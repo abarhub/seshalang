@@ -15,7 +15,7 @@ fn main() {
         println!("Premier argument : {}", nom_fichier);
 
         if nom_fichier.ends_with(".bas") {
-            main_basic();
+            main_basic(nom_fichier);
         }
     } else {
         println!("Pas d'argument");
