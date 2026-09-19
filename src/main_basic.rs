@@ -1,12 +1,16 @@
+use crate::main_basic::EtatLexer::{Autre, Nombre};
 use std::cmp::PartialEq;
 use std::collections::HashMap;
 use std::fs;
 use std::rc::Rc;
 
-const ETAT_AUTRE: i32 = 0;
-const ETAT_NOMBRE: i32 = 1;
-const ETAT_MOT: i32 = 2;
-const ETAT_SEPARATEUR: i32 = 3;
+#[derive(Debug, Eq, PartialEq, Clone)]
+enum EtatLexer {
+    Autre,
+    Nombre,
+    Mot,
+    Separateur,
+}
 
 #[derive(Debug, Eq, PartialEq, Clone)]
 enum TypeToken {
@@ -81,62 +85,43 @@ fn parse_basic(contenu_fichier: String) -> std::io::Result<AstProgramme> {
     for ligne in contenu_fichier.lines() {
         let mut s = String::new();
         let mut nombre = 0;
-        let mut etat = ETAT_AUTRE;
+        let mut etat = Autre;
 
         let mut liste_tokens_ligne: Vec<Token> = Vec::new();
 
         for mot in ligne.chars() {
-            if mot.is_numeric() {
+            let nouvel_etat = calcul_etat(mot);
+            let etat_precedant = etat.clone();
+            if nouvel_etat != etat {
+                if etat != Autre {
+                    let token = creation_token(s.clone(), nombre, etat);
+                    liste_tokens_ligne.push(token);
+                    s = "".to_string();
+                    nombre = 0;
+                }
+            }
+            etat = nouvel_etat;
+            if etat == Nombre {
                 let n = mot.to_digit(10).unwrap();
-                if etat != ETAT_NOMBRE {
-                    if etat != ETAT_AUTRE {
-                        let token = creation_token(s.clone(), nombre, etat);
-                        liste_tokens_ligne.push(token);
-                        s = "".to_string();
-                        nombre = 0;
-                    }
-                    etat = ETAT_NOMBRE;
+                if etat_precedant != Nombre {
+                    etat = Nombre;
                     nombre = n;
                 } else {
                     nombre = nombre * 10 + n;
                 }
-            } else if mot == ' ' {
-                if etat != ETAT_AUTRE {
-                    let token = creation_token(s.clone(), nombre, etat);
-                    liste_tokens_ligne.push(token);
-                    s = "".to_string();
-                    nombre = 0;
-                }
-                etat = ETAT_AUTRE;
-            } else if mot == '+'
-                || mot == '-'
-                || mot == '*'
-                || mot == '/'
-                || mot == '='
-                || mot == '('
-                || mot == ')'
-            {
-                if etat != ETAT_AUTRE {
-                    let token = creation_token(s.clone(), nombre, etat);
-                    liste_tokens_ligne.push(token);
-                    s = "".to_string();
-                    nombre = 0;
-                }
-                etat = ETAT_SEPARATEUR;
+            } else if etat == Autre {
+                etat = Autre;
+                s = "".to_string();
+                nombre = 0;
+            } else if etat == EtatLexer::Separateur {
+                etat = EtatLexer::Separateur;
                 s = "".to_string();
                 s.push(mot);
-            } else if mot.is_alphabetic() || mot == '_' {
-                if etat == ETAT_MOT {
+            } else if etat == EtatLexer::Mot {
+                if etat_precedant == EtatLexer::Mot {
                     s.push(mot);
                 } else {
-                    if etat != ETAT_AUTRE {
-                        let token = creation_token(s.clone(), nombre, etat);
-                        liste_tokens_ligne.push(token);
-                        s = "".to_string();
-                        nombre = 0;
-                    }
-
-                    etat = ETAT_MOT;
+                    etat = EtatLexer::Mot;
                     s = "".to_string();
                     s.push(mot);
                 }
@@ -146,7 +131,7 @@ fn parse_basic(contenu_fichier: String) -> std::io::Result<AstProgramme> {
             }
         }
 
-        if etat != ETAT_AUTRE {
+        if etat != Autre {
             let token = creation_token(s.clone(), nombre, etat);
             liste_tokens_ligne.push(token);
         }
@@ -163,19 +148,47 @@ fn parse_basic(contenu_fichier: String) -> std::io::Result<AstProgramme> {
     Ok(programme)
 }
 
-fn creation_token(s: String, nombre: u32, etat: i32) -> Token {
+fn calcul_etat(mot: char) -> EtatLexer {
+    if mot.is_numeric() {
+        Nombre
+    } else if mot == ' ' {
+        Autre
+    } else if mot == '+'
+        || mot == '-'
+        || mot == '*'
+        || mot == '/'
+        || mot == '='
+        || mot == '('
+        || mot == ')'
+    {
+        EtatLexer::Separateur
+    } else if mot.is_alphabetic()
+        || mot == '_'
+        || mot == '$'
+        || mot == '!'
+        || mot == '%'
+        || mot == '#'
+        || mot == '&'
+    {
+        EtatLexer::Mot
+    } else {
+        Autre
+    }
+}
+
+fn creation_token(s: String, nombre: u32, etat: EtatLexer) -> Token {
     match etat {
-        ETAT_NOMBRE => Token {
+        EtatLexer::Nombre => Token {
             texte: "".to_string(),
             nombre: nombre,
             type_token: TypeToken::Nombre,
         },
-        ETAT_MOT => Token {
+        EtatLexer::Mot => Token {
             texte: s,
             nombre: 0,
             type_token: TypeToken::Identifiant,
         },
-        ETAT_SEPARATEUR => Token {
+        EtatLexer::Separateur => Token {
             texte: s,
             nombre: 0,
             type_token: TypeToken::Separateur,
