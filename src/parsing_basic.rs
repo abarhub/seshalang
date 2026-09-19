@@ -99,6 +99,8 @@ fn calcul_etat(mot: char) -> EtatLexer {
         || mot == '='
         || mot == '('
         || mot == ')'
+        || mot == ','
+        || mot == ';'
     {
         EtatLexer::Separateur
     } else if mot.is_alphabetic()
@@ -153,19 +155,27 @@ fn parsing_programme(liste_tokens: Vec<Vec<Token>>) -> AstProgramme {
                 println!("appel {}", ident);
                 let mut ligne_restant = ligne[1..].to_vec();
                 let mut liste_expressions: Vec<AstExpression> = vec![];
+                let mut separateur_virgule: Vec<bool> = vec![];
                 loop {
                     let len = ligne_restant.len();
                     let exp = parsing_expression(ligne_restant.clone());
                     liste_expressions.push(exp.0);
-                    if exp.1 < len as u32 {
+                    if exp.1 + 1 < len as u32
+                        && separateur_parametre(&ident, &ligne_restant[exp.1 as usize])
+                    {
                         let n = exp.1 as usize;
-                        ligne_restant = ligne_restant[n..].to_vec();
+                        separateur_virgule.push(est_separateur(
+                            &ligne_restant[exp.1 as usize],
+                            ",".to_string(),
+                        ));
+                        ligne_restant = ligne_restant[n+1..].to_vec();
                     } else {
                         break;
                     }
                 }
 
-                let instruction = AstInstruction::AstAppelMethode(ident, liste_expressions);
+                let instruction =
+                    AstInstruction::AstAppelMethode(ident, liste_expressions, separateur_virgule);
 
                 programme.liste_instructions.push(instruction);
             } else {
@@ -179,6 +189,14 @@ fn parsing_programme(liste_tokens: Vec<Vec<Token>>) -> AstProgramme {
     }
 
     programme
+}
+
+fn separateur_parametre(nom_methode: &String, mot: &Token) -> bool {
+    if nom_methode.to_lowercase() == "print" {
+        est_separateur(mot, ",".to_string()) || est_separateur(mot, ";".to_string())
+    } else {
+        est_separateur(mot, ",".to_string())
+    }
 }
 
 fn est_identifiant(token: &Token) -> bool {
@@ -278,10 +296,9 @@ fn parsing_expression(liste_tokens: Vec<Token>) -> (AstExpression, u32) {
         if let Token::TokenNombre(nombre) = &liste_tokens[0] {
             return (AstExpression::AstNombre(*nombre), 1);
         } else {
-            panic!("nombre inconnu");
+            panic!("nombre inconnu: {:?}", liste_tokens[0]);
         }
     } else {
-        eprintln!("expression inconnue: {:?}", liste_tokens);
-        panic!("expression inconnue");
+        panic!("expression inconnue: {:?}", liste_tokens);
     }
 }

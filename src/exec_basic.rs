@@ -1,6 +1,4 @@
-use crate::main_basic::{
-    AstExpression, AstInstruction, AstProgramme,
-};
+use crate::main_basic::{AstExpression, AstInstruction, AstProgramme};
 use std::collections::HashMap;
 
 pub fn execute(programme: AstProgramme) -> Vec<String> {
@@ -11,12 +9,28 @@ pub fn execute(programme: AstProgramme) -> Vec<String> {
         if let AstInstruction::AstAffectation(ident, expression) = instruction {
             let resultat = execute_expression(&expression, &mut contexte);
             contexte.insert(ident.clone(), resultat);
-        } else if let AstInstruction::AstAppelMethode(nom, parametres) = instruction {
+        } else if let AstInstruction::AstAppelMethode(nom, parametres, separateurs) = instruction {
             if nom.to_lowercase() == "print" {
+                let mut i = 0;
                 for expression in parametres.iter() {
                     let resultat = execute_expression(&expression, &mut contexte);
-                    println!("{}", resultat);
-                    sortie.push(resultat.to_string());
+                    if i < separateurs.len() && !separateurs[i] {
+                        print!("{} ", resultat);
+                        if sortie.is_empty() {
+                            sortie.push(resultat.to_string());
+                        } else {
+                            let len = sortie.len() - 1;
+                            let mut s = sortie[len].clone();
+                            let s2 = resultat.to_string();
+                            s += s2.as_str();
+                            sortie[len] = s;
+                        }
+                    } else {
+                        println!("{}", resultat);
+                        sortie.push(resultat.to_string());
+                    }
+
+                    i += 1;
                 }
             } else {
                 eprintln!("appel de méthode {} inconnue: {:?}", nom, instruction);

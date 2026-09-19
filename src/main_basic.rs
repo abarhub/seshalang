@@ -11,7 +11,7 @@ pub struct AstProgramme {
 #[derive(Debug)]
 pub enum AstInstruction {
     AstAffectation(String, AstExpression),
-    AstAppelMethode(String, Vec<AstExpression>),
+    AstAppelMethode(String, Vec<AstExpression>, Vec<bool>),
 }
 
 #[derive(Debug, Clone)]
@@ -78,11 +78,21 @@ mod tests {
 
     #[test]
     fn test_parse_execute4() {
-        let fichier = "print 8 20".to_string();
+        let fichier = "print 8, 20".to_string();
         let programme = parse_basic(fichier).unwrap();
         let sortie = execute(programme);
         assert_eq!(sortie.len(), 2);
         assert_eq!(sortie[0], "8");
         assert_eq!(sortie[1], "20");
+    }
+
+    #[test]
+    fn test_parse_execute5() {
+        let fichier = "print 10; 30".to_string();
+        let programme = parse_basic(fichier).unwrap();
+        let sortie = execute(programme);
+        assert_eq!(sortie.len(), 2);
+        assert_eq!(sortie[0], "10");
+        assert_eq!(sortie[1], "30");
     }
 }
