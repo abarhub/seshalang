@@ -38,7 +38,7 @@ enum TypeInstruction {
 struct AstInstruction {
     type_instruction: TypeInstruction,
     nom: String,
-    expression: AstExpression,
+    liste_expression: Vec<AstExpression>,
 }
 
 #[derive(Debug, Eq, PartialEq, Copy, Clone)]
@@ -204,18 +204,32 @@ fn parsing_programme(liste_tokens: Vec<Vec<Token>>) -> AstProgramme {
             let instruction = AstInstruction {
                 type_instruction: TypeInstruction::Affectation,
                 nom: ligne[0].texte.clone(),
-                expression: exp.0,
+                liste_expression: Vec::from([exp.0]),
             };
             programme.liste_instructions.push(instruction);
         } else if ligne.len() >= 1 && ligne[0].type_token == TypeToken::Identifiant {
             // appel de méthode
             println!("appel {}", ligne[0].texte);
-            let exp = parsing_expression(ligne[1..].to_vec());
+            let mut ligne_restant = ligne[1..].to_vec();
+            let mut listeExpressions: Vec<AstExpression> = vec![];
+            loop {
+                let len = ligne_restant.len();
+                let exp = parsing_expression(ligne_restant.clone());
+                listeExpressions.push(exp.0);
+                if exp.1 < len as u32 {
+                    let n = exp.1 as usize;
+                    ligne_restant = ligne_restant[n..].to_vec();
+                } else {
+                    break;
+                }
+            }
+
             let instruction = AstInstruction {
                 type_instruction: TypeInstruction::AppelMethode,
                 nom: ligne[0].texte.clone(),
-                expression: exp.0,
+                liste_expression: listeExpressions,
             };
+
             programme.liste_instructions.push(instruction);
         } else {
             eprintln!("instrction inconnue: {:?}", ligne);
@@ -343,13 +357,15 @@ fn execute(programme: AstProgramme) -> Vec<String> {
 
     for instruction in programme.liste_instructions.iter() {
         if instruction.type_instruction == TypeInstruction::Affectation {
-            let resultat = execute_expression(&instruction.expression, &mut contexte);
+            let resultat = execute_expression(&instruction.liste_expression[0], &mut contexte);
             contexte.insert(instruction.nom.clone(), resultat);
         } else if instruction.type_instruction == TypeInstruction::AppelMethode {
             if instruction.nom == "print" {
-                let resultat = execute_expression(&instruction.expression, &mut contexte);
-                println!("{}", resultat);
-                sortie.push(resultat.to_string());
+                for expression in instruction.liste_expression.iter() {
+                    let resultat = execute_expression(&expression, &mut contexte);
+                    println!("{}", resultat);
+                    sortie.push(resultat.to_string());
+                }
             } else {
                 eprintln!(
                     "appel de méthode {} inconnue: {:?}",
@@ -424,5 +440,15 @@ mod tests {
         let sortie = execute(programme);
         assert_eq!(sortie.len(), 1);
         assert_eq!(sortie[0], "15");
+    }
+
+    #[test]
+    fn test_parse_execute4() {
+        let fichier = "print 8 20".to_string();
+        let programme = parse_basic(fichier).unwrap();
+        let sortie = execute(programme);
+        assert_eq!(sortie.len(), 2);
+        assert_eq!(sortie[0], "8");
+        assert_eq!(sortie[1], "20");
     }
 }
