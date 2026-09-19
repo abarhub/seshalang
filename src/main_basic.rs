@@ -1,6 +1,14 @@
+use std::cmp::PartialEq;
+use std::collections::HashMap;
 use std::fs;
+use std::rc::Rc;
 
-#[derive(Debug)]
+const ETAT_AUTRE: i32 = 0;
+const ETAT_NOMBRE: i32 = 1;
+const ETAT_MOT: i32 = 2;
+const ETAT_SEPARATEUR: i32 = 3;
+
+#[derive(Debug, Eq, PartialEq, Clone)]
 enum TypeToken {
     Nombre,
     MotReserve,
@@ -8,17 +16,47 @@ enum TypeToken {
     Separateur,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 struct Token {
     texte: String,
     nombre: u32,
     type_token: TypeToken,
 }
 
-const ETAT_AUTRE: i32 = 0;
-const ETAT_NOMBRE: i32 = 1;
-const ETAT_MOT: i32 = 2;
-const ETAT_SEPARATEUR: i32 = 3;
+#[derive(Debug)]
+struct AstProgramme {
+    liste_instructions: Vec<AstInstruction>,
+}
+
+#[derive(Debug, Eq, PartialEq)]
+enum TypeInstruction {
+    Affectation,
+    AppelMethode,
+}
+
+#[derive(Debug)]
+struct AstInstruction {
+    type_instruction: TypeInstruction,
+    nom: String,
+    expression: AstExpression,
+}
+
+#[derive(Debug, Eq, PartialEq, Copy, Clone)]
+enum TypeExpression {
+    Nombre,
+    Identifiant,
+    OperateurBinaire,
+}
+
+#[derive(Debug, Clone)]
+struct AstExpression {
+    type_expression: TypeExpression,
+    identifiant: String,
+    nombre: u32,
+    operateur: String,
+    exp: Rc<Option<AstExpression>>,
+    exp2: Rc<Option<AstExpression>>,
+}
 
 pub fn main_basic(fichier: String) {
     let mut x = 5;
@@ -45,7 +83,7 @@ fn parse_basic(fichier: String) -> std::io::Result<()> {
                 let n = mot.to_digit(10).unwrap();
                 if etat != ETAT_NOMBRE {
                     if etat != ETAT_AUTRE {
-                        let token = creationToken(s.clone(), nombre, etat);
+                        let token = creation_token(s.clone(), nombre, etat);
                         liste_tokens_ligne.push(token);
                         s = "".to_string();
                         nombre = 0;
@@ -66,7 +104,7 @@ fn parse_basic(fichier: String) -> std::io::Result<()> {
                 || mot == ')'
             {
                 if etat != ETAT_AUTRE {
-                    let token = creationToken(s.clone(), nombre, etat);
+                    let token = creation_token(s.clone(), nombre, etat);
                     liste_tokens_ligne.push(token);
                     s = "".to_string();
                     nombre = 0;
@@ -79,7 +117,7 @@ fn parse_basic(fichier: String) -> std::io::Result<()> {
                     s.push(mot);
                 } else {
                     if etat != ETAT_AUTRE {
-                        let token = creationToken(s.clone(), nombre, etat);
+                        let token = creation_token(s.clone(), nombre, etat);
                         liste_tokens_ligne.push(token);
                         s = "".to_string();
                         nombre = 0;
@@ -96,7 +134,7 @@ fn parse_basic(fichier: String) -> std::io::Result<()> {
         }
 
         if etat != ETAT_AUTRE {
-            let token = creationToken(s.clone(), nombre, etat);
+            let token = creation_token(s.clone(), nombre, etat);
             liste_tokens_ligne.push(token);
         }
 
@@ -107,10 +145,14 @@ fn parse_basic(fichier: String) -> std::io::Result<()> {
 
     println!("liste token : {:?}", liste_tokens);
 
+    let programme = parsing_programme(liste_tokens);
+
+    execute(programme);
+
     Ok(())
 }
 
-fn creationToken(s: String, nombre: u32, etat: i32) -> Token {
+fn creation_token(s: String, nombre: u32, etat: i32) -> Token {
     match etat {
         ETAT_NOMBRE => Token {
             texte: "".to_string(),
@@ -131,4 +173,158 @@ fn creationToken(s: String, nombre: u32, etat: i32) -> Token {
     }
 }
 
-fn ajouteToken() {}
+fn parsing_programme(liste_tokens: Vec<Vec<Token>>) -> AstProgramme {
+    let mut programme = AstProgramme {
+        liste_instructions: Vec::new(),
+    };
+    for ligne in liste_tokens {
+        if ligne.len() == 0 {
+            continue;
+        }
+
+        if ligne.len() > 1
+            && ligne[0].type_token == TypeToken::Identifiant
+            && ligne[1].type_token == TypeToken::Separateur
+            && ligne[1].texte == "="
+        {
+            // affectation
+            println!("affectation {}", ligne[0].texte);
+            let exp = parsing_expression(ligne[2..].to_vec());
+            let instruction = AstInstruction {
+                type_instruction: TypeInstruction::Affectation,
+                nom: ligne[0].texte.clone(),
+                expression: exp.0,
+            };
+            programme.liste_instructions.push(instruction);
+        } else if (ligne.len() > 1
+            && ligne[0].type_token == TypeToken::Identifiant
+            && ligne[1].type_token == TypeToken::Separateur
+            && ligne[1].texte == "(")
+        {
+            // appel de méthode
+            println!("appel {}", ligne[0].texte);
+            let exp = parsing_expression(ligne[2..ligne.len() - 1].to_vec());
+            let instruction = AstInstruction {
+                type_instruction: TypeInstruction::AppelMethode,
+                nom: ligne[0].texte.clone(),
+                expression: exp.0,
+            };
+            programme.liste_instructions.push(instruction);
+        } else {
+            eprintln!("instrction inconnue: {:?}", ligne);
+            panic!("instruction inconnue");
+        }
+    }
+
+    programme
+}
+
+fn parsing_expression(liste_tokens: Vec<Token>) -> (AstExpression, u32) {
+    if liste_tokens.len() == 1 && liste_tokens[0].type_token == TypeToken::Identifiant {
+        return (
+            AstExpression {
+                type_expression: TypeExpression::Identifiant,
+                identifiant: liste_tokens[0].texte.clone(),
+                nombre: 0,
+                operateur: "".to_string(),
+                exp: Rc::new(None),
+                exp2: Rc::new(None),
+            },
+            1,
+        );
+    } else if liste_tokens.len() == 1 && liste_tokens[0].type_token == TypeToken::Nombre {
+        return (
+            AstExpression {
+                type_expression: TypeExpression::Nombre,
+                identifiant: "".to_string(),
+                nombre: liste_tokens[0].nombre,
+                operateur: "".to_string(),
+                exp: Rc::new(None),
+                exp2: Rc::new(None),
+            },
+            1,
+        );
+    } else if liste_tokens.len() == 3
+        && (liste_tokens[0].type_token == TypeToken::Identifiant
+            || liste_tokens[0].type_token == TypeToken::Nombre)
+        && liste_tokens[1].type_token == TypeToken::Separateur
+        && (liste_tokens[1].texte == "+"
+            || liste_tokens[1].texte == "-"
+            || liste_tokens[1].texte == "*"
+            || liste_tokens[1].texte == "/")
+        && (liste_tokens[2].type_token == TypeToken::Identifiant
+            || liste_tokens[2].type_token == TypeToken::Nombre)
+    {
+        let expr1: AstExpression;
+        let expr2: AstExpression;
+        let mut expr_list: Vec<Token> = Vec::new();
+        expr_list.push(liste_tokens[0].clone());
+        let res = parsing_expression(expr_list);
+        expr1 = res.0;
+
+        let mut expr_list2: Vec<Token> = Vec::new();
+        expr_list2.push(liste_tokens[2].clone());
+        let res = parsing_expression(expr_list2);
+        expr2 = res.0;
+
+        return (
+            AstExpression {
+                type_expression: TypeExpression::OperateurBinaire,
+                identifiant: "".to_string(),
+                nombre: 0,
+                operateur: liste_tokens[1].texte.to_string(),
+                exp: Rc::new(Some(expr1)),
+                exp2: Rc::new(Some(expr2)),
+            },
+            3,
+        );
+    } else {
+        eprintln!("expression inconnue: {:?}", liste_tokens);
+        panic!("expression inconnue");
+    }
+}
+
+fn execute(programme: AstProgramme) {
+    let mut contexte: HashMap<String, i32> = HashMap::new();
+
+    for instruction in programme.liste_instructions.iter() {
+        if instruction.type_instruction == TypeInstruction::Affectation {
+            let resultat = execute_expression(&instruction.expression, &mut contexte);
+            contexte.insert(instruction.nom.clone(), resultat);
+        } else if instruction.type_instruction == TypeInstruction::AppelMethode {
+            if instruction.nom == "print" {
+                let resultat = execute_expression(&instruction.expression, &mut contexte);
+                println!("{}", resultat);
+            } else {
+                eprintln!("appel de méthode {} inconnue: {:?}", instruction.nom, instruction);
+                panic!("appel de méthode inconnue");
+            }
+        } else {
+            eprintln!("instruction inconnue: {:?}", instruction);
+            panic!("instruction inconnue");
+        }
+    }
+}
+
+fn execute_expression(expression: &AstExpression, contexte: &mut HashMap<String, i32>) -> i32 {
+    if expression.type_expression == TypeExpression::Nombre {
+        return expression.nombre as i32;
+    } else if expression.type_expression == TypeExpression::Identifiant {
+        return contexte.get(&expression.identifiant).unwrap().clone();
+    } else if expression.type_expression == TypeExpression::OperateurBinaire {
+        let e1 = expression.exp.as_ref();
+        let e2 = expression.exp2.as_ref();
+        let expr1 = execute_expression(&(e1.clone().unwrap()), contexte);
+        let expr2 = execute_expression(&(e2.clone().unwrap()), contexte);
+        return match expression.operateur.as_str() {
+            "+" => expr1 + expr2,
+            "-" => expr1 - expr2,
+            "*" => expr1 * expr2,
+            "/" => expr1 / expr2,
+            _ => panic!("Opérateur inconnu: {}", expression.operateur),
+        };
+    } else {
+        eprintln!("Expression inconnue: {:?}", expression);
+        panic!("Expression inconnue");
+    }
+}
