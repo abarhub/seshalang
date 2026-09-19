@@ -63,15 +63,22 @@ pub fn main_basic(fichier: String) {
     x += 1;
     println!("x2 is {}", x);
     println!("fichier: {}", fichier);
-    parse_basic(fichier).expect("Erreur pour lire le fichier");
+    parse_basic_file(fichier).expect("Erreur pour lire le fichier");
 }
 
-fn parse_basic(fichier: String) -> std::io::Result<()> {
+fn parse_basic_file(fichier: String) -> std::io::Result<()> {
     let contenu = fs::read_to_string(fichier)?;
 
+    let programme = parse_basic(contenu)?;
+
+    execute(programme);
+    Ok(())
+}
+
+fn parse_basic(contenu_fichier: String) -> std::io::Result<(AstProgramme)> {
     let mut liste_tokens: Vec<Vec<Token>> = Vec::new();
 
-    for ligne in contenu.lines() {
+    for ligne in contenu_fichier.lines() {
         let mut s = String::new();
         let mut nombre = 0;
         let mut etat = ETAT_AUTRE;
@@ -147,9 +154,7 @@ fn parse_basic(fichier: String) -> std::io::Result<()> {
 
     let programme = parsing_programme(liste_tokens);
 
-    execute(programme);
-
-    Ok(())
+    return Ok(programme);
 }
 
 fn creation_token(s: String, nombre: u32, etat: i32) -> Token {
@@ -284,7 +289,8 @@ fn parsing_expression(liste_tokens: Vec<Token>) -> (AstExpression, u32) {
     }
 }
 
-fn execute(programme: AstProgramme) {
+fn execute(programme: AstProgramme) -> Vec<String> {
+    let mut sortie: Vec<String> = Vec::new();
     let mut contexte: HashMap<String, i32> = HashMap::new();
 
     for instruction in programme.liste_instructions.iter() {
@@ -295,8 +301,12 @@ fn execute(programme: AstProgramme) {
             if instruction.nom == "print" {
                 let resultat = execute_expression(&instruction.expression, &mut contexte);
                 println!("{}", resultat);
+                sortie.push(resultat.to_string());
             } else {
-                eprintln!("appel de méthode {} inconnue: {:?}", instruction.nom, instruction);
+                eprintln!(
+                    "appel de méthode {} inconnue: {:?}",
+                    instruction.nom, instruction
+                );
                 panic!("appel de méthode inconnue");
             }
         } else {
@@ -304,6 +314,8 @@ fn execute(programme: AstProgramme) {
             panic!("instruction inconnue");
         }
     }
+
+    sortie
 }
 
 fn execute_expression(expression: &AstExpression, contexte: &mut HashMap<String, i32>) -> i32 {
@@ -326,5 +338,25 @@ fn execute_expression(expression: &AstExpression, contexte: &mut HashMap<String,
     } else {
         eprintln!("Expression inconnue: {:?}", expression);
         panic!("Expression inconnue");
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    // Note this useful idiom: importing names from outer (for mod tests) scope.
+    use super::*;
+
+    #[test]
+    fn test_parse_execute() {
+        let fichier = "x=5
+                                y=x+7
+                                print(x)
+                                print(y)"
+            .to_string();
+        let programme = parse_basic(fichier).unwrap();
+        let sortie = execute(programme);
+        assert_eq!(sortie.len(), 2);
+        assert_eq!(sortie[0], "5");
+        assert_eq!(sortie[1], "12");
     }
 }
