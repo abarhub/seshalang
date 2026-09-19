@@ -1,7 +1,5 @@
 use crate::main_basic::AstInstruction::AstAffectation;
-use crate::main_basic::{
-    AstExpression, AstInstruction, AstProgramme, TypeExpression, TypeInstruction,
-};
+use crate::main_basic::{AstExpression, AstInstruction, AstProgramme};
 use std::rc::Rc;
 
 #[derive(Debug, Eq, PartialEq, Clone)]

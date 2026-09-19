@@ -1,6 +1,5 @@
 use crate::exec_basic::execute;
 use crate::parsing_basic::parse_basic;
-use std::cmp::PartialEq;
 use std::fs;
 use std::rc::Rc;
 
@@ -9,41 +8,17 @@ pub struct AstProgramme {
     pub liste_instructions: Vec<AstInstruction>,
 }
 
-#[derive(Debug, Eq, PartialEq)]
-pub enum TypeInstruction {
-    Affectation,
-    AppelMethode,
-}
-
 #[derive(Debug)]
 pub enum AstInstruction {
     AstAffectation(String, AstExpression),
     AstAppelMethode(String, Vec<AstExpression>),
-    // pub type_instruction: TypeInstruction,
-    // pub nom: String,
-    // pub liste_expression: Vec<AstExpression>,
-}
-
-#[derive(Debug, Eq, PartialEq, Copy, Clone)]
-pub enum TypeExpression {
-    Nombre,
-    Identifiant,
-    OperateurBinaire,
 }
 
 #[derive(Debug, Clone)]
 pub enum AstExpression {
     AstNombre(u32),
     AstIdentifiant(String),
-    AstOperateurBinaire(String,Rc<AstExpression>,Rc<AstExpression>),
-
-
-    // pub type_expression: TypeExpression,
-    // pub identifiant: String,
-    // pub nombre: u32,
-    // pub operateur: String,
-    // pub exp: Rc<Option<AstExpression>>,
-    // pub exp2: Rc<Option<AstExpression>>,
+    AstOperateurBinaire(String, Rc<AstExpression>, Rc<AstExpression>),
 }
 
 pub fn main_basic(fichier: String) {

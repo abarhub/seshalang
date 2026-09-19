@@ -1,5 +1,5 @@
 use crate::main_basic::{
-    AstExpression, AstInstruction, AstProgramme, TypeExpression, TypeInstruction,
+    AstExpression, AstInstruction, AstProgramme,
 };
 use std::collections::HashMap;
 
