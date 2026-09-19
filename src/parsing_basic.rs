@@ -1,3 +1,4 @@
+use crate::main_basic::AstInstruction::AstAffectation;
 use crate::main_basic::{
     AstExpression, AstInstruction, AstProgramme, TypeExpression, TypeInstruction,
 };
@@ -10,8 +11,6 @@ enum EtatLexer {
     Mot,
     Separateur,
 }
-
-
 
 #[derive(Debug, Clone)]
 enum Token {
@@ -144,11 +143,7 @@ fn parsing_programme(liste_tokens: Vec<Vec<Token>>) -> AstProgramme {
             if let Token::TokenIdentifiant(ident) = ligne[0].clone() {
                 println!("affectation {}", ident);
                 let exp = parsing_expression(ligne[2..].to_vec());
-                let instruction = AstInstruction {
-                    type_instruction: TypeInstruction::Affectation,
-                    nom: ident,
-                    liste_expression: Vec::from([exp.0]),
-                };
+                let instruction = AstAffectation(ident.clone(), exp.0);
                 programme.liste_instructions.push(instruction);
             } else {
                 eprintln!("token {:?} n'est pas un identifiant", ligne[0]);
@@ -172,11 +167,7 @@ fn parsing_programme(liste_tokens: Vec<Vec<Token>>) -> AstProgramme {
                     }
                 }
 
-                let instruction = AstInstruction {
-                    type_instruction: TypeInstruction::AppelMethode,
-                    nom: ident,
-                    liste_expression: liste_expressions,
-                };
+                let instruction = AstInstruction::AstAppelMethode(ident, liste_expressions);
 
                 programme.liste_instructions.push(instruction);
             } else {
@@ -216,17 +207,7 @@ fn est_separateur(token: &Token, separateur_cherche: String) -> bool {
 fn parsing_expression(liste_tokens: Vec<Token>) -> (AstExpression, u32) {
     if liste_tokens.len() == 1 && est_identifiant(&liste_tokens[0]) {
         if let Token::TokenIdentifiant(ident) = &liste_tokens[0] {
-            return (
-                AstExpression {
-                    type_expression: TypeExpression::Identifiant,
-                    identifiant: ident.clone(),
-                    nombre: 0,
-                    operateur: "".to_string(),
-                    exp: Rc::new(None),
-                    exp2: Rc::new(None),
-                },
-                1,
-            );
+            (AstExpression::AstIdentifiant(ident.clone()), 1)
         } else {
             panic!(
                 "Token {:?} n'est pas un identifiant",
@@ -235,17 +216,7 @@ fn parsing_expression(liste_tokens: Vec<Token>) -> (AstExpression, u32) {
         }
     } else if liste_tokens.len() == 1 && est_nombre(&liste_tokens[0]) {
         if let Token::TokenNombre(nombre) = liste_tokens[0] {
-            return (
-                AstExpression {
-                    type_expression: TypeExpression::Nombre,
-                    identifiant: "".to_string(),
-                    nombre: nombre,
-                    operateur: "".to_string(),
-                    exp: Rc::new(None),
-                    exp2: Rc::new(None),
-                },
-                1,
-            );
+            return (AstExpression::AstNombre(nombre), 1);
         } else {
             panic!("Token {:?} n'est pas un nombre", liste_tokens[0].clone());
         }
@@ -276,14 +247,11 @@ fn parsing_expression(liste_tokens: Vec<Token>) -> (AstExpression, u32) {
             nb_token += res.1;
 
             return (
-                AstExpression {
-                    type_expression: TypeExpression::OperateurBinaire,
-                    identifiant: "".to_string(),
-                    nombre: 0,
-                    operateur: separateur.clone(),
-                    exp: Rc::new(Some(expr1)),
-                    exp2: Rc::new(Some(expr2)),
-                },
+                AstExpression::AstOperateurBinaire(
+                    separateur.clone(),
+                    Rc::new(expr1),
+                    Rc::new(expr2),
+                ),
                 nb_token,
             );
         } else {
@@ -304,33 +272,13 @@ fn parsing_expression(liste_tokens: Vec<Token>) -> (AstExpression, u32) {
         }
     } else if liste_tokens.len() > 0 && est_identifiant(&liste_tokens[0]) {
         if let Token::TokenIdentifiant(ident) = &liste_tokens[0] {
-            return (
-                AstExpression {
-                    type_expression: TypeExpression::Identifiant,
-                    identifiant: ident.clone(),
-                    nombre: 0,
-                    operateur: "".to_string(),
-                    exp: Rc::new(None),
-                    exp2: Rc::new(None),
-                },
-                1,
-            );
+            return (AstExpression::AstIdentifiant(ident.clone()), 1);
         } else {
             panic!("identifiant inconnu");
         }
     } else if liste_tokens.len() > 0 && est_nombre(&liste_tokens[0]) {
         if let Token::TokenNombre(nombre) = &liste_tokens[0] {
-            return (
-                AstExpression {
-                    type_expression: TypeExpression::Nombre,
-                    identifiant: "".to_string(),
-                    nombre: *nombre,
-                    operateur: "".to_string(),
-                    exp: Rc::new(None),
-                    exp2: Rc::new(None),
-                },
-                1,
-            );
+            return (AstExpression::AstNombre(*nombre), 1);
         } else {
             panic!("nombre inconnu");
         }
