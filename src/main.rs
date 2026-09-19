@@ -2,6 +2,8 @@ use std::env;
 use crate::main_basic::main_basic;
 
 mod main_basic;
+pub mod parsing_basic;
+mod exec_basic;
 
 fn main() {
     let mut x = 5;
