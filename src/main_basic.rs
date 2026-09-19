@@ -75,7 +75,7 @@ fn parse_basic_file(fichier: String) -> std::io::Result<()> {
     Ok(())
 }
 
-fn parse_basic(contenu_fichier: String) -> std::io::Result<(AstProgramme)> {
+fn parse_basic(contenu_fichier: String) -> std::io::Result<AstProgramme> {
     let mut liste_tokens: Vec<Vec<Token>> = Vec::new();
 
     for ligne in contenu_fichier.lines() {
@@ -101,6 +101,12 @@ fn parse_basic(contenu_fichier: String) -> std::io::Result<(AstProgramme)> {
                     nombre = nombre * 10 + n;
                 }
             } else if mot == ' ' {
+                if etat != ETAT_AUTRE {
+                    let token = creation_token(s.clone(), nombre, etat);
+                    liste_tokens_ligne.push(token);
+                    s = "".to_string();
+                    nombre = 0;
+                }
                 etat = ETAT_AUTRE;
             } else if mot == '+'
                 || mot == '-'
@@ -154,7 +160,7 @@ fn parse_basic(contenu_fichier: String) -> std::io::Result<(AstProgramme)> {
 
     let programme = parsing_programme(liste_tokens);
 
-    return Ok(programme);
+    Ok(programme)
 }
 
 fn creation_token(s: String, nombre: u32, etat: i32) -> Token {
@@ -201,14 +207,10 @@ fn parsing_programme(liste_tokens: Vec<Vec<Token>>) -> AstProgramme {
                 expression: exp.0,
             };
             programme.liste_instructions.push(instruction);
-        } else if (ligne.len() > 1
-            && ligne[0].type_token == TypeToken::Identifiant
-            && ligne[1].type_token == TypeToken::Separateur
-            && ligne[1].texte == "(")
-        {
+        } else if ligne.len() >= 1 && ligne[0].type_token == TypeToken::Identifiant {
             // appel de méthode
             println!("appel {}", ligne[0].texte);
-            let exp = parsing_expression(ligne[2..ligne.len() - 1].to_vec());
+            let exp = parsing_expression(ligne[1..].to_vec());
             let instruction = AstInstruction {
                 type_instruction: TypeInstruction::AppelMethode,
                 nom: ligne[0].texte.clone(),
@@ -260,17 +262,22 @@ fn parsing_expression(liste_tokens: Vec<Token>) -> (AstExpression, u32) {
         && (liste_tokens[2].type_token == TypeToken::Identifiant
             || liste_tokens[2].type_token == TypeToken::Nombre)
     {
+        let mut nb_token: u32 = 0;
         let expr1: AstExpression;
         let expr2: AstExpression;
         let mut expr_list: Vec<Token> = Vec::new();
         expr_list.push(liste_tokens[0].clone());
         let res = parsing_expression(expr_list);
         expr1 = res.0;
+        nb_token += res.1;
+
+        nb_token += 1;
 
         let mut expr_list2: Vec<Token> = Vec::new();
         expr_list2.push(liste_tokens[2].clone());
         let res = parsing_expression(expr_list2);
         expr2 = res.0;
+        nb_token += res.1;
 
         return (
             AstExpression {
@@ -281,7 +288,48 @@ fn parsing_expression(liste_tokens: Vec<Token>) -> (AstExpression, u32) {
                 exp: Rc::new(Some(expr1)),
                 exp2: Rc::new(Some(expr2)),
             },
-            3,
+            nb_token,
+        );
+    } else if liste_tokens.len() > 0
+        && liste_tokens[0].type_token == TypeToken::Separateur
+        && liste_tokens[0].texte == "("
+    {
+        let mut nb_token: u32 = 0;
+        nb_token += 1;
+        let res = parsing_expression(liste_tokens[1..].to_vec());
+        nb_token += res.1;
+        if liste_tokens[nb_token as usize].type_token == TypeToken::Separateur
+            && liste_tokens[nb_token as usize].texte == ")"
+        {
+            nb_token += 1;
+            return (res.0, nb_token);
+        } else {
+            eprintln!("expression inconnue: {:?}", liste_tokens);
+            panic!("expression inconnue");
+        }
+    } else if liste_tokens.len() > 0 && liste_tokens[0].type_token == TypeToken::Identifiant {
+        return (
+            AstExpression {
+                type_expression: TypeExpression::Identifiant,
+                identifiant: liste_tokens[0].texte.clone(),
+                nombre: 0,
+                operateur: "".to_string(),
+                exp: Rc::new(None),
+                exp2: Rc::new(None),
+            },
+            1,
+        );
+    } else if liste_tokens.len() > 0 && liste_tokens[0].type_token == TypeToken::Nombre {
+        return (
+            AstExpression {
+                type_expression: TypeExpression::Nombre,
+                identifiant: "".to_string(),
+                nombre: liste_tokens[0].nombre,
+                operateur: "".to_string(),
+                exp: Rc::new(None),
+                exp2: Rc::new(None),
+            },
+            1,
         );
     } else {
         eprintln!("expression inconnue: {:?}", liste_tokens);
@@ -358,5 +406,23 @@ mod tests {
         assert_eq!(sortie.len(), 2);
         assert_eq!(sortie[0], "5");
         assert_eq!(sortie[1], "12");
+    }
+
+    #[test]
+    fn test_parse_execute2() {
+        let fichier = "print 10".to_string();
+        let programme = parse_basic(fichier).unwrap();
+        let sortie = execute(programme);
+        assert_eq!(sortie.len(), 1);
+        assert_eq!(sortie[0], "10");
+    }
+
+    #[test]
+    fn test_parse_execute3() {
+        let fichier = "print ((15))".to_string();
+        let programme = parse_basic(fichier).unwrap();
+        let sortie = execute(programme);
+        assert_eq!(sortie.len(), 1);
+        assert_eq!(sortie[0], "15");
     }
 }
