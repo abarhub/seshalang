@@ -9,6 +9,7 @@ enum EtatLexer {
     Nombre,
     Mot,
     Separateur,
+    ChaineDeCaracteres,
 }
 
 #[derive(Debug, Clone)]
@@ -17,6 +18,7 @@ enum Token {
     TokenIdentifiant(String),
     TokenSeparateur(String),
     TokenMotReserve(String),
+    TokenChaine(String),
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -25,6 +27,7 @@ enum TypeCharactere {
     Mot,
     Separateur,
     Ignorable,
+    Guillemet,
 }
 
 struct CharIterator {
@@ -71,14 +74,6 @@ impl CharIterator {
             false
         }
     }
-
-    fn get_etat(&self) -> EtatLexer {
-        if let Some(c) = self.get() {
-            calcul_etat(c)
-        } else {
-            EtatLexer::Autre
-        }
-    }
 }
 
 impl Iterator for CharIterator {
@@ -100,7 +95,6 @@ pub fn parse_basic(contenu_fichier: String) -> std::io::Result<AstProgramme> {
     let mut liste_tokens: Vec<Vec<Token>> = Vec::new();
 
     for ligne in contenu_fichier.lines() {
-
         let mut liste_tokens_ligne: Vec<Token> = Vec::new();
 
         let mut iter = CharIterator::new(ligne.to_string());
@@ -112,6 +106,8 @@ pub fn parse_basic(contenu_fichier: String) -> std::io::Result<AstProgramme> {
                 while iter.next_is_type_charactere(1, TypeCharactere::Nombre) {
                     if let Some(mot2) = iter.next() {
                         nombre = nombre * 10 + mot2.to_digit(10).unwrap();
+                    } else {
+                        break;
                     }
                 }
 
@@ -128,10 +124,27 @@ pub fn parse_basic(contenu_fichier: String) -> std::io::Result<AstProgramme> {
                 while iter.next_is_type_charactere(1, TypeCharactere::Mot) {
                     if let Some(mot2) = iter.next() {
                         s = s + mot2.to_string().as_str();
+                    } else {
+                        break;
                     }
                 }
 
                 let token = creation_token(s, 0, EtatLexer::Mot);
+                liste_tokens_ligne.push(token);
+            } else if iter.is_type_charactere(TypeCharactere::Guillemet) {
+                let mut s = "".to_string();
+                //s.push(mot);
+                while !iter.next_is_type_charactere(1, TypeCharactere::Guillemet) {
+                    if let Some(mot2) = iter.next() {
+                        s = s + mot2.to_string().as_str();
+                    } else {
+                        break;
+                    }
+                }
+                if iter.is_type_charactere(TypeCharactere::Guillemet) {
+                    iter.next();
+                }
+                let token = creation_token(s, 0, EtatLexer::ChaineDeCaracteres);
                 liste_tokens_ligne.push(token);
             } else {
                 // ignoré
@@ -153,36 +166,6 @@ pub fn parse_basic(contenu_fichier: String) -> std::io::Result<AstProgramme> {
     let programme = parsing_programme(liste_tokens);
 
     Ok(programme)
-}
-
-fn calcul_etat(mot: char) -> EtatLexer {
-    if mot.is_numeric() {
-        EtatLexer::Nombre
-    } else if mot == ' ' {
-        EtatLexer::Autre
-    } else if mot == '+'
-        || mot == '-'
-        || mot == '*'
-        || mot == '/'
-        || mot == '='
-        || mot == '('
-        || mot == ')'
-        || mot == ','
-        || mot == ';'
-    {
-        EtatLexer::Separateur
-    } else if mot.is_alphabetic()
-        || mot == '_'
-        || mot == '$'
-        || mot == '!'
-        || mot == '%'
-        || mot == '#'
-        || mot == '&'
-    {
-        EtatLexer::Mot
-    } else {
-        EtatLexer::Autre
-    }
 }
 
 fn get_type_charactere(mot: char) -> TypeCharactere {
@@ -210,6 +193,8 @@ fn get_type_charactere(mot: char) -> TypeCharactere {
         || mot == '&'
     {
         TypeCharactere::Mot
+    } else if mot == '"' {
+        TypeCharactere::Guillemet
     } else {
         TypeCharactere::Ignorable
     }
@@ -220,6 +205,7 @@ fn creation_token(s: String, nombre: u32, etat: EtatLexer) -> Token {
         EtatLexer::Nombre => Token::TokenNombre(nombre),
         EtatLexer::Mot => Token::TokenIdentifiant(s),
         EtatLexer::Separateur => Token::TokenSeparateur(s),
+        EtatLexer::ChaineDeCaracteres => Token::TokenChaine(s),
         _ => panic!("Etat invalide"),
     }
 }
@@ -318,6 +304,13 @@ fn est_separateur(token: &Token, separateur_cherche: String) -> bool {
     }
 }
 
+fn est_chaine(token: &Token) -> bool {
+    match token {
+        Token::TokenChaine(_) => true,
+        _ => false,
+    }
+}
+
 fn parsing_expression(liste_tokens: Vec<Token>) -> (AstExpression, u32) {
     if liste_tokens.len() == 1 && est_identifiant(&liste_tokens[0]) {
         if let Token::TokenIdentifiant(ident) = &liste_tokens[0] {
@@ -395,6 +388,12 @@ fn parsing_expression(liste_tokens: Vec<Token>) -> (AstExpression, u32) {
             return (AstExpression::AstNombre(*nombre), 1);
         } else {
             panic!("nombre inconnu: {:?}", liste_tokens[0]);
+        }
+    } else if liste_tokens.len() > 0 && est_chaine(&liste_tokens[0]) {
+        if let Token::TokenChaine(chaine) = &liste_tokens[0] {
+            return (AstExpression::AstChaine(chaine.clone()), 1);
+        } else {
+            panic!("chaine inconnue: {:?}", liste_tokens[0]);
         }
     } else {
         panic!("expression inconnue: {:?}", liste_tokens);

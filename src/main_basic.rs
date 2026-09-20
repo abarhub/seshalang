@@ -19,6 +19,7 @@ pub enum AstExpression {
     AstNombre(u32),
     AstIdentifiant(String),
     AstOperateurBinaire(String, Rc<AstExpression>, Rc<AstExpression>),
+    AstChaine(String),
 }
 
 pub fn main_basic(fichier: String) {
@@ -94,5 +95,14 @@ mod tests {
         assert_eq!(sortie.len(), 2);
         assert_eq!(sortie[0], "10");
         assert_eq!(sortie[1], "30");
+    }
+
+    #[test]
+    fn test_parse_execute6() {
+        let fichier = "print \"abc\"".to_string();
+        let programme = parse_basic(fichier).unwrap();
+        let sortie = execute(programme);
+        assert_eq!(sortie.len(), 1);
+        assert_eq!(sortie[0], "abc");
     }
 }
