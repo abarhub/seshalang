@@ -105,4 +105,14 @@ mod tests {
         assert_eq!(sortie.len(), 1);
         assert_eq!(sortie[0], "abc");
     }
+
+    #[test]
+    fn test_parse_execute7() {
+        let fichier = "x=\"XYZ t1\"
+                                print x".to_string();
+        let programme = parse_basic(fichier).unwrap();
+        let sortie = execute(programme);
+        assert_eq!(sortie.len(), 1);
+        assert_eq!(sortie[0], "XYZ t1");
+    }
 }
