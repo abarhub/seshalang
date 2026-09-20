@@ -133,7 +133,6 @@ pub fn parse_basic(contenu_fichier: String) -> std::io::Result<AstProgramme> {
                 liste_tokens_ligne.push(token);
             } else if iter.is_type_charactere(TypeCharactere::Guillemet) {
                 let mut s = "".to_string();
-                //s.push(mot);
                 while !iter.next_is_type_charactere(1, TypeCharactere::Guillemet) {
                     if let Some(mot2) = iter.next() {
                         s = s + mot2.to_string().as_str();
@@ -141,7 +140,7 @@ pub fn parse_basic(contenu_fichier: String) -> std::io::Result<AstProgramme> {
                         break;
                     }
                 }
-                if iter.is_type_charactere(TypeCharactere::Guillemet) {
+                if iter.next_is_type_charactere(1, TypeCharactere::Guillemet) {
                     iter.next();
                 }
                 let token = creation_token(s, 0, EtatLexer::ChaineDeCaracteres);
@@ -328,12 +327,16 @@ fn parsing_expression(liste_tokens: Vec<Token>) -> (AstExpression, u32) {
             panic!("Token {:?} n'est pas un nombre", liste_tokens[0].clone());
         }
     } else if liste_tokens.len() == 3
-        && (est_identifiant(&liste_tokens[0]) || est_nombre(&liste_tokens[0]))
+        && (est_identifiant(&liste_tokens[0])
+            || est_nombre(&liste_tokens[0])
+            || est_chaine(&liste_tokens[0]))
         && (est_separateur(&liste_tokens[1], "+".to_string())
             || est_separateur(&liste_tokens[1], "-".to_string())
             || est_separateur(&liste_tokens[1], "*".to_string())
             || est_separateur(&liste_tokens[1], "/".to_string()))
-        && (est_identifiant(&liste_tokens[2]) || est_nombre(&liste_tokens[2]))
+        && (est_identifiant(&liste_tokens[2])
+            || est_nombre(&liste_tokens[2])
+            || est_chaine(&liste_tokens[2]))
     {
         if let Token::TokenSeparateur(separateur) = &liste_tokens[1] {
             let mut nb_token: u32 = 0;

@@ -115,4 +115,13 @@ mod tests {
         assert_eq!(sortie.len(), 1);
         assert_eq!(sortie[0], "XYZ t1");
     }
+    #[test]
+    fn test_parse_execute8() {
+        let fichier = "x=\"ABC\" + \"DEF\"
+                                print x".to_string();
+        let programme = parse_basic(fichier).unwrap();
+        let sortie = execute(programme);
+        assert_eq!(sortie.len(), 1);
+        assert_eq!(sortie[0], "ABCDEF");
+    }
 }

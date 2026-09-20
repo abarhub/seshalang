@@ -72,25 +72,40 @@ fn execute_expression(
         let e2 = exp2.as_ref();
         let expr1 = execute_expression(&(e1.clone()), table_symbole);
         let expr2 = execute_expression(&(e2.clone()), table_symbole);
-        let n1: i32;
-        let n2: i32;
-        if let Valeur::Nombre(n) = expr1 {
-            n1 = n;
+        if let Valeur::Nombre(_) = expr1 {
+            let n1: i32;
+            let n2: i32;
+            if let Valeur::Nombre(n) = expr1 {
+                n1 = n;
+            } else {
+                panic!("Expression non numérique: {:?}", expr1);
+            }
+            if let Valeur::Nombre(n) = expr2 {
+                n2 = n;
+            } else {
+                panic!("Expression non numérique: {:?}", expr2);
+            }
+            return match operateur.as_str() {
+                "+" => Valeur::Nombre(n1 + n2),
+                "-" => Valeur::Nombre(n1 - n2),
+                "*" => Valeur::Nombre(n1 * n2),
+                "/" => Valeur::Nombre(n1 / n2),
+                _ => panic!("Opérateur inconnu: {}", operateur),
+            };
+        } else if let Valeur::Chaine(s1) = expr1 {
+            let s2:String;
+            if let Valeur::Chaine(s02) = expr2 {
+                s2 = s02;
+            } else {
+                panic!("Expression non numérique: {:?}", expr2);
+            }
+            return match operateur.as_str() {
+                "+" => Valeur::Chaine(s1 + s2.as_str()),
+                _ => panic!("Opérateur inconnu: {}", operateur),
+            };
         } else {
-            panic!("Expression non numérique: {:?}", expr1);
+            panic!("Expression invalide: {:?}", expr1);
         }
-        if let Valeur::Nombre(n) = expr2 {
-            n2 = n;
-        } else {
-            panic!("Expression non numérique: {:?}", expr2);
-        }
-        return match operateur.as_str() {
-            "+" => Valeur::Nombre(n1 + n2),
-            "-" => Valeur::Nombre(n1 - n2),
-            "*" => Valeur::Nombre(n1 * n2),
-            "/" => Valeur::Nombre(n1 / n2),
-            _ => panic!("Opérateur inconnu: {}", operateur),
-        };
     } else if let AstExpression::AstChaine(chaine) = expression {
         return Valeur::Chaine(chaine.clone());
     } else {
