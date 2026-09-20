@@ -33,12 +33,10 @@ pub fn execute(programme: AstProgramme) -> Vec<String> {
                     i += 1;
                 }
             } else {
-                eprintln!("appel de méthode {} inconnue: {:?}", nom, instruction);
-                panic!("appel de méthode inconnue");
+                panic!("appel de méthode {} inconnue: {:?}", nom, instruction);
             }
         } else {
-            eprintln!("instruction inconnue: {:?}", instruction);
-            panic!("instruction inconnue");
+            panic!("instruction inconnue: {:?}", instruction);
         }
     }
 

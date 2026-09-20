@@ -1,5 +1,6 @@
 use crate::main_basic::AstInstruction::AstAffectation;
 use crate::main_basic::{AstExpression, AstInstruction, AstProgramme};
+use std::cmp::PartialEq;
 use std::rc::Rc;
 
 #[derive(Debug, Eq, PartialEq, Clone)]
@@ -18,61 +19,128 @@ enum Token {
     TokenMotReserve(String),
 }
 
+#[derive(Debug, Clone, PartialEq)]
+enum TypeCharactere {
+    Nombre,
+    Mot,
+    Separateur,
+    Ignorable,
+}
+
+struct CharIterator {
+    texte: String,
+    index: i32,
+}
+
+impl CharIterator {
+    fn new(s: String) -> CharIterator {
+        CharIterator {
+            texte: s,
+            index: -1,
+        }
+    }
+
+    fn get(&self) -> Option<char> {
+        if self.index < 0 {
+            None
+        } else {
+            self.texte.chars().nth(self.index as usize)
+        }
+    }
+
+    fn get_next(&self, pos: usize) -> Option<char> {
+        if self.index < 0 || self.index + pos as i32 >= self.texte.len() as i32 {
+            None
+        } else {
+            self.texte.chars().nth(self.index as usize + pos)
+        }
+    }
+
+    fn is_type_charactere(&self, type_charactere: TypeCharactere) -> bool {
+        if let Some(c) = self.get() {
+            get_type_charactere(c) == type_charactere
+        } else {
+            false
+        }
+    }
+
+    fn next_is_type_charactere(&self, pos: usize, type_charactere: TypeCharactere) -> bool {
+        if let Some(c) = self.get_next(pos) {
+            get_type_charactere(c) == type_charactere
+        } else {
+            false
+        }
+    }
+
+    fn get_etat(&self) -> EtatLexer {
+        if let Some(c) = self.get() {
+            calcul_etat(c)
+        } else {
+            EtatLexer::Autre
+        }
+    }
+}
+
+impl Iterator for CharIterator {
+    type Item = char;
+
+    fn next(&mut self) -> Option<char> {
+        if self.index + 1 >= 0 && self.index + 1 < self.texte.len() as i32 {
+            self.index += 1;
+            let c = self.texte.chars().nth(self.index as usize).unwrap();
+            Some(c)
+        } else {
+            self.index = self.texte.len() as i32;
+            None
+        }
+    }
+}
+
 pub fn parse_basic(contenu_fichier: String) -> std::io::Result<AstProgramme> {
     let mut liste_tokens: Vec<Vec<Token>> = Vec::new();
 
     for ligne in contenu_fichier.lines() {
-        let mut s = String::new();
-        let mut nombre = 0;
-        let mut etat = EtatLexer::Autre;
 
         let mut liste_tokens_ligne: Vec<Token> = Vec::new();
 
-        for mot in ligne.chars() {
-            let nouvel_etat = calcul_etat(mot);
-            let etat_precedant = etat.clone();
-            if nouvel_etat != etat {
-                if etat != EtatLexer::Autre {
-                    let token = creation_token(s.clone(), nombre, etat);
-                    liste_tokens_ligne.push(token);
-                    s = "".to_string();
-                    nombre = 0;
+        let mut iter = CharIterator::new(ligne.to_string());
+
+        while let Some(mot) = iter.next() {
+            if iter.is_type_charactere(TypeCharactere::Nombre) {
+                let mut nombre = mot.to_digit(10).unwrap();
+
+                while iter.next_is_type_charactere(1, TypeCharactere::Nombre) {
+                    if let Some(mot2) = iter.next() {
+                        nombre = nombre * 10 + mot2.to_digit(10).unwrap();
+                    }
                 }
-            }
-            etat = nouvel_etat;
-            if etat == EtatLexer::Nombre {
-                let n = mot.to_digit(10).unwrap();
-                if etat_precedant != EtatLexer::Nombre {
-                    etat = EtatLexer::Nombre;
-                    nombre = n;
-                } else {
-                    nombre = nombre * 10 + n;
-                }
-            } else if etat == EtatLexer::Autre {
-                etat = EtatLexer::Autre;
-                s = "".to_string();
-                nombre = 0;
-            } else if etat == EtatLexer::Separateur {
-                etat = EtatLexer::Separateur;
-                s = "".to_string();
+
+                let token = creation_token("".to_string(), nombre, EtatLexer::Nombre);
+                liste_tokens_ligne.push(token);
+            } else if iter.is_type_charactere(TypeCharactere::Separateur) {
+                let mut s = "".to_string();
                 s.push(mot);
-            } else if etat == EtatLexer::Mot {
-                if etat_precedant == EtatLexer::Mot {
-                    s.push(mot);
-                } else {
-                    etat = EtatLexer::Mot;
-                    s = "".to_string();
-                    s.push(mot);
+                let token = creation_token(s, 0, EtatLexer::Separateur);
+                liste_tokens_ligne.push(token);
+            } else if iter.is_type_charactere(TypeCharactere::Mot) {
+                let mut s = mot.to_string();
+
+                while iter.next_is_type_charactere(1, TypeCharactere::Mot) {
+                    if let Some(mot2) = iter.next() {
+                        s = s + mot2.to_string().as_str();
+                    }
                 }
+
+                let token = creation_token(s, 0, EtatLexer::Mot);
+                liste_tokens_ligne.push(token);
             } else {
                 // ignoré
-                println!("caractere ignore: {}", mot)
+                if mot == ' ' || mot == '\n' {
+                    // caractères espaces
+                } else {
+                    println!("caractere ignore: {}", mot)
+                }
             }
-        }
-
-        if etat != EtatLexer::Autre {
-            let token = creation_token(s.clone(), nombre, etat);
-            liste_tokens_ligne.push(token);
         }
 
         if liste_tokens_ligne.len() > 0 {
@@ -114,6 +182,36 @@ fn calcul_etat(mot: char) -> EtatLexer {
         EtatLexer::Mot
     } else {
         EtatLexer::Autre
+    }
+}
+
+fn get_type_charactere(mot: char) -> TypeCharactere {
+    if mot.is_ascii_digit() {
+        TypeCharactere::Nombre
+    } else if mot == ' ' {
+        TypeCharactere::Ignorable
+    } else if mot == '+'
+        || mot == '-'
+        || mot == '*'
+        || mot == '/'
+        || mot == '='
+        || mot == '('
+        || mot == ')'
+        || mot == ','
+        || mot == ';'
+    {
+        TypeCharactere::Separateur
+    } else if mot.is_ascii_alphabetic()
+        || mot == '_'
+        || mot == '$'
+        || mot == '!'
+        || mot == '%'
+        || mot == '#'
+        || mot == '&'
+    {
+        TypeCharactere::Mot
+    } else {
+        TypeCharactere::Ignorable
     }
 }
 
@@ -168,7 +266,7 @@ fn parsing_programme(liste_tokens: Vec<Vec<Token>>) -> AstProgramme {
                             &ligne_restant[exp.1 as usize],
                             ",".to_string(),
                         ));
-                        ligne_restant = ligne_restant[n+1..].to_vec();
+                        ligne_restant = ligne_restant[n + 1..].to_vec();
                     } else {
                         break;
                     }
