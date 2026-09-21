@@ -1,6 +1,7 @@
 use crate::main_basic::AstInstruction::AstAffectation;
 use crate::main_basic::{AstExpression, AstInstruction, AstProgramme};
-use std::cmp::PartialEq;
+use std::any::Any;
+use std::cmp::{PartialEq, max};
 use std::rc::Rc;
 
 #[derive(Debug, Eq, PartialEq, Clone)]
@@ -12,7 +13,7 @@ enum EtatLexer {
     ChaineDeCaracteres,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 enum Token {
     TokenNombre(u32),
     TokenIdentifiant(String),
@@ -86,6 +87,134 @@ impl Iterator for CharIterator {
             Some(c)
         } else {
             self.index = self.texte.len() as i32;
+            None
+        }
+    }
+}
+
+#[derive(Debug)]
+struct TokenIterator {
+    liste_tokens: Vec<Token>,
+    index: i32,
+}
+
+impl TokenIterator {
+    fn new(liste: Vec<Token>) -> TokenIterator {
+        TokenIterator {
+            liste_tokens: liste.clone(),
+            index: -1,
+        }
+    }
+
+    fn get(&self) -> Option<Token> {
+        if self.index + 1 >= 0 && self.index + 1 < self.liste_tokens.len() as i32 {
+            Some(self.liste_tokens[(self.index + 1) as usize].clone())
+        } else {
+            None
+        }
+    }
+
+    fn get_pos(&self, position: i32) -> Option<Token> {
+        if self.index + 1 + position >= 0
+            && self.index + 1 + position < self.liste_tokens.len() as i32
+        {
+            Some(self.liste_tokens[(self.index + 1 + position) as usize].clone())
+        } else {
+            None
+        }
+    }
+
+    fn est_type_token(&self, type_token: Token) -> bool {
+        if let Some(t) = self.get() {
+            t == type_token
+        } else {
+            false
+        }
+    }
+
+    fn est_identifiant(&self) -> bool {
+        if let Some(Token::TokenIdentifiant(x)) = self.get() {
+            true
+        } else {
+            false
+        }
+    }
+
+    fn est_identifiant_pos(&self, position: i32) -> bool {
+        if let Some(Token::TokenIdentifiant(x)) = self.get_pos(position) {
+            true
+        } else {
+            false
+        }
+    }
+
+    fn est_separateur_pos(&self, separateur: String, position: i32) -> bool {
+        if let Some(Token::TokenSeparateur(x)) = self.get_pos(position) {
+            x == separateur
+        } else {
+            false
+        }
+    }
+
+    fn est_separateur(&self, separateur: String) -> bool {
+        if let Some(Token::TokenSeparateur(x)) = self.get() {
+            x == separateur
+        } else {
+            false
+        }
+    }
+
+    fn est_nombre(&self) -> bool {
+        if let Some(Token::TokenNombre(x)) = self.get() {
+            true
+        } else {
+            false
+        }
+    }
+
+    fn est_nombre_pos(&self, position: i32) -> bool {
+        if let Some(Token::TokenNombre(x)) = self.get_pos(position) {
+            true
+        } else {
+            false
+        }
+    }
+
+    fn est_chaine(&self) -> bool {
+        if let Some(Token::TokenChaine(x)) = self.get() {
+            true
+        } else {
+            false
+        }
+    }
+
+    fn est_chaine_pos(&self, position: i32) -> bool {
+        if let Some(Token::TokenChaine(x)) = self.get_pos(position) {
+            true
+        } else {
+            false
+        }
+    }
+
+    fn len(&self) -> usize {
+        if self.index < 0 {
+            self.liste_tokens.len()
+        } else {
+            max(self.liste_tokens.len() - (self.index + 1) as usize, 0)
+        }
+    }
+}
+
+impl Iterator for TokenIterator {
+    type Item = Token;
+
+    fn next(&mut self) -> Option<Token> {
+        if self.index + 1 >= 0 && self.index + 1 < self.liste_tokens.len() as i32 {
+            self.index += 1;
+            let c = self.liste_tokens.get(self.index as usize).unwrap();
+            Some(c.clone())
+        } else {
+            self.index = self.liste_tokens.len() as i32;
             None
         }
     }
@@ -218,55 +347,62 @@ fn parsing_programme(liste_tokens: Vec<Vec<Token>>) -> AstProgramme {
             continue;
         }
 
-        if ligne.len() > 1
-            && est_identifiant(&ligne[0])
-            && est_separateur(&ligne[1], "=".to_string())
+        let mut token_iterator = TokenIterator::new(ligne);
+
+        if token_iterator.est_identifiant() && token_iterator.est_separateur_pos("=".to_string(), 1)
         {
             // affectation
-            if let Token::TokenIdentifiant(ident) = ligne[0].clone() {
+            if let Token::TokenIdentifiant(ident) = token_iterator.next().unwrap() {
                 println!("affectation {}", ident);
-                let exp = parsing_expression(ligne[2..].to_vec());
+                token_iterator.next();
+                let exp = parsing_expression(&mut token_iterator);
                 let instruction = AstAffectation(ident.clone(), exp.0);
                 programme.liste_instructions.push(instruction);
             } else {
-                eprintln!("token {:?} n'est pas un identifiant", ligne[0]);
-                panic!("token {:?} n'est pas un identifiant", ligne[0]);
+                panic!("token {:?} n'est pas un identifiant", token_iterator.get());
             }
-        } else if ligne.len() >= 1 && est_identifiant(&ligne[0]) {
+        } else if token_iterator.est_identifiant() {
             // appel de méthode
-            if let Token::TokenIdentifiant(ident) = ligne[0].clone() {
+            if let Token::TokenIdentifiant(ident) = token_iterator.next().unwrap() {
                 println!("appel {}", ident);
-                let mut ligne_restant = ligne[1..].to_vec();
+                // let mut ligne_restant = ligne[1..].to_vec();
                 let mut liste_expressions: Vec<AstExpression> = vec![];
-                let mut separateur_virgule: Vec<bool> = vec![];
+                let mut separateur_virgule_liste: Vec<bool> = vec![];
                 loop {
-                    let len = ligne_restant.len();
-                    let exp = parsing_expression(ligne_restant.clone());
+                    // let len = ligne_restant.len();
+                    let exp = parsing_expression(&mut token_iterator);
                     liste_expressions.push(exp.0);
-                    if exp.1 + 1 < len as u32
-                        && separateur_parametre(&ident, &ligne_restant[exp.1 as usize])
+                    if token_iterator.len() > 0
+                        && separateur_parametre(&ident, token_iterator.get().unwrap())
                     {
-                        let n = exp.1 as usize;
-                        separateur_virgule.push(est_separateur(
-                            &ligne_restant[exp.1 as usize],
-                            ",".to_string(),
-                        ));
-                        ligne_restant = ligne_restant[n + 1..].to_vec();
+                        let mut separateur_virgule = true;
+                        if let Some(Token::TokenSeparateur(s)) = token_iterator.next() {
+                            separateur_virgule = s == ",";
+                        } else {
+                            panic!(
+                                "token {:?} n'est pas un séparateur",
+                                token_iterator.get().unwrap()
+                            );
+                        };
+                        // let n = exp.1 as usize;
+                        separateur_virgule_liste.push(separateur_virgule);
+                        // ligne_restant = ligne_restant[n + 1..].to_vec();
                     } else {
                         break;
                     }
                 }
 
-                let instruction =
-                    AstInstruction::AstAppelMethode(ident, liste_expressions, separateur_virgule);
+                let instruction = AstInstruction::AstAppelMethode(
+                    ident,
+                    liste_expressions,
+                    separateur_virgule_liste,
+                );
 
                 programme.liste_instructions.push(instruction);
             } else {
-                eprintln!("token {:?} n'est pas un identifiant", ligne[0]);
-                panic!("token {:?} n'est pas un identifiant", ligne[0]);
+                panic!("token {:?} n'est pas un identifiant", token_iterator.get());
             }
         } else {
-            eprintln!("instruction inconnue: {:?}", ligne);
             panic!("instruction inconnue");
         }
     }
@@ -274,11 +410,11 @@ fn parsing_programme(liste_tokens: Vec<Vec<Token>>) -> AstProgramme {
     programme
 }
 
-fn separateur_parametre(nom_methode: &String, mot: &Token) -> bool {
+fn separateur_parametre(nom_methode: &String, mot: Token) -> bool {
     if nom_methode.to_lowercase() == "print" {
-        est_separateur(mot, ",".to_string()) || est_separateur(mot, ";".to_string())
+        est_separateur(&mot, ",".to_string()) || est_separateur(&mot, ";".to_string())
     } else {
-        est_separateur(mot, ",".to_string())
+        est_separateur(&mot, ",".to_string())
     }
 }
 
@@ -310,8 +446,8 @@ fn est_chaine(token: &Token) -> bool {
     }
 }
 
-fn parsing_expression(liste_tokens: Vec<Token>) -> (AstExpression, u32) {
-    if liste_tokens.len() == 1 && est_identifiant(&liste_tokens[0]) {
+fn parsing_expression(mut liste_tokens: &mut TokenIterator) -> (AstExpression, u32) {
+    /*if liste_tokens.len() == 1 && est_identifiant(&liste_tokens[0]) {
         if let Token::TokenIdentifiant(ident) = &liste_tokens[0] {
             (AstExpression::AstIdentifiant(ident.clone()), 1)
         } else {
@@ -326,33 +462,37 @@ fn parsing_expression(liste_tokens: Vec<Token>) -> (AstExpression, u32) {
         } else {
             panic!("Token {:?} n'est pas un nombre", liste_tokens[0].clone());
         }
-    } else if liste_tokens.len() == 3
-        && (est_identifiant(&liste_tokens[0])
-            || est_nombre(&liste_tokens[0])
-            || est_chaine(&liste_tokens[0]))
-        && (est_separateur(&liste_tokens[1], "+".to_string())
-            || est_separateur(&liste_tokens[1], "-".to_string())
-            || est_separateur(&liste_tokens[1], "*".to_string())
-            || est_separateur(&liste_tokens[1], "/".to_string()))
-        && (est_identifiant(&liste_tokens[2])
-            || est_nombre(&liste_tokens[2])
-            || est_chaine(&liste_tokens[2]))
+    } else*/
+    if liste_tokens.len() == 3
+        && (liste_tokens.est_identifiant()
+            || liste_tokens.est_nombre()
+            || liste_tokens.est_chaine())
+        && (liste_tokens.est_separateur_pos("+".to_string(), 1)
+            || liste_tokens.est_separateur_pos("-".to_string(), 1)
+            || liste_tokens.est_separateur_pos("*".to_string(), 1)
+            || liste_tokens.est_separateur_pos("/".to_string(), 1))
+        && (liste_tokens.est_identifiant_pos(2)
+            || liste_tokens.est_nombre_pos(2)
+            || liste_tokens.est_chaine_pos(2))
     {
-        if let Token::TokenSeparateur(separateur) = &liste_tokens[1] {
+        let token1 = liste_tokens.next().unwrap();
+        if let Token::TokenSeparateur(separateur) = liste_tokens.next().unwrap() {
             let mut nb_token: u32 = 0;
             let expr1: AstExpression;
             let expr2: AstExpression;
             let mut expr_list: Vec<Token> = Vec::new();
-            expr_list.push(liste_tokens[0].clone());
-            let res = parsing_expression(expr_list);
+            expr_list.push(token1);
+            let mut token_iter = TokenIterator::new(expr_list);
+            let res = parsing_expression(&mut token_iter);
             expr1 = res.0;
             nb_token += res.1;
 
             nb_token += 1;
 
             let mut expr_list2: Vec<Token> = Vec::new();
-            expr_list2.push(liste_tokens[2].clone());
-            let res = parsing_expression(expr_list2);
+            expr_list2.push(liste_tokens.next().unwrap());
+            let mut token_iter2 = TokenIterator::new(expr_list2);
+            let res = parsing_expression(&mut token_iter2);
             expr2 = res.0;
             nb_token += res.1;
 
@@ -365,38 +505,39 @@ fn parsing_expression(liste_tokens: Vec<Token>) -> (AstExpression, u32) {
                 nb_token,
             );
         } else {
-            eprintln!("Invalid separator token: {:?}", liste_tokens[1]);
+            eprintln!("Invalid separator token: {:?}", liste_tokens.get());
             panic!("Invalid separator token");
         }
-    } else if liste_tokens.len() > 0 && est_separateur(&liste_tokens[0], "(".to_string()) {
+    } else if liste_tokens.est_separateur("(".to_string()) {
         let mut nb_token: u32 = 0;
         nb_token += 1;
-        let res = parsing_expression(liste_tokens[1..].to_vec());
+        liste_tokens.next();
+        let res = parsing_expression(liste_tokens);
         nb_token += res.1;
-        if est_separateur(&liste_tokens[nb_token as usize], ")".to_string()) {
+        if liste_tokens.est_separateur(")".to_string()) {
             nb_token += 1;
             return (res.0, nb_token);
         } else {
             eprintln!("parenthese manquante: {:?}", liste_tokens);
             panic!("parenthese manquante");
         }
-    } else if liste_tokens.len() > 0 && est_identifiant(&liste_tokens[0]) {
-        if let Token::TokenIdentifiant(ident) = &liste_tokens[0] {
+    } else if liste_tokens.est_identifiant() {
+        if let Token::TokenIdentifiant(ident) = liste_tokens.next().unwrap() {
             return (AstExpression::AstIdentifiant(ident.clone()), 1);
         } else {
             panic!("identifiant inconnu");
         }
-    } else if liste_tokens.len() > 0 && est_nombre(&liste_tokens[0]) {
-        if let Token::TokenNombre(nombre) = &liste_tokens[0] {
-            return (AstExpression::AstNombre(*nombre), 1);
+    } else if liste_tokens.est_nombre() {
+        if let Token::TokenNombre(nombre) = liste_tokens.next().unwrap() {
+            return (AstExpression::AstNombre(nombre), 1);
         } else {
-            panic!("nombre inconnu: {:?}", liste_tokens[0]);
+            panic!("nombre inconnu: {:?}", liste_tokens.get());
         }
-    } else if liste_tokens.len() > 0 && est_chaine(&liste_tokens[0]) {
-        if let Token::TokenChaine(chaine) = &liste_tokens[0] {
+    } else if liste_tokens.est_chaine() {
+        if let Token::TokenChaine(chaine) = liste_tokens.next().unwrap() {
             return (AstExpression::AstChaine(chaine.clone()), 1);
         } else {
-            panic!("chaine inconnue: {:?}", liste_tokens[0]);
+            panic!("chaine inconnue: {:?}", liste_tokens.get());
         }
     } else {
         panic!("expression inconnue: {:?}", liste_tokens);
