@@ -74,10 +74,23 @@ impl CharIterator {
             false
         }
     }
-    pub(crate) fn next_is_fin_variable(&self) -> bool {
+
+    fn next_is_fin_variable(&self) -> bool {
         if let Some(c) = self.get_next(1) {
             if get_type_charactere(c) == TypeCharactere::Separateur {
                 est_fin_variable(c)
+            } else {
+                false
+            }
+        } else {
+            false
+        }
+    }
+
+    fn next_is_underscore(&self) -> bool {
+        if let Some(c) = self.get_next(1) {
+            if get_type_charactere(c) == TypeCharactere::Separateur {
+                c == '_'
             } else {
                 false
             }
@@ -231,6 +244,16 @@ impl Iterator for TokenIterator {
 }
 
 pub fn parse_basic(contenu_fichier: String) -> std::io::Result<AstProgramme> {
+    let liste_tokens: Vec<Vec<Token>> = lexer(contenu_fichier);
+
+    println!("liste token : {:?}", liste_tokens);
+
+    let programme = parsing_programme(liste_tokens);
+
+    Ok(programme)
+}
+
+fn lexer(contenu_fichier: String) -> Vec<Vec<Token>> {
     let mut liste_tokens: Vec<Vec<Token>> = Vec::new();
 
     for ligne in contenu_fichier.lines() {
@@ -240,6 +263,7 @@ pub fn parse_basic(contenu_fichier: String) -> std::io::Result<AstProgramme> {
 
         while let Some(mot) = iter.next() {
             if iter.is_type_charactere(TypeCharactere::Nombre) {
+                // nombre
                 let mut nombre = mot.to_digit(10).unwrap();
 
                 while iter.next_is_type_charactere(1, TypeCharactere::Nombre) {
@@ -253,15 +277,19 @@ pub fn parse_basic(contenu_fichier: String) -> std::io::Result<AstProgramme> {
                 let token = creation_token("".to_string(), nombre, EtatLexer::Nombre);
                 liste_tokens_ligne.push(token);
             } else if iter.is_type_charactere(TypeCharactere::Separateur) {
+                // séparateur
                 let mut s = "".to_string();
                 s.push(mot);
                 let token = creation_token(s, 0, EtatLexer::Separateur);
                 liste_tokens_ligne.push(token);
             } else if iter.is_type_charactere(TypeCharactere::Mot) {
+                // identifiant
                 let mut s = mot.to_string();
 
                 while iter.next_is_type_charactere(1, TypeCharactere::Mot)
                     || iter.next_is_fin_variable()
+                    || iter.next_is_type_charactere(1, TypeCharactere::Nombre)
+                    || iter.next_is_underscore()
                 {
                     if let Some(mot2) = iter.next() {
                         s = s + mot2.to_string().as_str();
@@ -276,6 +304,7 @@ pub fn parse_basic(contenu_fichier: String) -> std::io::Result<AstProgramme> {
                 let token = creation_token(s, 0, EtatLexer::Mot);
                 liste_tokens_ligne.push(token);
             } else if iter.is_type_charactere(TypeCharactere::Guillemet) {
+                // chaine de caractère
                 let mut s = "".to_string();
                 while !iter.next_is_type_charactere(1, TypeCharactere::Guillemet) {
                     if let Some(mot2) = iter.next() {
@@ -303,15 +332,10 @@ pub fn parse_basic(contenu_fichier: String) -> std::io::Result<AstProgramme> {
             liste_tokens.push(liste_tokens_ligne);
         }
     }
-
-    println!("liste token : {:?}", liste_tokens);
-
-    let programme = parsing_programme(liste_tokens);
-
-    Ok(programme)
+    liste_tokens
 }
 
-fn est_fin_variable(c:char)->bool{
+fn est_fin_variable(c: char) -> bool {
     c == '$' || c == '%' || c == '&' || c == '!' || c == '#'
 }
 
@@ -499,17 +523,16 @@ fn parsing_expression(mut liste_tokens: &mut TokenIterator) -> (AstExpression, u
             expr2 = res.0;
             nb_token += res.1;
 
-            return (
+            (
                 AstExpression::AstOperateurBinaire(
                     separateur.clone(),
                     Rc::new(expr1),
                     Rc::new(expr2),
                 ),
                 nb_token,
-            );
+            )
         } else {
-            eprintln!("Invalid separator token: {:?}", liste_tokens.get());
-            panic!("Invalid separator token");
+            panic!("Invalid separator token: {:?}", liste_tokens.get());
         }
     } else if liste_tokens.est_separateur("(".to_string()) {
         let mut nb_token: u32 = 0;
@@ -521,8 +544,7 @@ fn parsing_expression(mut liste_tokens: &mut TokenIterator) -> (AstExpression, u
             nb_token += 1;
             return (res.0, nb_token);
         } else {
-            eprintln!("parenthese manquante: {:?}", liste_tokens);
-            panic!("parenthese manquante");
+            panic!("parenthese manquante: {:?}", liste_tokens);
         }
     } else if liste_tokens.est_identifiant() {
         if let Token::TokenIdentifiant(ident) = liste_tokens.next().unwrap() {
@@ -544,5 +566,93 @@ fn parsing_expression(mut liste_tokens: &mut TokenIterator) -> (AstExpression, u
         }
     } else {
         panic!("expression inconnue: {:?}", liste_tokens);
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    // Note this useful idiom: importing names from outer (for mod tests) scope.
+    use super::*;
+
+    #[test]
+    fn test_lexer_nombre() {
+        let fichier = "123".to_string();
+        let liste_tokens = lexer(fichier);
+
+        assert_eq!(liste_tokens, vec![vec![Token::TokenNombre(123)]]);
+    }
+
+    #[test]
+    fn test_lexer_identifiant() {
+        let fichier = "abc".to_string();
+        let liste_tokens = lexer(fichier);
+
+        assert_eq!(
+            liste_tokens,
+            vec![vec![Token::TokenIdentifiant("abc".to_string())]]
+        );
+    }
+
+    #[test]
+    fn test_lexer_identifiant2() {
+        let fichier = "abc$".to_string();
+        let liste_tokens = lexer(fichier);
+
+        assert_eq!(
+            liste_tokens,
+            vec![vec![Token::TokenIdentifiant("abc$".to_string())]]
+        );
+    }
+
+    #[test]
+    fn test_lexer_identifiant3() {
+        let fichier = "toto tata% 96325".to_string();
+        let liste_tokens = lexer(fichier);
+
+        assert_eq!(
+            liste_tokens,
+            vec![vec![
+                Token::TokenIdentifiant("toto".to_string()),
+                Token::TokenIdentifiant("tata%".to_string()),
+                Token::TokenNombre(96325)
+            ]]
+        );
+    }
+
+    #[test]
+    fn test_lexer_identifiant4() {
+        let fichier = "azertyu123_bbb".to_string();
+        let liste_tokens = lexer(fichier);
+
+        assert_eq!(
+            liste_tokens,
+            vec![vec![Token::TokenIdentifiant("azertyu123_bbb".to_string())]]
+        );
+    }
+
+    #[test]
+    fn test_lexer_separateur() {
+        let fichier = "2+3".to_string();
+        let liste_tokens = lexer(fichier);
+
+        assert_eq!(
+            liste_tokens,
+            vec![vec![
+                Token::TokenNombre(2),
+                Token::TokenSeparateur("+".to_string()),
+                Token::TokenNombre(3)
+            ]]
+        );
+    }
+
+    #[test]
+    fn test_lexer_guillemet() {
+        let fichier = "\"bbb\"".to_string();
+        let liste_tokens = lexer(fichier);
+
+        assert_eq!(
+            liste_tokens,
+            vec![vec![Token::TokenChaine("bbb".to_string()),]]
+        );
     }
 }
