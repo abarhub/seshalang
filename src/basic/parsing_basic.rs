@@ -466,22 +466,6 @@ fn est_chaine(token: &Token) -> bool {
 }
 
 fn parsing_expression(mut liste_tokens: &mut TokenIterator) -> (AstExpression, u32) {
-    /*if liste_tokens.len() == 1 && est_identifiant(&liste_tokens[0]) {
-        if let Token::TokenIdentifiant(ident) = &liste_tokens[0] {
-            (AstExpression::AstIdentifiant(ident.clone()), 1)
-        } else {
-            panic!(
-                "Token {:?} n'est pas un identifiant",
-                liste_tokens[0].clone()
-            );
-        }
-    } else if liste_tokens.len() == 1 && est_nombre(&liste_tokens[0]) {
-        if let Token::TokenNombre(nombre) = liste_tokens[0] {
-            return (AstExpression::AstNombre(nombre), 1);
-        } else {
-            panic!("Token {:?} n'est pas un nombre", liste_tokens[0].clone());
-        }
-    } else*/
     if liste_tokens.len() == 3
         && (liste_tokens.est_identifiant()
             || liste_tokens.est_nombre()
