@@ -1,4 +1,3 @@
-
 #[derive(Debug, Eq, PartialEq, Clone)]
 enum EtatLexer {
     Autre,
@@ -8,12 +7,31 @@ enum EtatLexer {
     ChaineDeCaracteres,
 }
 
+#[derive(Debug, Clone, PartialEq)]
+pub enum TypeSeparateur {
+    EQU,
+    DIFF,
+    SUP,
+    SUPE,
+    INF,
+    INFE,
+    PLUS,
+    MOINS,
+    FOIS,
+    DIVR,
+    DIVE,
+    EXP,
+    PARENTO,
+    PARENTF,
+    VIRGULE,
+    POINTVIRGULE,
+}
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum Token {
     TokenNombre(u32),
     TokenIdentifiant(String),
-    TokenSeparateur(String),
+    TokenSeparateur(TypeSeparateur),
     TokenMotReserve(String),
     TokenChaine(String),
 }
@@ -198,7 +216,6 @@ fn est_fin_variable(c: char) -> bool {
     c == '$' || c == '%' || c == '&' || c == '!' || c == '#'
 }
 
-
 fn get_type_charactere(mot: char) -> TypeCharactere {
     if mot.is_ascii_digit() {
         TypeCharactere::Nombre
@@ -235,15 +252,53 @@ fn creation_token(s: String, nombre: u32, etat: EtatLexer) -> Token {
     match etat {
         EtatLexer::Nombre => Token::TokenNombre(nombre),
         EtatLexer::Mot => Token::TokenIdentifiant(s),
-        EtatLexer::Separateur => Token::TokenSeparateur(s),
+        EtatLexer::Separateur => Token::TokenSeparateur(calculOperateur(s)),
         EtatLexer::ChaineDeCaracteres => Token::TokenChaine(s),
         _ => panic!("Etat invalide"),
     }
 }
 
+fn calculOperateur(s: String) -> TypeSeparateur {
+    if s == "+" {
+        TypeSeparateur::PLUS
+    } else if s == "-" {
+        TypeSeparateur::MOINS
+    } else if s == "(" {
+        TypeSeparateur::PARENTO
+    } else if s == ")" {
+        TypeSeparateur::PARENTF
+    } else if s == "=" {
+        TypeSeparateur::EQU
+    } else if s == "<>" {
+        TypeSeparateur::DIFF
+    } else if s == ">" {
+        TypeSeparateur::SUP
+    } else if s == ">=" {
+        TypeSeparateur::SUPE
+    } else if s == "<" {
+        TypeSeparateur::INF
+    } else if s == "<=" {
+        TypeSeparateur::INFE
+    } else if s == "*" {
+        TypeSeparateur::FOIS
+    } else if s == "/" {
+        TypeSeparateur::DIVR
+    } else if s == "\\" {
+        TypeSeparateur::DIVE
+    } else if s == "^" {
+        TypeSeparateur::EXP
+    } else if s == "," {
+        TypeSeparateur::VIRGULE
+    } else if s == ";" {
+        TypeSeparateur::POINTVIRGULE
+    } else {
+        panic!("separateur invalide : {}", s)
+    }
+}
 
 #[cfg(test)]
 mod tests {
+    use crate::basic::lexer_basic::TypeSeparateur::PLUS;
     // Note this useful idiom: importing names from outer (for mod tests) scope.
     use super::*;
 
@@ -312,7 +367,7 @@ mod tests {
             liste_tokens,
             vec![vec![
                 Token::TokenNombre(2),
-                Token::TokenSeparateur("+".to_string()),
+                Token::TokenSeparateur(PLUS),
                 Token::TokenNombre(3)
             ]]
         );

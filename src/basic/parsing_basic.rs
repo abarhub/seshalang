@@ -1,6 +1,14 @@
-use crate::basic::lexer_basic::{Token, lexer};
+use crate::basic::lexer_basic::TypeSeparateur::{
+    DIVE, FOIS, MOINS, PARENTF, PARENTO, PLUS, POINTVIRGULE, VIRGULE,
+};
+use crate::basic::lexer_basic::{Token, TypeSeparateur, lexer};
 use crate::basic::main_basic::AstInstruction::AstAffectation;
-use crate::basic::main_basic::{AstExpression, AstInstruction, AstProgramme};
+use crate::basic::main_basic::AstOperateurBinaireType::{
+    DivisionEntiere, DivisionReel, Moins, Multiplication,
+};
+use crate::basic::main_basic::{
+    AstExpression, AstInstruction, AstOperateurBinaireType, AstProgramme,
+};
 use std::cmp::{PartialEq, max};
 use std::rc::Rc;
 
@@ -60,7 +68,7 @@ impl TokenIterator {
         }
     }
 
-    fn est_separateur_pos(&self, separateur: String, position: i32) -> bool {
+    fn est_separateur_pos(&self, separateur: TypeSeparateur, position: i32) -> bool {
         if let Some(Token::TokenSeparateur(x)) = self.get_pos(position) {
             x == separateur
         } else {
@@ -68,7 +76,7 @@ impl TokenIterator {
         }
     }
 
-    fn est_separateur(&self, separateur: String) -> bool {
+    fn est_separateur(&self, separateur: TypeSeparateur) -> bool {
         if let Some(Token::TokenSeparateur(x)) = self.get() {
             x == separateur
         } else {
@@ -153,7 +161,8 @@ fn parsing_programme(liste_tokens: Vec<Vec<Token>>) -> AstProgramme {
 
         let mut token_iterator = TokenIterator::new(ligne);
 
-        if token_iterator.est_identifiant() && token_iterator.est_separateur_pos("=".to_string(), 1)
+        if token_iterator.est_identifiant()
+            && token_iterator.est_separateur_pos(TypeSeparateur::EQU, 1)
         {
             // affectation
             if let Token::TokenIdentifiant(ident) = token_iterator.next().unwrap() {
@@ -181,7 +190,7 @@ fn parsing_programme(liste_tokens: Vec<Vec<Token>>) -> AstProgramme {
                     {
                         let mut separateur_virgule = true;
                         if let Some(Token::TokenSeparateur(s)) = token_iterator.next() {
-                            separateur_virgule = s == ",";
+                            separateur_virgule = s == TypeSeparateur::VIRGULE;
                         } else {
                             panic!(
                                 "token {:?} n'est pas un séparateur",
@@ -216,9 +225,9 @@ fn parsing_programme(liste_tokens: Vec<Vec<Token>>) -> AstProgramme {
 
 fn separateur_parametre(nom_methode: &String, mot: Token) -> bool {
     if nom_methode.to_lowercase() == "print" {
-        est_separateur(&mot, ",".to_string()) || est_separateur(&mot, ";".to_string())
+        est_separateur(&mot, VIRGULE) || est_separateur(&mot, POINTVIRGULE)
     } else {
-        est_separateur(&mot, ",".to_string())
+        est_separateur(&mot, VIRGULE)
     }
 }
 
@@ -236,7 +245,7 @@ fn est_nombre(token: &Token) -> bool {
     }
 }
 
-fn est_separateur(token: &Token, separateur_cherche: String) -> bool {
+fn est_separateur(token: &Token, separateur_cherche: TypeSeparateur) -> bool {
     match token {
         Token::TokenSeparateur(separateur) => separateur == &separateur_cherche,
         _ => false,
@@ -255,10 +264,10 @@ fn parsing_expression(mut liste_tokens: &mut TokenIterator) -> (AstExpression, u
         && (liste_tokens.est_identifiant()
             || liste_tokens.est_nombre()
             || liste_tokens.est_chaine())
-        && (liste_tokens.est_separateur_pos("+".to_string(), 1)
-            || liste_tokens.est_separateur_pos("-".to_string(), 1)
-            || liste_tokens.est_separateur_pos("*".to_string(), 1)
-            || liste_tokens.est_separateur_pos("/".to_string(), 1))
+        && (liste_tokens.est_separateur_pos(PLUS, 1)
+            || liste_tokens.est_separateur_pos(MOINS, 1)
+            || liste_tokens.est_separateur_pos(FOIS, 1)
+            || liste_tokens.est_separateur_pos(DIVE, 1))
         && (liste_tokens.est_identifiant_pos(2)
             || liste_tokens.est_nombre_pos(2)
             || liste_tokens.est_chaine_pos(2))
@@ -286,7 +295,7 @@ fn parsing_expression(mut liste_tokens: &mut TokenIterator) -> (AstExpression, u
 
             (
                 AstExpression::AstOperateurBinaire(
-                    separateur.clone(),
+                    calcul_type_operation_binaire(separateur),
                     Rc::new(expr1),
                     Rc::new(expr2),
                 ),
@@ -295,13 +304,13 @@ fn parsing_expression(mut liste_tokens: &mut TokenIterator) -> (AstExpression, u
         } else {
             panic!("Invalid separator token: {:?}", liste_tokens.get());
         }
-    } else if liste_tokens.est_separateur("(".to_string()) {
+    } else if liste_tokens.est_separateur(PARENTO) {
         let mut nb_token: u32 = 0;
         nb_token += 1;
         liste_tokens.next();
         let res = parsing_expression(liste_tokens);
         nb_token += res.1;
-        if liste_tokens.est_separateur(")".to_string()) {
+        if liste_tokens.est_separateur(PARENTF) {
             nb_token += 1;
             return (res.0, nb_token);
         } else {
@@ -327,5 +336,18 @@ fn parsing_expression(mut liste_tokens: &mut TokenIterator) -> (AstExpression, u
         }
     } else {
         panic!("expression inconnue: {:?}", liste_tokens);
+    }
+}
+
+fn calcul_type_operation_binaire(type_operation: TypeSeparateur) -> AstOperateurBinaireType {
+    match type_operation {
+        TypeSeparateur::PLUS => AstOperateurBinaireType::Plus,
+        TypeSeparateur::MOINS => Moins,
+        TypeSeparateur::FOIS => Multiplication,
+        TypeSeparateur::DIVR => DivisionReel,
+        TypeSeparateur::DIVE => DivisionEntiere,
+        _ => {
+            panic!("unsupported type separateur: {:?}", type_operation);
+        }
     }
 }

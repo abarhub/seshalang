@@ -1,6 +1,8 @@
+use crate::basic::main_basic::{
+    AstExpression, AstInstruction, AstOperateurBinaireType, AstProgramme,
+};
 use std::collections::HashMap;
 use std::fmt;
-use crate::basic::main_basic::{AstExpression, AstInstruction, AstProgramme};
 
 #[derive(Debug, Clone)]
 enum Valeur {
@@ -85,23 +87,23 @@ fn execute_expression(
             } else {
                 panic!("Expression non numérique: {:?}", expr2);
             }
-            return match operateur.as_str() {
-                "+" => Valeur::Nombre(n1 + n2),
-                "-" => Valeur::Nombre(n1 - n2),
-                "*" => Valeur::Nombre(n1 * n2),
-                "/" => Valeur::Nombre(n1 / n2),
-                _ => panic!("Opérateur inconnu: {}", operateur),
+            return match operateur {
+                AstOperateurBinaireType::Plus => Valeur::Nombre(n1 + n2),
+                AstOperateurBinaireType::Moins => Valeur::Nombre(n1 - n2),
+                AstOperateurBinaireType::Multiplication => Valeur::Nombre(n1 * n2),
+                AstOperateurBinaireType::DivisionEntiere => Valeur::Nombre(n1 / n2),
+                _ => panic!("Opérateur inconnu: {:?}", operateur),
             };
         } else if let Valeur::Chaine(s1) = expr1 {
-            let s2:String;
+            let s2: String;
             if let Valeur::Chaine(s02) = expr2 {
                 s2 = s02;
             } else {
                 panic!("Expression non numérique: {:?}", expr2);
             }
-            return match operateur.as_str() {
-                "+" => Valeur::Chaine(s1 + s2.as_str()),
-                _ => panic!("Opérateur inconnu: {}", operateur),
+            return match operateur {
+                AstOperateurBinaireType::Plus => Valeur::Chaine(s1 + s2.as_str()),
+                _ => panic!("Opérateur inconnu: {:?}", operateur),
             };
         } else {
             panic!("Expression invalide: {:?}", expr1);

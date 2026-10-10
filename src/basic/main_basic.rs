@@ -17,10 +17,19 @@ pub enum AstInstruction {
 }
 
 #[derive(Debug, Clone)]
+pub enum AstOperateurBinaireType {
+    Plus,
+    Moins,
+    Multiplication,
+    DivisionReel,
+    DivisionEntiere
+}
+
+#[derive(Debug, Clone)]
 pub enum AstExpression {
     AstNombre(u32),
     AstIdentifiant(String),
-    AstOperateurBinaire(String, Rc<AstExpression>, Rc<AstExpression>),
+    AstOperateurBinaire(AstOperateurBinaireType, Rc<AstExpression>, Rc<AstExpression>),
     AstChaine(String),
 }
 
