@@ -1,4 +1,32 @@
 #[derive(Debug, Eq, PartialEq, Clone)]
+pub enum TypeMotCle {
+    If,
+    Else,
+    For,
+    Next,
+    Goto,
+    Print,
+    Mod,
+    Not,
+    And,
+    Or,
+    Xor,
+    Eqv,
+    Imp,
+    Const,
+    Let,
+    End,
+    Then,
+    Select,
+    Case,
+    ElseIf,
+    Dim,
+    As,
+    Integer,
+    String,
+}
+
+#[derive(Debug, Eq, PartialEq, Clone)]
 enum EtatLexer {
     Autre,
     Nombre,
@@ -32,7 +60,7 @@ pub enum Token {
     TokenNombre(u32),
     TokenIdentifiant(String),
     TokenSeparateur(TypeSeparateur),
-    TokenMotReserve(String),
+    TokenMotReserve(TypeMotCle),
     TokenChaine(String),
 }
 
@@ -265,14 +293,20 @@ fn get_type_charactere(mot: char) -> TypeCharactere {
 fn creation_token(s: String, nombre: u32, etat: EtatLexer) -> Token {
     match etat {
         EtatLexer::Nombre => Token::TokenNombre(nombre),
-        EtatLexer::Mot => Token::TokenIdentifiant(s),
-        EtatLexer::Separateur => Token::TokenSeparateur(calculOperateur(s)),
+        EtatLexer::Mot => {
+            if let Some(mot_cle) = mots_cles(s.clone()) {
+                Token::TokenMotReserve(mot_cle)
+            } else {
+                Token::TokenIdentifiant(s)
+            }
+        }
+        EtatLexer::Separateur => Token::TokenSeparateur(calcul_operateur(s)),
         EtatLexer::ChaineDeCaracteres => Token::TokenChaine(s),
         _ => panic!("Etat invalide"),
     }
 }
 
-fn calculOperateur(s: String) -> TypeSeparateur {
+fn calcul_operateur(s: String) -> TypeSeparateur {
     if s == "+" {
         TypeSeparateur::PLUS
     } else if s == "-" {
@@ -307,6 +341,36 @@ fn calculOperateur(s: String) -> TypeSeparateur {
         TypeSeparateur::POINTVIRGULE
     } else {
         panic!("separateur invalide : {}", s)
+    }
+}
+
+fn mots_cles(s: String) -> Option<TypeMotCle> {
+    match s.to_uppercase().as_str() {
+        "IF" => Some(TypeMotCle::If),
+        "ELSE" => Some(TypeMotCle::Else),
+        "FOR" => Some(TypeMotCle::For),
+        "GOTO" => Some(TypeMotCle::Goto),
+        "NEXT" => Some(TypeMotCle::Next),
+        "PRINT" => Some(TypeMotCle::Print),
+        "MOD" => Some(TypeMotCle::Mod),
+        "NOT" => Some(TypeMotCle::Not),
+        "AND" => Some(TypeMotCle::And),
+        "OR" => Some(TypeMotCle::Or),
+        "XOR" => Some(TypeMotCle::Xor),
+        "EQV" => Some(TypeMotCle::Eqv),
+        "IMP" => Some(TypeMotCle::Imp),
+        "CONST" => Some(TypeMotCle::Const),
+        "LET" => Some(TypeMotCle::Let),
+        "END" => Some(TypeMotCle::End),
+        "THEN" => Some(TypeMotCle::Then),
+        "SELECT" => Some(TypeMotCle::Select),
+        "CASE" => Some(TypeMotCle::Case),
+        "ELSEIF" => Some(TypeMotCle::ElseIf),
+        "DIM" => Some(TypeMotCle::Dim),
+        "AS" => Some(TypeMotCle::As),
+        "INTEGER" => Some(TypeMotCle::Integer),
+        "STRING" => Some(TypeMotCle::String),
+        _ => None,
     }
 }
 
