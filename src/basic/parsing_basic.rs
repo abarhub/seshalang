@@ -1,6 +1,5 @@
-use crate::main_basic::AstInstruction::AstAffectation;
-use crate::main_basic::{AstExpression, AstInstruction, AstProgramme};
-use std::any::Any;
+use crate::basic::main_basic::AstInstruction::AstAffectation;
+use crate::basic::main_basic::{AstExpression, AstInstruction, AstProgramme};
 use std::cmp::{PartialEq, max};
 use std::rc::Rc;
 

@@ -1,9 +1,8 @@
 use std::env;
-use crate::main_basic::main_basic;
 
-mod main_basic;
-pub mod parsing_basic;
-mod exec_basic;
+mod basic;
+
+
 
 fn main() {
     let mut x = 5;
@@ -17,7 +16,7 @@ fn main() {
         println!("Premier argument : {}", nom_fichier);
 
         if nom_fichier.ends_with(".bas") {
-            main_basic(nom_fichier);
+            basic::main_basic(nom_fichier);
         }
     } else {
         println!("Pas d'argument");

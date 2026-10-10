@@ -1,7 +1,9 @@
-use crate::exec_basic::execute;
-use crate::parsing_basic::parse_basic;
+
 use std::fs;
 use std::rc::Rc;
+use crate::basic::exec_basic::execute;
+use crate::basic::parsing_basic::parse_basic;
+
 
 #[derive(Debug)]
 pub struct AstProgramme {
@@ -22,15 +24,8 @@ pub enum AstExpression {
     AstChaine(String),
 }
 
-pub fn main_basic(fichier: String) {
-    let mut x = 5;
-    x += 1;
-    println!("x2 is {}", x);
-    println!("fichier: {}", fichier);
-    parse_basic_file(fichier).expect("Erreur pour lire le fichier");
-}
 
-fn parse_basic_file(fichier: String) -> std::io::Result<()> {
+pub fn parse_basic_file(fichier: String) -> std::io::Result<()> {
     let contenu = fs::read_to_string(fichier)?;
 
     let programme = parse_basic(contenu)?;
@@ -41,9 +36,10 @@ fn parse_basic_file(fichier: String) -> std::io::Result<()> {
 
 #[cfg(test)]
 mod tests {
+    use crate::basic::parsing_basic::parse_basic;
     // Note this useful idiom: importing names from outer (for mod tests) scope.
     use super::*;
-    use crate::exec_basic::execute;
+    use crate::basic::exec_basic::execute;
 
     #[test]
     fn test_parse_execute() {

@@ -1,6 +1,6 @@
-use crate::main_basic::{AstExpression, AstInstruction, AstProgramme};
 use std::collections::HashMap;
 use std::fmt;
+use crate::basic::main_basic::{AstExpression, AstInstruction, AstProgramme};
 
 #[derive(Debug, Clone)]
 enum Valeur {
