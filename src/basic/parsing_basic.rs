@@ -74,6 +74,17 @@ impl CharIterator {
             false
         }
     }
+    pub(crate) fn next_is_fin_variable(&self) -> bool {
+        if let Some(c) = self.get_next(1) {
+            if get_type_charactere(c) == TypeCharactere::Separateur {
+                est_fin_variable(c)
+            } else {
+                false
+            }
+        } else {
+            false
+        }
+    }
 }
 
 impl Iterator for CharIterator {
@@ -249,9 +260,14 @@ pub fn parse_basic(contenu_fichier: String) -> std::io::Result<AstProgramme> {
             } else if iter.is_type_charactere(TypeCharactere::Mot) {
                 let mut s = mot.to_string();
 
-                while iter.next_is_type_charactere(1, TypeCharactere::Mot) {
+                while iter.next_is_type_charactere(1, TypeCharactere::Mot)
+                    || iter.next_is_fin_variable()
+                {
                     if let Some(mot2) = iter.next() {
                         s = s + mot2.to_string().as_str();
+                        if est_fin_variable(mot2) {
+                            break;
+                        }
                     } else {
                         break;
                     }
@@ -293,6 +309,10 @@ pub fn parse_basic(contenu_fichier: String) -> std::io::Result<AstProgramme> {
     let programme = parsing_programme(liste_tokens);
 
     Ok(programme)
+}
+
+fn est_fin_variable(c:char)->bool{
+    c == '$' || c == '%' || c == '&' || c == '!' || c == '#'
 }
 
 fn get_type_charactere(mot: char) -> TypeCharactere {
