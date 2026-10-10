@@ -347,7 +347,13 @@ fn parsing_expression(mut liste_tokens: &mut TokenIterator) -> (AstExpression, u
         } else {
             panic!("Invalid separator token: {:?}", liste_tokens.get());
         }
-    } else if liste_tokens.est_separateur(PARENTO) {
+    } else {
+        expr_literaux(liste_tokens)
+    }
+}
+
+fn expr_literaux(mut liste_tokens: &mut TokenIterator) -> (AstExpression, u32) {
+    if liste_tokens.est_separateur(PARENTO) {
         let mut nb_token: u32 = 0;
         nb_token += 1;
         liste_tokens.next();
@@ -355,7 +361,7 @@ fn parsing_expression(mut liste_tokens: &mut TokenIterator) -> (AstExpression, u
         nb_token += res.1;
         if liste_tokens.est_separateur(PARENTF) {
             nb_token += 1;
-            return (res.0, nb_token);
+            (res.0, nb_token)
         } else {
             panic!("parenthese manquante: {:?}", liste_tokens);
         }
@@ -384,11 +390,11 @@ fn parsing_expression(mut liste_tokens: &mut TokenIterator) -> (AstExpression, u
 
 fn calcul_type_operation_binaire(type_operation: TypeSeparateur) -> AstOperateurBinaireType {
     match type_operation {
-        TypeSeparateur::PLUS => AstOperateurBinaireType::Plus,
-        TypeSeparateur::MOINS => Moins,
-        TypeSeparateur::FOIS => Multiplication,
+        PLUS => AstOperateurBinaireType::Plus,
+        MOINS => Moins,
+        FOIS => Multiplication,
         TypeSeparateur::DIVR => DivisionReel,
-        TypeSeparateur::DIVE => DivisionEntiere,
+        DIVE => DivisionEntiere,
         _ => {
             panic!("unsupported type separateur: {:?}", type_operation);
         }
