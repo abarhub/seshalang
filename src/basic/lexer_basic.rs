@@ -102,10 +102,10 @@ impl CharIterator {
         }
     }
 
-    fn next_is_underscore(&self) -> bool {
+    fn next_is_character(&self, pos: usize, car: char) -> bool {
         if let Some(c) = self.get_next(1) {
             if get_type_charactere(c) == TypeCharactere::Separateur {
-                c == '_'
+                c == car
             } else {
                 false
             }
@@ -157,6 +157,17 @@ pub fn lexer(contenu_fichier: String) -> Vec<Vec<Token>> {
                 // séparateur
                 let mut s = "".to_string();
                 s.push(mot);
+                if mot == '<' && iter.next_is_character(1, '=') // <=
+                    || mot == '>' && iter.next_is_character(1, '=')// >=
+                    || mot == '<' && iter.next_is_character(1, '>')
+                // <>
+                {
+                    if let Some(mot2) = iter.next() {
+                        s.push(mot2);
+                    } else {
+                        panic!("erreur de caractere: {}", mot)
+                    }
+                }
                 let token = creation_token(s, 0, EtatLexer::Separateur);
                 liste_tokens_ligne.push(token);
             } else if iter.is_type_charactere(TypeCharactere::Mot) {
@@ -166,7 +177,6 @@ pub fn lexer(contenu_fichier: String) -> Vec<Vec<Token>> {
                 while iter.next_is_type_charactere(1, TypeCharactere::Mot)
                     || iter.next_is_fin_variable()
                     || iter.next_is_type_charactere(1, TypeCharactere::Nombre)
-                    || iter.next_is_underscore()
                 {
                     if let Some(mot2) = iter.next() {
                         s = s + mot2.to_string().as_str();
@@ -230,6 +240,10 @@ fn get_type_charactere(mot: char) -> TypeCharactere {
         || mot == ')'
         || mot == ','
         || mot == ';'
+        || mot == '<'
+        || mot == '>'
+        || mot == '\\'
+        || mot == '^'
     {
         TypeCharactere::Separateur
     } else if mot.is_ascii_alphabetic()
@@ -298,9 +312,11 @@ fn calculOperateur(s: String) -> TypeSeparateur {
 
 #[cfg(test)]
 mod tests {
-    use crate::basic::lexer_basic::TypeSeparateur::PLUS;
     // Note this useful idiom: importing names from outer (for mod tests) scope.
     use super::*;
+    use crate::basic::lexer_basic::TypeSeparateur::{
+        DIFF, DIVE, DIVR, EQU, EXP, FOIS, INF, INFE, MOINS, PARENTF, PARENTO, PLUS, SUP, SUPE,
+    };
 
     #[test]
     fn test_lexer_nombre() {
@@ -359,6 +375,41 @@ mod tests {
     }
 
     #[test]
+    fn test_lexer_identifiant5() {
+        let fichier = "aaa
+                            bbbb
+                            cccc"
+            .to_string();
+        let liste_tokens = lexer(fichier);
+
+        assert_eq!(
+            liste_tokens,
+            vec![
+                vec![Token::TokenIdentifiant("aaa".to_string())],
+                vec![Token::TokenIdentifiant("bbbb".to_string())],
+                vec![Token::TokenIdentifiant("cccc".to_string())]
+            ]
+        );
+    }
+
+    #[test]
+    fn test_lexer_identifiant6() {
+        let fichier = "aaa$ bbb! ccc% ddd# eeee&".to_string();
+        let liste_tokens = lexer(fichier);
+
+        assert_eq!(
+            liste_tokens,
+            vec![vec![
+                Token::TokenIdentifiant("aaa$".to_string()),
+                Token::TokenIdentifiant("bbb!".to_string()),
+                Token::TokenIdentifiant("ccc%".to_string()),
+                Token::TokenIdentifiant("ddd#".to_string()),
+                Token::TokenIdentifiant("eeee&".to_string())
+            ]]
+        );
+    }
+
+    #[test]
     fn test_lexer_separateur() {
         let fichier = "2+3".to_string();
         let liste_tokens = lexer(fichier);
@@ -369,6 +420,32 @@ mod tests {
                 Token::TokenNombre(2),
                 Token::TokenSeparateur(PLUS),
                 Token::TokenNombre(3)
+            ]]
+        );
+    }
+
+    #[test]
+    fn test_lexer_separateur2() {
+        let fichier = "+ - * / \\ ^ ( ) < > = >= <= <>".to_string();
+        let liste_tokens = lexer(fichier);
+
+        assert_eq!(
+            liste_tokens,
+            vec![vec![
+                Token::TokenSeparateur(PLUS),
+                Token::TokenSeparateur(MOINS),
+                Token::TokenSeparateur(FOIS),
+                Token::TokenSeparateur(DIVR),
+                Token::TokenSeparateur(DIVE),
+                Token::TokenSeparateur(EXP),
+                Token::TokenSeparateur(PARENTO),
+                Token::TokenSeparateur(PARENTF),
+                Token::TokenSeparateur(INF),
+                Token::TokenSeparateur(SUP),
+                Token::TokenSeparateur(EQU),
+                Token::TokenSeparateur(SUPE),
+                Token::TokenSeparateur(INFE),
+                Token::TokenSeparateur(DIFF)
             ]]
         );
     }
