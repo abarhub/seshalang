@@ -1,7 +1,6 @@
-use crate::basic::lexer_basic::TypeSeparateur::{
-    DIVE, FOIS, MOINS, PARENTF, PARENTO, PLUS, POINTVIRGULE, VIRGULE,
-};
-use crate::basic::lexer_basic::{lexer, Token, TypeMotCle, TypeNombre, TypeSeparateur};
+use crate::basic::lexer_basic::TypeNombre::{Entier, Long, Single};
+use crate::basic::lexer_basic::TypeSeparateur::{DIVE, DIVR, FOIS, MOINS, PARENTF, PARENTO, PLUS, POINTVIRGULE, VIRGULE};
+use crate::basic::lexer_basic::{Token, TypeMotCle, TypeNombre, TypeSeparateur, lexer};
 use crate::basic::main_basic::AstInstruction::AstAffectation;
 use crate::basic::main_basic::AstOperateurBinaireType::{
     DivisionEntiere, DivisionReel, Moins, Multiplication,
@@ -11,7 +10,6 @@ use crate::basic::main_basic::{
 };
 use std::cmp::max;
 use std::rc::Rc;
-use crate::basic::lexer_basic::TypeNombre::{Entier, Long, Single};
 
 #[derive(Debug)]
 struct TokenIterator {
@@ -303,53 +301,52 @@ fn est_chaine(token: &Token) -> bool {
     }
 }
 
-fn parsing_expression(mut liste_tokens: &mut TokenIterator) -> (AstExpression, u32) {
-    if liste_tokens.len() == 3
-        && (liste_tokens.est_identifiant()
-            || liste_tokens.est_nombre()
-            || liste_tokens.est_chaine())
-        && (liste_tokens.est_separateur_pos(PLUS, 1)
-            || liste_tokens.est_separateur_pos(MOINS, 1)
-            || liste_tokens.est_separateur_pos(FOIS, 1)
-            || liste_tokens.est_separateur_pos(DIVE, 1))
-        && (liste_tokens.est_identifiant_pos(2)
-            || liste_tokens.est_nombre_pos(2)
-            || liste_tokens.est_chaine_pos(2))
-    {
+fn parsing_expression(liste_tokens: &mut TokenIterator) -> (AstExpression, u32) {
+    let op1 = expr_mult(liste_tokens);
+
+    if liste_tokens.est_separateur_pos(PLUS, 0) || liste_tokens.est_separateur_pos(MOINS, 0) {
         let token1 = liste_tokens.next().unwrap();
-        if let Token::TokenSeparateur(separateur, _) = liste_tokens.next().unwrap() {
-            let mut nb_token: u32 = 0;
-            let expr1: AstExpression;
-            let expr2: AstExpression;
-            let mut expr_list: Vec<Token> = Vec::new();
-            expr_list.push(token1);
-            let mut token_iter = TokenIterator::new(expr_list);
-            let res = parsing_expression(&mut token_iter);
-            expr1 = res.0;
-            nb_token += res.1;
-
-            nb_token += 1;
-
-            let mut expr_list2: Vec<Token> = Vec::new();
-            expr_list2.push(liste_tokens.next().unwrap());
-            let mut token_iter2 = TokenIterator::new(expr_list2);
-            let res = parsing_expression(&mut token_iter2);
-            expr2 = res.0;
-            nb_token += res.1;
-
+        let op2 = expr_mult(liste_tokens);
+        if let Token::TokenSeparateur(separateur, _) = token1 {
             (
                 AstExpression::AstOperateurBinaire(
                     calcul_type_operation_binaire(separateur),
-                    Rc::new(expr1),
-                    Rc::new(expr2),
+                    Rc::new(op1.0),
+                    Rc::new(op2.0),
                 ),
-                nb_token,
+                op1.1 + op2.1 + 1,
             )
         } else {
-            panic!("Invalid separator token: {:?}", liste_tokens.get());
+            panic!("Expected separator after expression")
         }
     } else {
-        expr_literaux(liste_tokens)
+        op1
+    }
+}
+
+fn expr_mult(liste_tokens: &mut TokenIterator) -> (AstExpression, u32) {
+    let op1 = expr_literaux(liste_tokens);
+
+    if liste_tokens.est_separateur_pos(FOIS, 0)
+        || liste_tokens.est_separateur_pos(DIVE, 0)
+        || liste_tokens.est_separateur_pos(DIVR, 0)
+    {
+        let token1 = liste_tokens.next().unwrap();
+        let op2 = expr_literaux(liste_tokens);
+        if let Token::TokenSeparateur(separateur, _) = token1 {
+            (
+                AstExpression::AstOperateurBinaire(
+                    calcul_type_operation_binaire(separateur),
+                    Rc::new(op1.0),
+                    Rc::new(op2.0),
+                ),
+                op1.1 + op2.1 + 1,
+            )
+        } else {
+            panic!("Expected separator after expression")
+        }
+    } else {
+        op1
     }
 }
 
@@ -373,12 +370,14 @@ fn expr_literaux(mut liste_tokens: &mut TokenIterator) -> (AstExpression, u32) {
             panic!("identifiant inconnu");
         }
     } else if liste_tokens.est_nombre() {
-        if let Token::TokenNombre(nombrei16, nombrei32, nombref32, nombref64, type_nombre, _) = liste_tokens.next().unwrap() {
-            return match type_nombre {
-                Entier => return (AstExpression::AstNombreInteger(nombrei16), 1),
-                Long => return (AstExpression::AstNombreLong(nombrei32), 1),
-                Single => return (AstExpression::AstNombreSingle(nombref32), 1),
-                TypeNombre::Double => return (AstExpression::AstNombreDouble(nombref64), 1),
+        if let Token::TokenNombre(nombrei16, nombrei32, nombref32, nombref64, type_nombre, _) =
+            liste_tokens.next().unwrap()
+        {
+            match type_nombre {
+                Entier => (AstExpression::AstNombreInteger(nombrei16), 1),
+                Long => (AstExpression::AstNombreLong(nombrei32), 1),
+                Single => (AstExpression::AstNombreSingle(nombref32), 1),
+                TypeNombre::Double => (AstExpression::AstNombreDouble(nombref64), 1),
             }
         } else {
             panic!("nombre inconnu: {:?}", liste_tokens.get());
