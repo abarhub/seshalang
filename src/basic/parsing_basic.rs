@@ -1,12 +1,16 @@
 use crate::basic::lexer_basic::TypeNombre::{Entier, Long, Single};
-use crate::basic::lexer_basic::TypeSeparateur::{DIVE, DIVR, FOIS, MOINS, PARENTF, PARENTO, PLUS, POINTVIRGULE, VIRGULE};
+use crate::basic::lexer_basic::TypeSeparateur::{
+    DIFF, DIVE, DIVR, EQU, EXP, FOIS, INF, INFE, MOINS, PARENTF, PARENTO, PLUS, POINTVIRGULE, SUP,
+    SUPE, VIRGULE,
+};
 use crate::basic::lexer_basic::{Token, TypeMotCle, TypeNombre, TypeSeparateur, lexer};
 use crate::basic::main_basic::AstInstruction::AstAffectation;
 use crate::basic::main_basic::AstOperateurBinaireType::{
-    DivisionEntiere, DivisionReel, Moins, Multiplication,
+    Different, DivisionEntiere, DivisionReel, Egal, Inferieur, InferieurEgal, Moins,
+    Multiplication, Superieur, SuperieurEgal,
 };
 use crate::basic::main_basic::{
-    AstExpression, AstInstruction, AstOperateurBinaireType, AstProgramme,
+    AstExpression, AstInstruction, AstOperateurBinaireType, AstOperateurUnaireType, AstProgramme,
 };
 use std::cmp::max;
 use std::rc::Rc;
@@ -302,39 +306,117 @@ fn est_chaine(token: &Token) -> bool {
 }
 
 fn parsing_expression(liste_tokens: &mut TokenIterator) -> (AstExpression, u32) {
-    let op1 = expr_mult(liste_tokens);
+    expr_imp(liste_tokens)
+}
 
-    if liste_tokens.est_separateur_pos(PLUS, 0) || liste_tokens.est_separateur_pos(MOINS, 0) {
-        let token1 = liste_tokens.next().unwrap();
-        let op2 = expr_mult(liste_tokens);
-        if let Token::TokenSeparateur(separateur, _) = token1 {
-            (
-                AstExpression::AstOperateurBinaire(
-                    calcul_type_operation_binaire(separateur),
-                    Rc::new(op1.0),
-                    Rc::new(op2.0),
-                ),
-                op1.1 + op2.1 + 1,
-            )
+// expression X IMP Y
+fn expr_imp(liste_tokens: &mut TokenIterator) -> (AstExpression, u32) {
+    let mut op1 = expr_eqv(liste_tokens);
+
+    while liste_tokens.est_mot_cle(TypeMotCle::Imp) {
+        liste_tokens.next().unwrap();
+        let op2 = expr_eqv(liste_tokens);
+        op1 = (
+            AstExpression::AstOperateurBinaire(
+                AstOperateurBinaireType::Imp,
+                Rc::new(op1.0),
+                Rc::new(op2.0),
+            ),
+            op1.1 + op2.1 + 1,
+        )
+    }
+    op1
+}
+// expression X EQV Y
+fn expr_eqv(liste_tokens: &mut TokenIterator) -> (AstExpression, u32) {
+    let mut op1 = expr_or(liste_tokens);
+
+    while liste_tokens.est_mot_cle(TypeMotCle::Eqv) {
+        liste_tokens.next().unwrap();
+        let op2 = expr_or(liste_tokens);
+        op1 = (
+            AstExpression::AstOperateurBinaire(
+                AstOperateurBinaireType::Eqv,
+                Rc::new(op1.0),
+                Rc::new(op2.0),
+            ),
+            op1.1 + op2.1 + 1,
+        )
+    }
+    op1
+}
+// expression X OR Y ou X XOR Y
+fn expr_or(liste_tokens: &mut TokenIterator) -> (AstExpression, u32) {
+    let mut op1 = expr_and(liste_tokens);
+
+    while liste_tokens.est_mot_cle(TypeMotCle::Or) || liste_tokens.est_mot_cle(TypeMotCle::Xor) {
+        let operateur = if liste_tokens.est_mot_cle(TypeMotCle::Or) {
+            AstOperateurBinaireType::Or
         } else {
-            panic!("Expected separator after expression")
+            AstOperateurBinaireType::Xor
+        };
+        liste_tokens.next().unwrap();
+        let op2 = expr_and(liste_tokens);
+        op1 = (
+            AstExpression::AstOperateurBinaire(operateur, Rc::new(op1.0), Rc::new(op2.0)),
+            op1.1 + op2.1 + 1,
+        )
+    }
+    op1
+}
+
+// expression X AND Y
+fn expr_and(liste_tokens: &mut TokenIterator) -> (AstExpression, u32) {
+    let mut op1 = expr_not(liste_tokens);
+
+    while liste_tokens.est_mot_cle(TypeMotCle::And) {
+        liste_tokens.next().unwrap();
+        let op2 = expr_not(liste_tokens);
+        op1 = (
+            AstExpression::AstOperateurBinaire(
+                AstOperateurBinaireType::And,
+                Rc::new(op1.0),
+                Rc::new(op2.0),
+            ),
+            op1.1 + op2.1 + 1,
+        )
+    }
+    op1
+}
+
+// expression NOT X
+fn expr_not(liste_tokens: &mut TokenIterator) -> (AstExpression, u32) {
+    if liste_tokens.est_mot_cle(TypeMotCle::Not) {
+        let mut op1: (AstExpression, u32) = (AstExpression::AstNombreInteger(0), 0);
+        while liste_tokens.est_mot_cle(TypeMotCle::Not) {
+            let token1 = liste_tokens.next().unwrap();
+            op1 = expr_comparaison(liste_tokens);
+            op1 = (
+                AstExpression::AstOperateurUnnaire(AstOperateurUnaireType::Not, Rc::new(op1.0)),
+                op1.1 + 1,
+            )
         }
-    } else {
         op1
+    } else {
+        expr_comparaison(liste_tokens)
     }
 }
 
-fn expr_mult(liste_tokens: &mut TokenIterator) -> (AstExpression, u32) {
-    let op1 = expr_literaux(liste_tokens);
+// expression X > Y ou X >= Y ou X < Y ou X <= Y ou X = Y ou X <> Y
+fn expr_comparaison(liste_tokens: &mut TokenIterator) -> (AstExpression, u32) {
+    let mut op1 = expr_plus(liste_tokens);
 
-    if liste_tokens.est_separateur_pos(FOIS, 0)
-        || liste_tokens.est_separateur_pos(DIVE, 0)
-        || liste_tokens.est_separateur_pos(DIVR, 0)
+    while liste_tokens.est_separateur_pos(EQU, 0)
+        || liste_tokens.est_separateur_pos(SUP, 0)
+        || liste_tokens.est_separateur_pos(SUPE, 0)
+        || liste_tokens.est_separateur_pos(INF, 0)
+        || liste_tokens.est_separateur_pos(INFE, 0)
+        || liste_tokens.est_separateur_pos(DIFF, 0)
     {
         let token1 = liste_tokens.next().unwrap();
-        let op2 = expr_literaux(liste_tokens);
+        let op2 = expr_plus(liste_tokens);
         if let Token::TokenSeparateur(separateur, _) = token1 {
-            (
+            op1 = (
                 AstExpression::AstOperateurBinaire(
                     calcul_type_operation_binaire(separateur),
                     Rc::new(op1.0),
@@ -345,9 +427,140 @@ fn expr_mult(liste_tokens: &mut TokenIterator) -> (AstExpression, u32) {
         } else {
             panic!("Expected separator after expression")
         }
-    } else {
-        op1
     }
+    op1
+}
+
+// expression X + Y ou X - Y
+fn expr_plus(liste_tokens: &mut TokenIterator) -> (AstExpression, u32) {
+    let mut op1 = expr_mod(liste_tokens);
+
+    while liste_tokens.est_separateur_pos(PLUS, 0) || liste_tokens.est_separateur_pos(MOINS, 0) {
+        let token1 = liste_tokens.next().unwrap();
+        let op2 = expr_mod(liste_tokens);
+        if let Token::TokenSeparateur(separateur, _) = token1 {
+            op1 = (
+                AstExpression::AstOperateurBinaire(
+                    calcul_type_operation_binaire(separateur),
+                    Rc::new(op1.0),
+                    Rc::new(op2.0),
+                ),
+                op1.1 + op2.1 + 1,
+            )
+        } else {
+            panic!("Expected separator after expression")
+        }
+    }
+    op1
+}
+
+// expression X MOD Y
+fn expr_mod(liste_tokens: &mut TokenIterator) -> (AstExpression, u32) {
+    let mut op1 = expr_dive(liste_tokens);
+
+    while liste_tokens.est_mot_cle(TypeMotCle::Mod) {
+        liste_tokens.next().unwrap();
+        let op2 = expr_dive(liste_tokens);
+        op1 = (
+            AstExpression::AstOperateurBinaire(
+                AstOperateurBinaireType::Mod,
+                Rc::new(op1.0),
+                Rc::new(op2.0),
+            ),
+            op1.1 + op2.1 + 1,
+        )
+    }
+    op1
+}
+
+// expression  X \ Y (division  entiere)
+fn expr_dive(liste_tokens: &mut TokenIterator) -> (AstExpression, u32) {
+    let mut op1 = expr_mult(liste_tokens);
+
+    while liste_tokens.est_separateur_pos(DIVE, 0) {
+        liste_tokens.next().unwrap();
+        let op2 = expr_mult(liste_tokens);
+        op1 = (
+            AstExpression::AstOperateurBinaire(DivisionEntiere, Rc::new(op1.0), Rc::new(op2.0)),
+            op1.1 + op2.1 + 1,
+        )
+    }
+    op1
+}
+
+// expression X * Y ou X / Y
+fn expr_mult(liste_tokens: &mut TokenIterator) -> (AstExpression, u32) {
+    let mut op1 = expr_neg(liste_tokens);
+
+    while liste_tokens.est_separateur_pos(FOIS, 0) || liste_tokens.est_separateur_pos(DIVR, 0) {
+        let token1 = liste_tokens.next().unwrap();
+        let op2 = expr_neg(liste_tokens);
+        if let Token::TokenSeparateur(separateur, _) = token1 {
+            op1 = (
+                AstExpression::AstOperateurBinaire(
+                    calcul_type_operation_binaire(separateur),
+                    Rc::new(op1.0),
+                    Rc::new(op2.0),
+                ),
+                op1.1 + op2.1 + 1,
+            )
+        } else {
+            panic!("Expected separator after expression")
+        }
+    }
+    op1
+}
+
+// expression -X
+fn expr_neg(liste_tokens: &mut TokenIterator) -> (AstExpression, u32) {
+    if liste_tokens.est_separateur_pos(MOINS, 0) || liste_tokens.est_separateur_pos(PLUS, 0) {
+        let mut op1: (AstExpression, u32) = (AstExpression::AstNombreInteger(0), 0);
+        while liste_tokens.est_separateur_pos(MOINS, 0) || liste_tokens.est_separateur_pos(PLUS, 0)
+        {
+            let token1 = liste_tokens.next().unwrap();
+            op1 = expr_xor(liste_tokens);
+            if let Token::TokenSeparateur(separateur, _) = token1 {
+                let type_operateur: AstOperateurUnaireType;
+                if separateur == MOINS {
+                    type_operateur = AstOperateurUnaireType::Moins;
+                } else {
+                    type_operateur = AstOperateurUnaireType::Plus;
+                }
+                op1 = (
+                    AstExpression::AstOperateurUnnaire(type_operateur, Rc::new(op1.0)),
+                    op1.1 + 1,
+                )
+            } else {
+                panic!("Expected separator after expression")
+            }
+        }
+        op1
+    } else {
+        expr_xor(liste_tokens)
+    }
+}
+
+// expression X ^ Y
+fn expr_xor(liste_tokens: &mut TokenIterator) -> (AstExpression, u32) {
+    let mut op1 = expr_literaux(liste_tokens);
+
+    while liste_tokens.est_separateur_pos(EXP, 0) {
+        let token1 = liste_tokens.next().unwrap();
+        let op2 = expr_literaux(liste_tokens);
+        if let Token::TokenSeparateur(separateur, _) = token1 {
+            op1 = (
+                AstExpression::AstOperateurBinaire(
+                    calcul_type_operation_binaire(separateur),
+                    Rc::new(op1.0),
+                    Rc::new(op2.0),
+                ),
+                op1.1 + op2.1 + 1,
+            )
+        } else {
+            panic!("Expected separator after expression")
+        }
+    }
+    op1
 }
 
 fn expr_literaux(mut liste_tokens: &mut TokenIterator) -> (AstExpression, u32) {
@@ -400,6 +613,12 @@ fn calcul_type_operation_binaire(type_operation: TypeSeparateur) -> AstOperateur
         FOIS => Multiplication,
         TypeSeparateur::DIVR => DivisionReel,
         DIVE => DivisionEntiere,
+        SUP => Superieur,
+        SUPE => SuperieurEgal,
+        INF => Inferieur,
+        INFE => InferieurEgal,
+        DIFF => Different,
+        EQU => Egal,
         _ => {
             panic!("unsupported type separateur: {:?}", type_operation);
         }

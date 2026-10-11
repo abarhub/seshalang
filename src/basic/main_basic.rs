@@ -22,7 +22,26 @@ pub enum AstOperateurBinaireType {
     Moins,
     Multiplication,
     DivisionReel,
-    DivisionEntiere
+    DivisionEntiere,
+    Mod,
+    Egal,
+    Different,
+    Superieur,
+    SuperieurEgal,
+    Inferieur,
+    InferieurEgal,
+    And,
+    Or,
+    Xor,
+    Imp,
+    Eqv,
+}
+
+#[derive(Debug, Clone)]
+pub enum AstOperateurUnaireType {
+    Plus,
+    Moins,
+    Not,
 }
 
 #[derive(Debug, Clone)]
@@ -33,6 +52,7 @@ pub enum AstExpression {
     AstNombreDouble(f64),
     AstIdentifiant(String),
     AstOperateurBinaire(AstOperateurBinaireType, Rc<AstExpression>, Rc<AstExpression>),
+    AstOperateurUnnaire(AstOperateurUnaireType, Rc<AstExpression>),
     AstChaine(String),
 }
 
