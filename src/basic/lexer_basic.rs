@@ -24,6 +24,9 @@ pub enum TypeMotCle {
     As,
     Integer,
     String,
+    Long,
+    Single,
+    Double,
 }
 
 #[derive(Debug, Eq, PartialEq, Clone)]
@@ -429,6 +432,9 @@ fn mots_cles(s: String) -> Option<TypeMotCle> {
         "AS" => Some(TypeMotCle::As),
         "INTEGER" => Some(TypeMotCle::Integer),
         "STRING" => Some(TypeMotCle::String),
+        "LONG" => Some(TypeMotCle::Long),
+        "SINGLE" => Some(TypeMotCle::Single),
+        "DOUBLE" => Some(TypeMotCle::Double),
         _ => None,
     }
 }
