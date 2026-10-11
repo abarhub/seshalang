@@ -6,14 +6,20 @@ use std::fmt;
 
 #[derive(Debug, Clone)]
 enum Valeur {
-    Nombre(i32),
+    NombreInteger(i16),
+    NombreLong(i32),
+    NombreSingle(f32),
+    NombreDouble(f64),
     Chaine(String),
 }
 
 impl fmt::Display for Valeur {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            Valeur::Nombre(n) => write!(f, "{}", n),
+            Valeur::NombreInteger(n) => write!(f, "{}", n),
+            Valeur::NombreLong(n) => write!(f, "{}", n),
+            Valeur::NombreSingle(n) => write!(f, "{}", n),
+            Valeur::NombreDouble(n) => write!(f, "{}", n),
             Valeur::Chaine(s) => write!(f, "{}", s),
         }
     }
@@ -65,8 +71,14 @@ fn execute_expression(
     expression: &AstExpression,
     table_symbole: &mut HashMap<String, Valeur>,
 ) -> Valeur {
-    if let AstExpression::AstNombre(nombre) = expression {
-        Valeur::Nombre(*nombre as i32)
+    if let AstExpression::AstNombreInteger(nombre) = expression {
+        Valeur::NombreInteger(*nombre)
+    } else if let AstExpression::AstNombreLong(nombre) = expression {
+        Valeur::NombreLong(*nombre)
+    } else if let AstExpression::AstNombreSingle(nombre) = expression {
+        Valeur::NombreSingle(*nombre)
+    } else if let AstExpression::AstNombreDouble(nombre) = expression {
+        Valeur::NombreDouble(*nombre)
     } else if let AstExpression::AstIdentifiant(ident) = expression {
         return table_symbole.get(ident).unwrap().clone();
     } else if let AstExpression::AstOperateurBinaire(operateur, exp1, exp2) = expression {
@@ -74,24 +86,24 @@ fn execute_expression(
         let e2 = exp2.as_ref();
         let expr1 = execute_expression(&(e1.clone()), table_symbole);
         let expr2 = execute_expression(&(e2.clone()), table_symbole);
-        if let Valeur::Nombre(_) = expr1 {
-            let n1: i32;
-            let n2: i32;
-            if let Valeur::Nombre(n) = expr1 {
+        if let Valeur::NombreInteger(_) = expr1 {
+            let n1: i16;
+            let n2: i16;
+            if let Valeur::NombreInteger(n) = expr1 {
                 n1 = n;
             } else {
                 panic!("Expression non numérique: {:?}", expr1);
             }
-            if let Valeur::Nombre(n) = expr2 {
+            if let Valeur::NombreInteger(n) = expr2 {
                 n2 = n;
             } else {
                 panic!("Expression non numérique: {:?}", expr2);
             }
             return match operateur {
-                AstOperateurBinaireType::Plus => Valeur::Nombre(n1 + n2),
-                AstOperateurBinaireType::Moins => Valeur::Nombre(n1 - n2),
-                AstOperateurBinaireType::Multiplication => Valeur::Nombre(n1 * n2),
-                AstOperateurBinaireType::DivisionEntiere => Valeur::Nombre(n1 / n2),
+                AstOperateurBinaireType::Plus => Valeur::NombreInteger(n1 + n2),
+                AstOperateurBinaireType::Moins => Valeur::NombreInteger(n1 - n2),
+                AstOperateurBinaireType::Multiplication => Valeur::NombreInteger(n1 * n2),
+                AstOperateurBinaireType::DivisionEntiere => Valeur::NombreInteger(n1 / n2),
                 _ => panic!("Opérateur inconnu: {:?}", operateur),
             };
         } else if let Valeur::Chaine(s1) = expr1 {

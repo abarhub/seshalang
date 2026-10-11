@@ -27,7 +27,10 @@ pub enum AstOperateurBinaireType {
 
 #[derive(Debug, Clone)]
 pub enum AstExpression {
-    AstNombre(u32),
+    AstNombreInteger(i16),
+    AstNombreLong(i32),
+    AstNombreSingle(f32),
+    AstNombreDouble(f64),
     AstIdentifiant(String),
     AstOperateurBinaire(AstOperateurBinaireType, Rc<AstExpression>, Rc<AstExpression>),
     AstChaine(String),

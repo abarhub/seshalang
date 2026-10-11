@@ -1,7 +1,7 @@
 use crate::basic::lexer_basic::TypeSeparateur::{
     DIVE, FOIS, MOINS, PARENTF, PARENTO, PLUS, POINTVIRGULE, VIRGULE,
 };
-use crate::basic::lexer_basic::{Token, TypeMotCle, TypeSeparateur, lexer};
+use crate::basic::lexer_basic::{lexer, Token, TypeMotCle, TypeNombre, TypeSeparateur};
 use crate::basic::main_basic::AstInstruction::AstAffectation;
 use crate::basic::main_basic::AstOperateurBinaireType::{
     DivisionEntiere, DivisionReel, Moins, Multiplication,
@@ -11,6 +11,7 @@ use crate::basic::main_basic::{
 };
 use std::cmp::max;
 use std::rc::Rc;
+use crate::basic::lexer_basic::TypeNombre::{Entier, Long, Single};
 
 #[derive(Debug)]
 struct TokenIterator {
@@ -93,7 +94,7 @@ impl TokenIterator {
     }
 
     fn est_nombre(&self) -> bool {
-        if let Some(Token::TokenNombre(_, _, _, _)) = self.get() {
+        if let Some(Token::TokenNombre(_, _, _, _, _, _)) = self.get() {
             true
         } else {
             false
@@ -101,7 +102,7 @@ impl TokenIterator {
     }
 
     fn est_nombre_pos(&self, position: i32) -> bool {
-        if let Some(Token::TokenNombre(_, _, _, _)) = self.get_pos(position) {
+        if let Some(Token::TokenNombre(_, _, _, _, _, _)) = self.get_pos(position) {
             true
         } else {
             false
@@ -283,7 +284,7 @@ fn est_identifiant(token: &Token) -> bool {
 
 fn est_nombre(token: &Token) -> bool {
     match token {
-        Token::TokenNombre(_, _, _, _) => true,
+        Token::TokenNombre(_, _, _, _, _, _) => true,
         _ => false,
     }
 }
@@ -372,8 +373,13 @@ fn expr_literaux(mut liste_tokens: &mut TokenIterator) -> (AstExpression, u32) {
             panic!("identifiant inconnu");
         }
     } else if liste_tokens.est_nombre() {
-        if let Token::TokenNombre(nombre, _, _, _) = liste_tokens.next().unwrap() {
-            return (AstExpression::AstNombre(nombre), 1);
+        if let Token::TokenNombre(nombrei16, nombrei32, nombref32, nombref64, type_nombre, _) = liste_tokens.next().unwrap() {
+            return match type_nombre {
+                Entier => return (AstExpression::AstNombreInteger(nombrei16), 1),
+                Long => return (AstExpression::AstNombreLong(nombrei32), 1),
+                Single => return (AstExpression::AstNombreSingle(nombref32), 1),
+                TypeNombre::Double => return (AstExpression::AstNombreDouble(nombref64), 1),
+            }
         } else {
             panic!("nombre inconnu: {:?}", liste_tokens.get());
         }

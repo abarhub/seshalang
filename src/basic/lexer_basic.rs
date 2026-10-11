@@ -83,7 +83,7 @@ impl PositionToken {
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum Token {
-    TokenNombre(u32, f64, TypeNombre, PositionToken),
+    TokenNombre(i16, i32, f32, f64, TypeNombre, PositionToken),
     TokenIdentifiant(String, PositionToken),
     TokenSeparateur(TypeSeparateur, PositionToken),
     TokenMotReserve(TypeMotCle, PositionToken),
@@ -401,22 +401,50 @@ fn creation_token_nombre(s: String, pos: PositionToken) -> Token {
     }
     if !decimal && !exposant {
         if nombre_entier <= 32768 {
-            Token::TokenNombre(nombre_entier, 0.0, TypeNombre::Entier, pos)
+            Token::TokenNombre(
+                i16::try_from(nombre_entier).unwrap(),
+                0,
+                0.,
+                0.,
+                TypeNombre::Entier,
+                pos,
+            )
         } else {
-            Token::TokenNombre(nombre_entier, 0.0, TypeNombre::Long, pos)
+            Token::TokenNombre(
+                0,
+                i32::try_from(nombre_entier).unwrap(),
+                0.,
+                0.0,
+                TypeNombre::Long,
+                pos,
+            )
         }
     } else {
-        let mut nombre: f64 = nombre_entier as f64;
-        if decimal {
-            nombre = nombre + nombre_decimal;
-        }
-        if exposant {
-            nombre = nombre * 10.0_f64.powi(nombre_exposant);
-        }
         if decimal_double {
-            Token::TokenNombre(0, nombre, TypeNombre::Double, pos)
+            let mut nombre: f64 = nombre_entier as f64;
+            if decimal {
+                nombre = nombre + nombre_decimal;
+            }
+            if exposant {
+                nombre = nombre * 10.0_f64.powi(nombre_exposant);
+            }
+            Token::TokenNombre(0, 0, 0., nombre, TypeNombre::Double, pos)
         } else {
-            Token::TokenNombre(0, nombre, TypeNombre::Single, pos)
+            let mut nombre: f32 = nombre_entier as f32;
+            if decimal {
+                nombre = nombre + f64_to_f32(nombre_decimal);
+            }
+            if exposant {
+                nombre = nombre * 10.0_f32.powi(nombre_exposant);
+            }
+            Token::TokenNombre(
+                0,
+                0,
+                f32::try_from(nombre).unwrap(),
+                0.,
+                TypeNombre::Single,
+                pos,
+            )
         }
     }
 }
@@ -549,6 +577,16 @@ fn mots_cles(s: String) -> Option<TypeMotCle> {
     }
 }
 
+fn f64_to_f32(x: f64) -> f32 {
+    let y = x as f32;
+    assert_eq!(
+        x.is_finite(),
+        y.is_finite(),
+        "f32 overflow during conversion"
+    );
+    y
+}
+
 #[cfg(test)]
 mod tests {
     // Note this useful idiom: importing names from outer (for mod tests) scope.
@@ -567,6 +605,8 @@ mod tests {
             liste_tokens,
             vec![vec![Token::TokenNombre(
                 123,
+                0,
+                0.,
                 0.,
                 Entier,
                 PositionToken::new(1, 0)
@@ -583,7 +623,9 @@ mod tests {
             liste_tokens,
             vec![vec![Token::TokenNombre(
                 0,
+                0,
                 123.456,
+                0.,
                 Single,
                 PositionToken::new(1, 0)
             )]]
@@ -599,6 +641,8 @@ mod tests {
             liste_tokens,
             vec![vec![Token::TokenNombre(
                 0,
+                0,
+                0.,
                 12345.6,
                 Double,
                 PositionToken::new(1, 0)
@@ -644,7 +688,7 @@ mod tests {
             vec![vec![
                 Token::TokenIdentifiant("toto".to_string(), PositionToken::new(1, 0)),
                 Token::TokenIdentifiant("tata%".to_string(), PositionToken::new(1, 5)),
-                Token::TokenNombre(96325, 0., Long, PositionToken::new(1, 11))
+                Token::TokenNombre(0, 96325, 0., 0., Long, PositionToken::new(1, 11))
             ]]
         );
     }
@@ -715,9 +759,9 @@ cccc"
         assert_eq!(
             liste_tokens,
             vec![vec![
-                Token::TokenNombre(2, 0., Entier, PositionToken::new(1, 0)),
+                Token::TokenNombre(2, 0, 0., 0., Entier, PositionToken::new(1, 0)),
                 Token::TokenSeparateur(PLUS, PositionToken::new(1, 1)),
-                Token::TokenNombre(3, 0., Entier, PositionToken::new(1, 2))
+                Token::TokenNombre(3, 0, 0., 0., Entier, PositionToken::new(1, 2))
             ]]
         );
     }
@@ -830,7 +874,7 @@ cccc"
             vec![vec![
                 Token::TokenIdentifiant("a".to_string(), PositionToken::new(1, 0)),
                 Token::TokenSeparateur(EQU, PositionToken::new(1, 1)),
-                Token::TokenNombre(3, 0., Entier, PositionToken::new(1, 2))
+                Token::TokenNombre(3, 0, 0., 0., Entier, PositionToken::new(1, 2))
             ]]
         );
     }
