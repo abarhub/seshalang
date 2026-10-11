@@ -9,7 +9,7 @@ use crate::basic::main_basic::AstOperateurBinaireType::{
 use crate::basic::main_basic::{
     AstExpression, AstInstruction, AstOperateurBinaireType, AstProgramme,
 };
-use std::cmp::{PartialEq, max};
+use std::cmp::max;
 use std::rc::Rc;
 
 #[derive(Debug)]
@@ -53,7 +53,7 @@ impl TokenIterator {
     }
 
     fn est_identifiant(&self) -> bool {
-        if let Some(Token::TokenIdentifiant(x)) = self.get() {
+        if let Some(Token::TokenIdentifiant(_, _)) = self.get() {
             true
         } else {
             false
@@ -61,7 +61,7 @@ impl TokenIterator {
     }
 
     fn est_identifiant_pos(&self, position: i32) -> bool {
-        if let Some(Token::TokenIdentifiant(x)) = self.get_pos(position) {
+        if let Some(Token::TokenIdentifiant(_, _)) = self.get_pos(position) {
             true
         } else {
             false
@@ -69,7 +69,7 @@ impl TokenIterator {
     }
 
     fn est_mot_cle(&self, mot_cle: TypeMotCle) -> bool {
-        if let Some(Token::TokenMotReserve(mot_reserve)) = self.get() {
+        if let Some(Token::TokenMotReserve(mot_reserve, _)) = self.get() {
             mot_cle == mot_reserve
         } else {
             false
@@ -77,7 +77,7 @@ impl TokenIterator {
     }
 
     fn est_separateur_pos(&self, separateur: TypeSeparateur, position: i32) -> bool {
-        if let Some(Token::TokenSeparateur(x)) = self.get_pos(position) {
+        if let Some(Token::TokenSeparateur(x, _)) = self.get_pos(position) {
             x == separateur
         } else {
             false
@@ -85,7 +85,7 @@ impl TokenIterator {
     }
 
     fn est_separateur(&self, separateur: TypeSeparateur) -> bool {
-        if let Some(Token::TokenSeparateur(x)) = self.get() {
+        if let Some(Token::TokenSeparateur(x, _)) = self.get() {
             x == separateur
         } else {
             false
@@ -93,7 +93,7 @@ impl TokenIterator {
     }
 
     fn est_nombre(&self) -> bool {
-        if let Some(Token::TokenNombre(x)) = self.get() {
+        if let Some(Token::TokenNombre(_, _, _, _)) = self.get() {
             true
         } else {
             false
@@ -101,7 +101,7 @@ impl TokenIterator {
     }
 
     fn est_nombre_pos(&self, position: i32) -> bool {
-        if let Some(Token::TokenNombre(x)) = self.get_pos(position) {
+        if let Some(Token::TokenNombre(_, _, _, _)) = self.get_pos(position) {
             true
         } else {
             false
@@ -109,7 +109,7 @@ impl TokenIterator {
     }
 
     fn est_chaine(&self) -> bool {
-        if let Some(Token::TokenChaine(x)) = self.get() {
+        if let Some(Token::TokenChaine(_, _)) = self.get() {
             true
         } else {
             false
@@ -117,7 +117,7 @@ impl TokenIterator {
     }
 
     fn est_chaine_pos(&self, position: i32) -> bool {
-        if let Some(Token::TokenChaine(x)) = self.get_pos(position) {
+        if let Some(Token::TokenChaine(_, _)) = self.get_pos(position) {
             true
         } else {
             false
@@ -173,7 +173,7 @@ fn parsing_programme(liste_tokens: Vec<Vec<Token>>) -> AstProgramme {
             && token_iterator.est_separateur_pos(TypeSeparateur::EQU, 1)
         {
             // affectation
-            if let Token::TokenIdentifiant(ident) = token_iterator.next().unwrap() {
+            if let Token::TokenIdentifiant(ident, _) = token_iterator.next().unwrap() {
                 println!("affectation {}", ident);
                 token_iterator.next();
                 let exp = parsing_expression(&mut token_iterator);
@@ -184,7 +184,7 @@ fn parsing_programme(liste_tokens: Vec<Vec<Token>>) -> AstProgramme {
             }
         } else if token_iterator.est_identifiant() {
             // appel de méthode
-            if let Token::TokenIdentifiant(ident) = token_iterator.next().unwrap() {
+            if let Token::TokenIdentifiant(ident, _) = token_iterator.next().unwrap() {
                 println!("appel {}", ident);
                 let mut liste_expressions: Vec<AstExpression> = vec![];
                 let mut separateur_virgule_liste: Vec<bool> = vec![];
@@ -195,7 +195,7 @@ fn parsing_programme(liste_tokens: Vec<Vec<Token>>) -> AstProgramme {
                         && separateur_parametre(&ident, token_iterator.get().unwrap())
                     {
                         let mut separateur_virgule = true;
-                        if let Some(Token::TokenSeparateur(s)) = token_iterator.next() {
+                        if let Some(Token::TokenSeparateur(s, _)) = token_iterator.next() {
                             separateur_virgule = s == VIRGULE;
                         } else {
                             panic!(
@@ -220,7 +220,7 @@ fn parsing_programme(liste_tokens: Vec<Vec<Token>>) -> AstProgramme {
                 panic!("token {:?} n'est pas un identifiant", token_iterator.get());
             }
         } else if token_iterator.est_mot_cle(TypeMotCle::Print) {
-            if let Token::TokenMotReserve(_) = token_iterator.next().unwrap() {
+            if let Token::TokenMotReserve(_, _) = token_iterator.next().unwrap() {
                 let mut liste_expressions: Vec<AstExpression> = vec![];
                 let mut separateur_virgule_liste: Vec<bool> = vec![];
                 loop {
@@ -230,8 +230,8 @@ fn parsing_programme(liste_tokens: Vec<Vec<Token>>) -> AstProgramme {
                         && separateur_parametre_print(token_iterator.get().unwrap())
                     {
                         let mut separateur_virgule = true;
-                        if let Some(Token::TokenSeparateur(s)) = token_iterator.next() {
-                            separateur_virgule = s == TypeSeparateur::VIRGULE;
+                        if let Some(Token::TokenSeparateur(s, _)) = token_iterator.next() {
+                            separateur_virgule = s == VIRGULE;
                         } else {
                             panic!(
                                 "token {:?} n'est pas un séparateur",
@@ -276,28 +276,28 @@ fn separateur_parametre_print(mot: Token) -> bool {
 
 fn est_identifiant(token: &Token) -> bool {
     match token {
-        Token::TokenIdentifiant(_) => true,
+        Token::TokenIdentifiant(_, _) => true,
         _ => false,
     }
 }
 
 fn est_nombre(token: &Token) -> bool {
     match token {
-        Token::TokenNombre(_) => true,
+        Token::TokenNombre(_, _, _, _) => true,
         _ => false,
     }
 }
 
 fn est_separateur(token: &Token, separateur_cherche: TypeSeparateur) -> bool {
     match token {
-        Token::TokenSeparateur(separateur) => separateur == &separateur_cherche,
+        Token::TokenSeparateur(separateur, _) => separateur == &separateur_cherche,
         _ => false,
     }
 }
 
 fn est_chaine(token: &Token) -> bool {
     match token {
-        Token::TokenChaine(_) => true,
+        Token::TokenChaine(_, _) => true,
         _ => false,
     }
 }
@@ -316,7 +316,7 @@ fn parsing_expression(mut liste_tokens: &mut TokenIterator) -> (AstExpression, u
             || liste_tokens.est_chaine_pos(2))
     {
         let token1 = liste_tokens.next().unwrap();
-        if let Token::TokenSeparateur(separateur) = liste_tokens.next().unwrap() {
+        if let Token::TokenSeparateur(separateur, _) = liste_tokens.next().unwrap() {
             let mut nb_token: u32 = 0;
             let expr1: AstExpression;
             let expr2: AstExpression;
@@ -366,19 +366,19 @@ fn expr_literaux(mut liste_tokens: &mut TokenIterator) -> (AstExpression, u32) {
             panic!("parenthese manquante: {:?}", liste_tokens);
         }
     } else if liste_tokens.est_identifiant() {
-        if let Token::TokenIdentifiant(ident) = liste_tokens.next().unwrap() {
+        if let Token::TokenIdentifiant(ident, _) = liste_tokens.next().unwrap() {
             return (AstExpression::AstIdentifiant(ident.clone()), 1);
         } else {
             panic!("identifiant inconnu");
         }
     } else if liste_tokens.est_nombre() {
-        if let Token::TokenNombre(nombre) = liste_tokens.next().unwrap() {
+        if let Token::TokenNombre(nombre, _, _, _) = liste_tokens.next().unwrap() {
             return (AstExpression::AstNombre(nombre), 1);
         } else {
             panic!("nombre inconnu: {:?}", liste_tokens.get());
         }
     } else if liste_tokens.est_chaine() {
-        if let Token::TokenChaine(chaine) = liste_tokens.next().unwrap() {
+        if let Token::TokenChaine(chaine, _) = liste_tokens.next().unwrap() {
             return (AstExpression::AstChaine(chaine.clone()), 1);
         } else {
             panic!("chaine inconnue: {:?}", liste_tokens.get());

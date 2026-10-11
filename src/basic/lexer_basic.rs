@@ -56,12 +56,27 @@ pub enum TypeSeparateur {
 }
 
 #[derive(Debug, Clone, PartialEq)]
+pub struct PositionToken {
+    ligne: u32,
+    colonne: u32,
+}
+
+impl PositionToken {
+    fn new(no_ligne: u32, no_colonne: u32) -> PositionToken {
+        PositionToken {
+            ligne: no_ligne,
+            colonne: no_colonne,
+        }
+    }
+}
+
+#[derive(Debug, Clone, PartialEq)]
 pub enum Token {
-    TokenNombre(u32),
-    TokenIdentifiant(String),
-    TokenSeparateur(TypeSeparateur),
-    TokenMotReserve(TypeMotCle),
-    TokenChaine(String),
+    TokenNombre(u32, f64, bool, PositionToken),
+    TokenIdentifiant(String, PositionToken),
+    TokenSeparateur(TypeSeparateur, PositionToken),
+    TokenMotReserve(TypeMotCle, PositionToken),
+    TokenChaine(String, PositionToken),
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -197,12 +212,15 @@ impl Iterator for CharIterator {
 pub fn lexer(contenu_fichier: String) -> Vec<Vec<Token>> {
     let mut liste_tokens: Vec<Vec<Token>> = Vec::new();
 
+    let mut ligne_num = 1;
+
     for ligne in contenu_fichier.lines() {
         let mut liste_tokens_ligne: Vec<Token> = Vec::new();
 
         let mut iter = CharIterator::new(ligne.to_string());
 
         while let Some(mot) = iter.next() {
+            let pos = PositionToken::new(ligne_num, u32::try_from(iter.index).unwrap());
             if iter.next_is_commentaire() {
                 // commentaire
                 break;
@@ -218,7 +236,7 @@ pub fn lexer(contenu_fichier: String) -> Vec<Vec<Token>> {
                     }
                 }
 
-                let token = creation_token("".to_string(), nombre, EtatLexer::Nombre);
+                let token = creation_token("".to_string(), nombre, EtatLexer::Nombre, pos);
                 liste_tokens_ligne.push(token);
             } else if iter.is_type_charactere(TypeCharactere::Separateur) {
                 // séparateur
@@ -235,7 +253,7 @@ pub fn lexer(contenu_fichier: String) -> Vec<Vec<Token>> {
                         panic!("erreur de caractere: {}", mot)
                     }
                 }
-                let token = creation_token(s, 0, EtatLexer::Separateur);
+                let token = creation_token(s, 0, EtatLexer::Separateur, pos);
                 liste_tokens_ligne.push(token);
             } else if iter.is_type_charactere(TypeCharactere::Mot) {
                 // identifiant
@@ -255,7 +273,7 @@ pub fn lexer(contenu_fichier: String) -> Vec<Vec<Token>> {
                     }
                 }
 
-                let token = creation_token(s, 0, EtatLexer::Mot);
+                let token = creation_token(s, 0, EtatLexer::Mot, pos);
                 liste_tokens_ligne.push(token);
             } else if iter.is_type_charactere(TypeCharactere::Guillemet) {
                 // chaine de caractère
@@ -270,7 +288,7 @@ pub fn lexer(contenu_fichier: String) -> Vec<Vec<Token>> {
                 if iter.next_is_type_charactere(1, TypeCharactere::Guillemet) {
                     iter.next();
                 }
-                let token = creation_token(s, 0, EtatLexer::ChaineDeCaracteres);
+                let token = creation_token(s, 0, EtatLexer::ChaineDeCaracteres, pos);
                 liste_tokens_ligne.push(token);
             } else {
                 // ignoré
@@ -285,6 +303,8 @@ pub fn lexer(contenu_fichier: String) -> Vec<Vec<Token>> {
         if liste_tokens_ligne.len() > 0 {
             liste_tokens.push(liste_tokens_ligne);
         }
+
+        ligne_num += 1;
     }
     liste_tokens
 }
@@ -329,18 +349,18 @@ fn get_type_charactere(mot: char) -> TypeCharactere {
     }
 }
 
-fn creation_token(s: String, nombre: u32, etat: EtatLexer) -> Token {
+fn creation_token(s: String, nombre: u32, etat: EtatLexer, pos: PositionToken) -> Token {
     match etat {
-        EtatLexer::Nombre => Token::TokenNombre(nombre),
+        EtatLexer::Nombre => Token::TokenNombre(nombre, 0.0, false, pos),
         EtatLexer::Mot => {
             if let Some(mot_cle) = mots_cles(s.clone()) {
-                Token::TokenMotReserve(mot_cle)
+                Token::TokenMotReserve(mot_cle, pos)
             } else {
-                Token::TokenIdentifiant(s)
+                Token::TokenIdentifiant(s, pos)
             }
         }
-        EtatLexer::Separateur => Token::TokenSeparateur(calcul_operateur(s)),
-        EtatLexer::ChaineDeCaracteres => Token::TokenChaine(s),
+        EtatLexer::Separateur => Token::TokenSeparateur(calcul_operateur(s), pos),
+        EtatLexer::ChaineDeCaracteres => Token::TokenChaine(s, pos),
         _ => panic!("Etat invalide"),
     }
 }
@@ -426,7 +446,15 @@ mod tests {
         let fichier = "123".to_string();
         let liste_tokens = lexer(fichier);
 
-        assert_eq!(liste_tokens, vec![vec![Token::TokenNombre(123)]]);
+        assert_eq!(
+            liste_tokens,
+            vec![vec![Token::TokenNombre(
+                123,
+                0.,
+                false,
+                PositionToken::new(1, 0)
+            )]]
+        );
     }
 
     #[test]
@@ -436,7 +464,10 @@ mod tests {
 
         assert_eq!(
             liste_tokens,
-            vec![vec![Token::TokenIdentifiant("abc".to_string())]]
+            vec![vec![Token::TokenIdentifiant(
+                "abc".to_string(),
+                PositionToken::new(1, 0)
+            )]]
         );
     }
 
@@ -447,7 +478,10 @@ mod tests {
 
         assert_eq!(
             liste_tokens,
-            vec![vec![Token::TokenIdentifiant("abc$".to_string())]]
+            vec![vec![Token::TokenIdentifiant(
+                "abc$".to_string(),
+                PositionToken::new(1, 0)
+            )]]
         );
     }
 
@@ -459,9 +493,9 @@ mod tests {
         assert_eq!(
             liste_tokens,
             vec![vec![
-                Token::TokenIdentifiant("toto".to_string()),
-                Token::TokenIdentifiant("tata%".to_string()),
-                Token::TokenNombre(96325)
+                Token::TokenIdentifiant("toto".to_string(), PositionToken::new(1, 0)),
+                Token::TokenIdentifiant("tata%".to_string(), PositionToken::new(1, 5)),
+                Token::TokenNombre(96325, 0., false, PositionToken::new(1, 11))
             ]]
         );
     }
@@ -473,24 +507,36 @@ mod tests {
 
         assert_eq!(
             liste_tokens,
-            vec![vec![Token::TokenIdentifiant("azertyu123_bbb".to_string())]]
+            vec![vec![Token::TokenIdentifiant(
+                "azertyu123_bbb".to_string(),
+                PositionToken::new(1, 0)
+            )]]
         );
     }
 
     #[test]
     fn test_lexer_identifiant5() {
         let fichier = "aaa
-                            bbbb
-                            cccc"
+bbbb
+cccc"
             .to_string();
         let liste_tokens = lexer(fichier);
 
         assert_eq!(
             liste_tokens,
             vec![
-                vec![Token::TokenIdentifiant("aaa".to_string())],
-                vec![Token::TokenIdentifiant("bbbb".to_string())],
-                vec![Token::TokenIdentifiant("cccc".to_string())]
+                vec![Token::TokenIdentifiant(
+                    "aaa".to_string(),
+                    PositionToken::new(1, 0)
+                )],
+                vec![Token::TokenIdentifiant(
+                    "bbbb".to_string(),
+                    PositionToken::new(2, 0)
+                )],
+                vec![Token::TokenIdentifiant(
+                    "cccc".to_string(),
+                    PositionToken::new(3, 0)
+                )]
             ]
         );
     }
@@ -503,11 +549,11 @@ mod tests {
         assert_eq!(
             liste_tokens,
             vec![vec![
-                Token::TokenIdentifiant("aaa$".to_string()),
-                Token::TokenIdentifiant("bbb!".to_string()),
-                Token::TokenIdentifiant("ccc%".to_string()),
-                Token::TokenIdentifiant("ddd#".to_string()),
-                Token::TokenIdentifiant("eeee&".to_string())
+                Token::TokenIdentifiant("aaa$".to_string(), PositionToken::new(1, 0)),
+                Token::TokenIdentifiant("bbb!".to_string(), PositionToken::new(1, 5)),
+                Token::TokenIdentifiant("ccc%".to_string(), PositionToken::new(1, 10)),
+                Token::TokenIdentifiant("ddd#".to_string(), PositionToken::new(1, 15)),
+                Token::TokenIdentifiant("eeee&".to_string(), PositionToken::new(1, 20))
             ]]
         );
     }
@@ -520,9 +566,9 @@ mod tests {
         assert_eq!(
             liste_tokens,
             vec![vec![
-                Token::TokenNombre(2),
-                Token::TokenSeparateur(PLUS),
-                Token::TokenNombre(3)
+                Token::TokenNombre(2, 0., false, PositionToken::new(1, 0)),
+                Token::TokenSeparateur(PLUS, PositionToken::new(1, 1)),
+                Token::TokenNombre(3, 0., false, PositionToken::new(1, 2))
             ]]
         );
     }
@@ -535,20 +581,20 @@ mod tests {
         assert_eq!(
             liste_tokens,
             vec![vec![
-                Token::TokenSeparateur(PLUS),
-                Token::TokenSeparateur(MOINS),
-                Token::TokenSeparateur(FOIS),
-                Token::TokenSeparateur(DIVR),
-                Token::TokenSeparateur(DIVE),
-                Token::TokenSeparateur(EXP),
-                Token::TokenSeparateur(PARENTO),
-                Token::TokenSeparateur(PARENTF),
-                Token::TokenSeparateur(INF),
-                Token::TokenSeparateur(SUP),
-                Token::TokenSeparateur(EQU),
-                Token::TokenSeparateur(SUPE),
-                Token::TokenSeparateur(INFE),
-                Token::TokenSeparateur(DIFF)
+                Token::TokenSeparateur(PLUS, PositionToken::new(1, 0)),
+                Token::TokenSeparateur(MOINS, PositionToken::new(1, 2)),
+                Token::TokenSeparateur(FOIS, PositionToken::new(1, 4)),
+                Token::TokenSeparateur(DIVR, PositionToken::new(1, 6)),
+                Token::TokenSeparateur(DIVE, PositionToken::new(1, 8)),
+                Token::TokenSeparateur(EXP, PositionToken::new(1, 10)),
+                Token::TokenSeparateur(PARENTO, PositionToken::new(1, 12)),
+                Token::TokenSeparateur(PARENTF, PositionToken::new(1, 14)),
+                Token::TokenSeparateur(INF, PositionToken::new(1, 16)),
+                Token::TokenSeparateur(SUP, PositionToken::new(1, 18)),
+                Token::TokenSeparateur(EQU, PositionToken::new(1, 20)),
+                Token::TokenSeparateur(SUPE, PositionToken::new(1, 22)),
+                Token::TokenSeparateur(INFE, PositionToken::new(1, 25)),
+                Token::TokenSeparateur(DIFF, PositionToken::new(1, 28))
             ]]
         );
     }
@@ -560,7 +606,10 @@ mod tests {
 
         assert_eq!(
             liste_tokens,
-            vec![vec![Token::TokenChaine("bbb".to_string()),]]
+            vec![vec![Token::TokenChaine(
+                "bbb".to_string(),
+                PositionToken::new(1, 0)
+            ),]]
         );
     }
 
@@ -571,7 +620,10 @@ mod tests {
 
         assert_eq!(
             liste_tokens,
-            vec![vec![Token::TokenChaine("".to_string()),]]
+            vec![vec![Token::TokenChaine(
+                "".to_string(),
+                PositionToken::new(1, 0)
+            ),]]
         );
     }
 
@@ -598,7 +650,10 @@ mod tests {
 
         assert_eq!(
             liste_tokens,
-            vec![vec![Token::TokenIdentifiant("i".to_string())]]
+            vec![vec![Token::TokenIdentifiant(
+                "i".to_string(),
+                PositionToken::new(1, 0)
+            )]]
         );
     }
 
@@ -609,7 +664,10 @@ mod tests {
 
         assert_eq!(
             liste_tokens,
-            vec![vec![Token::TokenIdentifiant("XXX".to_string())]]
+            vec![vec![Token::TokenIdentifiant(
+                "XXX".to_string(),
+                PositionToken::new(1, 0)
+            )]]
         );
     }
 
@@ -621,9 +679,9 @@ mod tests {
         assert_eq!(
             liste_tokens,
             vec![vec![
-                Token::TokenIdentifiant("a".to_string()),
-                Token::TokenSeparateur(EQU),
-                Token::TokenNombre(3)
+                Token::TokenIdentifiant("a".to_string(), PositionToken::new(1, 0)),
+                Token::TokenSeparateur(EQU, PositionToken::new(1, 1)),
+                Token::TokenNombre(3, 0., false, PositionToken::new(1, 2))
             ]]
         );
     }
@@ -635,7 +693,10 @@ mod tests {
 
         assert_eq!(
             liste_tokens,
-            vec![vec![Token::TokenIdentifiant("remember".to_string())]]
+            vec![vec![Token::TokenIdentifiant(
+                "remember".to_string(),
+                PositionToken::new(1, 0)
+            )]]
         );
     }
 
@@ -646,7 +707,10 @@ mod tests {
 
         assert_eq!(
             liste_tokens,
-            vec![vec![Token::TokenIdentifiant("REM$".to_string())]]
+            vec![vec![Token::TokenIdentifiant(
+                "REM$".to_string(),
+                PositionToken::new(1, 0)
+            )]]
         );
     }
 }
