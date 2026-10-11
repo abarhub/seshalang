@@ -194,7 +194,7 @@ fn parsing_programme(liste_tokens: Vec<Vec<Token>>) -> AstProgramme {
                     if token_iterator.len() > 0
                         && separateur_parametre(&ident, token_iterator.get().unwrap())
                     {
-                        let mut separateur_virgule = true;
+                        let separateur_virgule: bool;
                         if let Some(Token::TokenSeparateur(s, _)) = token_iterator.next() {
                             separateur_virgule = s == VIRGULE;
                         } else {
