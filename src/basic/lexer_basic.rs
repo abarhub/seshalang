@@ -59,6 +59,14 @@ pub enum TypeSeparateur {
 }
 
 #[derive(Debug, Clone, PartialEq)]
+pub enum TypeNombre {
+    Entier,
+    Long,
+    Single,
+    Double,
+}
+
+#[derive(Debug, Clone, PartialEq)]
 pub struct PositionToken {
     ligne: u32,
     colonne: u32,
@@ -75,7 +83,7 @@ impl PositionToken {
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum Token {
-    TokenNombre(u32, f64, bool, PositionToken),
+    TokenNombre(u32, f64, TypeNombre, PositionToken),
     TokenIdentifiant(String, PositionToken),
     TokenSeparateur(TypeSeparateur, PositionToken),
     TokenMotReserve(TypeMotCle, PositionToken),
@@ -113,10 +121,11 @@ impl CharIterator {
     }
 
     fn get_next(&self, pos: usize) -> Option<char> {
-        if self.index < 0 || self.index + pos as i32 >= self.texte.len() as i32 {
+        let position = self.index + pos as i32;
+        if position < 0 || position >= self.texte.len() as i32 {
             None
         } else {
-            self.texte.chars().nth(self.index as usize + pos)
+            self.texte.chars().nth(position as usize)
         }
     }
 
@@ -195,6 +204,18 @@ impl CharIterator {
             false
         }
     }
+
+    fn next_is_number(&self, pos: usize) -> bool {
+        if let Some(c) = self.get_next(pos) {
+            get_type_charactere(c) == TypeCharactere::Nombre
+        } else {
+            false
+        }
+    }
+
+    fn no_next(&self) -> bool {
+        self.index >= self.texte.len() as i32
+    }
 }
 
 impl Iterator for CharIterator {
@@ -229,17 +250,30 @@ pub fn lexer(contenu_fichier: String) -> Vec<Vec<Token>> {
                 break;
             } else if iter.is_type_charactere(TypeCharactere::Nombre) {
                 // nombre
-                let mut nombre = mot.to_digit(10).unwrap();
+                let mut s = "".to_string();
+                s.push(mot);
+                // let mut nombre = mot.to_digit(10).unwrap();
 
-                while iter.next_is_type_charactere(1, TypeCharactere::Nombre) {
+                while iter.next_is_type_charactere(1, TypeCharactere::Nombre)
+                    || iter.next_is_character(1, '.')
+                    || iter.next_is_ident(1, 'e')
+                    || iter.next_is_ident(1, 'd')
+                    || iter.next_is_character(1, '#')
+                    || iter.next_is_character(1, '!')
+                {
                     if let Some(mot2) = iter.next() {
-                        nombre = nombre * 10 + mot2.to_digit(10).unwrap();
+                        s.push(mot2);
+                        // nombre = nombre * 10 + mot2.to_digit(10).unwrap();
                     } else {
                         break;
                     }
                 }
 
-                let token = creation_token("".to_string(), nombre, EtatLexer::Nombre, pos);
+                // if iter.next_is_character(1, '.'){
+                //
+                // }
+
+                let token = creation_token_nombre(s, pos);
                 liste_tokens_ligne.push(token);
             } else if iter.is_type_charactere(TypeCharactere::Separateur) {
                 // séparateur
@@ -256,7 +290,7 @@ pub fn lexer(contenu_fichier: String) -> Vec<Vec<Token>> {
                         panic!("erreur de caractere: {}", mot)
                     }
                 }
-                let token = creation_token(s, 0, EtatLexer::Separateur, pos);
+                let token = creation_token(s, EtatLexer::Separateur, pos);
                 liste_tokens_ligne.push(token);
             } else if iter.is_type_charactere(TypeCharactere::Mot) {
                 // identifiant
@@ -276,7 +310,7 @@ pub fn lexer(contenu_fichier: String) -> Vec<Vec<Token>> {
                     }
                 }
 
-                let token = creation_token(s, 0, EtatLexer::Mot, pos);
+                let token = creation_token(s, EtatLexer::Mot, pos);
                 liste_tokens_ligne.push(token);
             } else if iter.is_type_charactere(TypeCharactere::Guillemet) {
                 // chaine de caractère
@@ -291,7 +325,7 @@ pub fn lexer(contenu_fichier: String) -> Vec<Vec<Token>> {
                 if iter.next_is_type_charactere(1, TypeCharactere::Guillemet) {
                     iter.next();
                 }
-                let token = creation_token(s, 0, EtatLexer::ChaineDeCaracteres, pos);
+                let token = creation_token(s, EtatLexer::ChaineDeCaracteres, pos);
                 liste_tokens_ligne.push(token);
             } else {
                 // ignoré
@@ -310,6 +344,81 @@ pub fn lexer(contenu_fichier: String) -> Vec<Vec<Token>> {
         ligne_num += 1;
     }
     liste_tokens
+}
+
+fn creation_token_nombre(s: String, pos: PositionToken) -> Token {
+    let mut nombre_entier = 0u32;
+    let mut decimal = false;
+    let mut decimal_double = false;
+    let mut nombre_decimal = 0f64;
+    let mut exposant = false;
+    let mut nombre_exposant = 0i32;
+    let mut iter = CharIterator::new(s.clone());
+
+    // partie entiere du nombre
+    while iter.next_is_number(1) {
+        let c = iter.next().unwrap();
+        nombre_entier = nombre_entier * 10 + (c as u8 - '0' as u8) as u32;
+    }
+
+    // partie décimale du nombre : .XXXX
+    if iter.next_is_character(1, '.') {
+        iter.next().unwrap();
+        let mut facteur = 0.1f64;
+        decimal = true;
+        while iter.next_is_number(1) {
+            let c = iter.next().unwrap();
+            nombre_decimal = nombre_decimal + (c as u8 - '0' as u8) as f64 * facteur;
+            facteur = facteur / 10.0;
+        }
+    }
+
+    // partie exposant du nombre : eXXX
+    if iter.next_is_ident(1, 'e') || iter.next_is_ident(1, 'd') {
+        let mut exposant_negatif = false;
+        decimal_double = iter.next_is_ident(1, 'e');
+        exposant = true;
+        iter.next().unwrap();
+        if iter.next_is_character(1, '-') || iter.next_is_character(1, '+') {
+            exposant_negatif = iter.next_is_character(1, '-');
+            iter.next().unwrap();
+        }
+        while iter.next_is_number(1) {
+            let c = iter.next().unwrap();
+            nombre_exposant = nombre_exposant * 10 + (c as u8 - '0' as u8) as i32;
+        }
+        if exposant_negatif {
+            nombre_exposant = -nombre_exposant;
+        }
+    }
+    if iter.next_is_character(1, '#') || iter.next_is_character(1, '!') {
+        decimal = true;
+        decimal_double = iter.next_is_character(1, '#');
+        iter.next().unwrap();
+    }
+    if iter.no_next() {
+        panic!("Nombre invalide {}", s);
+    }
+    if !decimal && !exposant {
+        if nombre_entier <= 32768 {
+            Token::TokenNombre(nombre_entier, 0.0, TypeNombre::Entier, pos)
+        } else {
+            Token::TokenNombre(nombre_entier, 0.0, TypeNombre::Long, pos)
+        }
+    } else {
+        let mut nombre: f64 = nombre_entier as f64;
+        if decimal {
+            nombre = nombre + nombre_decimal;
+        }
+        if exposant {
+            nombre = nombre * 10.0_f64.powi(nombre_exposant);
+        }
+        if decimal_double {
+            Token::TokenNombre(0, nombre, TypeNombre::Double, pos)
+        } else {
+            Token::TokenNombre(0, nombre, TypeNombre::Single, pos)
+        }
+    }
 }
 
 fn est_fin_variable(c: char) -> bool {
@@ -334,6 +443,8 @@ fn get_type_charactere(mot: char) -> TypeCharactere {
         || mot == '>'
         || mot == '\\'
         || mot == '^'
+        || mot == '.'
+        || mot == ':'
     {
         TypeCharactere::Separateur
     } else if mot.is_ascii_alphabetic()
@@ -352,9 +463,8 @@ fn get_type_charactere(mot: char) -> TypeCharactere {
     }
 }
 
-fn creation_token(s: String, nombre: u32, etat: EtatLexer, pos: PositionToken) -> Token {
+fn creation_token(s: String, etat: EtatLexer, pos: PositionToken) -> Token {
     match etat {
-        EtatLexer::Nombre => Token::TokenNombre(nombre, 0.0, false, pos),
         EtatLexer::Mot => {
             if let Some(mot_cle) = mots_cles(s.clone()) {
                 Token::TokenMotReserve(mot_cle, pos)
@@ -443,6 +553,7 @@ fn mots_cles(s: String) -> Option<TypeMotCle> {
 mod tests {
     // Note this useful idiom: importing names from outer (for mod tests) scope.
     use super::*;
+    use crate::basic::lexer_basic::TypeNombre::{Double, Entier, Long, Single};
     use crate::basic::lexer_basic::TypeSeparateur::{
         DIFF, DIVE, DIVR, EQU, EXP, FOIS, INF, INFE, MOINS, PARENTF, PARENTO, PLUS, SUP, SUPE,
     };
@@ -457,7 +568,39 @@ mod tests {
             vec![vec![Token::TokenNombre(
                 123,
                 0.,
-                false,
+                Entier,
+                PositionToken::new(1, 0)
+            )]]
+        );
+    }
+
+    #[test]
+    fn test_lexer_nombre2() {
+        let fichier = "123.456".to_string();
+        let liste_tokens = lexer(fichier);
+
+        assert_eq!(
+            liste_tokens,
+            vec![vec![Token::TokenNombre(
+                0,
+                123.456,
+                Single,
+                PositionToken::new(1, 0)
+            )]]
+        );
+    }
+
+    #[test]
+    fn test_lexer_nombre3() {
+        let fichier = "123.456e2".to_string();
+        let liste_tokens = lexer(fichier);
+
+        assert_eq!(
+            liste_tokens,
+            vec![vec![Token::TokenNombre(
+                0,
+                12345.6,
+                Double,
                 PositionToken::new(1, 0)
             )]]
         );
@@ -501,7 +644,7 @@ mod tests {
             vec![vec![
                 Token::TokenIdentifiant("toto".to_string(), PositionToken::new(1, 0)),
                 Token::TokenIdentifiant("tata%".to_string(), PositionToken::new(1, 5)),
-                Token::TokenNombre(96325, 0., false, PositionToken::new(1, 11))
+                Token::TokenNombre(96325, 0., Long, PositionToken::new(1, 11))
             ]]
         );
     }
@@ -572,9 +715,9 @@ cccc"
         assert_eq!(
             liste_tokens,
             vec![vec![
-                Token::TokenNombre(2, 0., false, PositionToken::new(1, 0)),
+                Token::TokenNombre(2, 0., Entier, PositionToken::new(1, 0)),
                 Token::TokenSeparateur(PLUS, PositionToken::new(1, 1)),
-                Token::TokenNombre(3, 0., false, PositionToken::new(1, 2))
+                Token::TokenNombre(3, 0., Entier, PositionToken::new(1, 2))
             ]]
         );
     }
@@ -687,7 +830,7 @@ cccc"
             vec![vec![
                 Token::TokenIdentifiant("a".to_string(), PositionToken::new(1, 0)),
                 Token::TokenSeparateur(EQU, PositionToken::new(1, 1)),
-                Token::TokenNombre(3, 0., false, PositionToken::new(1, 2))
+                Token::TokenNombre(3, 0., Entier, PositionToken::new(1, 2))
             ]]
         );
     }
