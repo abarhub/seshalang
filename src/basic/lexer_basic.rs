@@ -131,9 +131,45 @@ impl CharIterator {
     }
 
     fn next_is_character(&self, pos: usize, car: char) -> bool {
-        if let Some(c) = self.get_next(1) {
+        if let Some(c) = self.get_next(pos) {
             if get_type_charactere(c) == TypeCharactere::Separateur {
                 c == car
+            } else {
+                false
+            }
+        } else {
+            false
+        }
+    }
+
+    fn next_is_ident(&self, pos: usize, car: char) -> bool {
+        if let Some(c) = self.get_next(pos) {
+            c.to_lowercase().eq(car.to_lowercase())
+        } else {
+            false
+        }
+    }
+
+    fn next_is_commentaire(&self) -> bool {
+        if let Some(c) = self.get() {
+            if c == '\'' {
+                true
+            } else if c.to_lowercase().eq('r'.to_lowercase()) {
+                if (self.next_is_ident(1, 'e')) && (self.next_is_ident(2, 'm')) {
+                    if let Some(c) = self.get_next(3) {
+                        if c.is_ascii_alphanumeric()
+                            || (c == '$' || c == '!' || c == '%' || c == '#' || c == '&')
+                        {
+                            return false;
+                        } else {
+                            true
+                        }
+                    } else {
+                        false
+                    }
+                } else {
+                    false
+                }
             } else {
                 false
             }
@@ -167,7 +203,10 @@ pub fn lexer(contenu_fichier: String) -> Vec<Vec<Token>> {
         let mut iter = CharIterator::new(ligne.to_string());
 
         while let Some(mot) = iter.next() {
-            if iter.is_type_charactere(TypeCharactere::Nombre) {
+            if iter.next_is_commentaire() {
+                // commentaire
+                break;
+            } else if iter.is_type_charactere(TypeCharactere::Nombre) {
                 // nombre
                 let mut nombre = mot.to_digit(10).unwrap();
 
@@ -522,6 +561,92 @@ mod tests {
         assert_eq!(
             liste_tokens,
             vec![vec![Token::TokenChaine("bbb".to_string()),]]
+        );
+    }
+
+    #[test]
+    fn test_lexer_guillemet2() {
+        let fichier = "\"\"".to_string();
+        let liste_tokens = lexer(fichier);
+
+        assert_eq!(
+            liste_tokens,
+            vec![vec![Token::TokenChaine("".to_string()),]]
+        );
+    }
+
+    #[test]
+    fn test_lexer_commentaire() {
+        let fichier = "REM aaa bbb ccc".to_string();
+        let liste_tokens = lexer(fichier);
+
+        assert_eq!(liste_tokens.len(), 0);
+    }
+
+    #[test]
+    fn test_lexer_commentaire2() {
+        let fichier = "' aaa bbb ccc".to_string();
+        let liste_tokens = lexer(fichier);
+
+        assert_eq!(liste_tokens.len(), 0);
+    }
+
+    #[test]
+    fn test_lexer_commentaire3() {
+        let fichier = "i REM xxxx".to_string();
+        let liste_tokens = lexer(fichier);
+
+        assert_eq!(
+            liste_tokens,
+            vec![vec![Token::TokenIdentifiant("i".to_string())]]
+        );
+    }
+
+    #[test]
+    fn test_lexer_commentaire4() {
+        let fichier = "XXX ' zzz".to_string();
+        let liste_tokens = lexer(fichier);
+
+        assert_eq!(
+            liste_tokens,
+            vec![vec![Token::TokenIdentifiant("XXX".to_string())]]
+        );
+    }
+
+    #[test]
+    fn test_lexer_commentaire5() {
+        let fichier = "a=3 rem www".to_string();
+        let liste_tokens = lexer(fichier);
+
+        assert_eq!(
+            liste_tokens,
+            vec![vec![
+                Token::TokenIdentifiant("a".to_string()),
+                Token::TokenSeparateur(EQU),
+                Token::TokenNombre(3)
+            ]]
+        );
+    }
+
+    #[test]
+    fn test_lexer_commentaire6() {
+        let fichier = "remember".to_string();
+        let liste_tokens = lexer(fichier);
+
+        assert_eq!(
+            liste_tokens,
+            vec![vec![Token::TokenIdentifiant("remember".to_string())]]
+        );
+    }
+
+    #[test]
+    fn test_lexer_commentaire7() {
+        let fichier = "REM$".to_string();
+        let liste_tokens = lexer(fichier);
+
+        assert_eq!(
+            liste_tokens,
+            vec![vec![Token::TokenIdentifiant("REM$".to_string())]]
         );
     }
 }
