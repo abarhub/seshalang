@@ -1,3 +1,4 @@
+use crate::basic::exec_basic::Valeur::{NombreDouble, NombreInteger, NombreLong, NombreSingle};
 use crate::basic::main_basic::{
     AstExpression, AstInstruction, AstOperateurBinaireType, AstProgramme,
 };
@@ -86,24 +87,68 @@ fn execute_expression(
         let e2 = exp2.as_ref();
         let expr1 = execute_expression(&(e1.clone()), table_symbole);
         let expr2 = execute_expression(&(e2.clone()), table_symbole);
-        if let Valeur::NombreInteger(_) = expr1 {
-            let n1: i16;
-            let n2: i16;
-            if let Valeur::NombreInteger(n) = expr1 {
-                n1 = n;
-            } else {
-                panic!("Expression non numérique: {:?}", expr1);
-            }
-            if let Valeur::NombreInteger(n) = expr2 {
-                n2 = n;
-            } else {
-                panic!("Expression non numérique: {:?}", expr2);
-            }
-            return match operateur {
-                AstOperateurBinaireType::Plus => Valeur::NombreInteger(n1 + n2),
-                AstOperateurBinaireType::Moins => Valeur::NombreInteger(n1 - n2),
-                AstOperateurBinaireType::Multiplication => Valeur::NombreInteger(n1 * n2),
-                AstOperateurBinaireType::DivisionEntiere => Valeur::NombreInteger(n1 / n2),
+        if est_nombre(expr1.clone()) {
+            let (expr1, expr2) = normalise(expr1, expr2);
+            return match (operateur, expr1, expr2) {
+                (AstOperateurBinaireType::Plus, NombreInteger(n1), NombreInteger(n2)) => {
+                    NombreInteger(n1 + n2)
+                }
+                (AstOperateurBinaireType::Moins, NombreInteger(n1), NombreInteger(n2)) => {
+                    NombreInteger(n1 - n2)
+                }
+                (AstOperateurBinaireType::Multiplication, NombreInteger(n1), NombreInteger(n2)) => {
+                    NombreInteger(n1 * n2)
+                }
+                (
+                    AstOperateurBinaireType::DivisionEntiere,
+                    NombreInteger(n1),
+                    NombreInteger(n2),
+                ) => NombreInteger(n1 / n2),
+                (AstOperateurBinaireType::DivisionReel, NombreInteger(n1), NombreInteger(n2)) => {
+                    NombreSingle(n1 as f32 / n2 as f32)
+                }
+                (AstOperateurBinaireType::Plus, NombreLong(n1), NombreLong(n2)) => {
+                    NombreLong(n1 + n2)
+                }
+                (AstOperateurBinaireType::Moins, NombreLong(n1), NombreLong(n2)) => {
+                    NombreLong(n1 - n2)
+                }
+                (AstOperateurBinaireType::Multiplication, NombreLong(n1), NombreLong(n2)) => {
+                    NombreLong(n1 * n2)
+                }
+                (AstOperateurBinaireType::DivisionEntiere, NombreLong(n1), NombreLong(n2)) => {
+                    NombreLong(n1 / n2)
+                }
+                (AstOperateurBinaireType::DivisionReel, NombreLong(n1), NombreLong(n2)) => {
+                    NombreSingle(n1 as f32 / n2 as f32)
+                }
+                (AstOperateurBinaireType::Plus, NombreSingle(n1), NombreSingle(n2)) => {
+                    NombreSingle(n1 + n2)
+                }
+                (AstOperateurBinaireType::Moins, NombreSingle(n1), NombreSingle(n2)) => {
+                    NombreSingle(n1 - n2)
+                }
+                (AstOperateurBinaireType::Multiplication, NombreSingle(n1), NombreSingle(n2)) => {
+                    NombreSingle(n1 * n2)
+                }
+                (AstOperateurBinaireType::DivisionEntiere, NombreSingle(n1), NombreSingle(n2)) => {
+                    NombreSingle(n1 / n2)
+                }
+                (AstOperateurBinaireType::DivisionReel, NombreSingle(n1), NombreSingle(n2)) => {
+                    NombreSingle(n1 / n2)
+                }
+                (AstOperateurBinaireType::Plus, NombreDouble(n1), NombreDouble(n2)) => {
+                    NombreDouble(n1 + n2)
+                }
+                (AstOperateurBinaireType::Moins, NombreDouble(n1), NombreDouble(n2)) => {
+                    NombreDouble(n1 - n2)
+                }
+                (AstOperateurBinaireType::Multiplication, NombreDouble(n1), NombreDouble(n2)) => {
+                    NombreDouble(n1 * n2)
+                }
+                (AstOperateurBinaireType::DivisionReel, NombreDouble(n1), NombreDouble(n2)) => {
+                    NombreDouble(n1 / n2)
+                }
                 _ => panic!("Opérateur inconnu: {:?}", operateur),
             };
         } else if let Valeur::Chaine(s1) = expr1 {
@@ -124,5 +169,37 @@ fn execute_expression(
         return Valeur::Chaine(chaine.clone());
     } else {
         panic!("Expression inconnue: {:?}", expression);
+    }
+}
+
+fn normalise(expr1: Valeur, expr2: Valeur) -> (Valeur, Valeur) {
+    match (expr1.clone(), expr2.clone()) {
+        (NombreInteger(n1), NombreInteger(n2)) => (NombreInteger(n1), NombreInteger(n2)),
+        (NombreLong(n1), NombreLong(n2)) => (NombreLong(n1), NombreLong(n2)),
+        (NombreSingle(n1), NombreSingle(n2)) => (NombreSingle(n1), NombreSingle(n2)),
+        (NombreDouble(n1), NombreDouble(n2)) => (NombreDouble(n1), NombreDouble(n2)),
+        (NombreDouble(n1), NombreInteger(n2)) => (NombreDouble(n1), NombreDouble(n2 as f64)),
+        (NombreInteger(n1), NombreDouble(n2)) => (NombreDouble(n1 as f64), NombreDouble(n2)),
+        (NombreDouble(n1), NombreLong(n2)) => (NombreDouble(n1), NombreDouble(n2 as f64)),
+        (NombreLong(n1), NombreDouble(n2)) => (NombreDouble(n1 as f64), NombreDouble(n2)),
+        (NombreDouble(n1), NombreSingle(n2)) => (NombreDouble(n1), NombreDouble(n2 as f64)),
+        (NombreSingle(n1), NombreDouble(n2)) => (NombreDouble(n1 as f64), NombreDouble(n2)),
+        (NombreLong(n1), NombreInteger(n2)) => (NombreLong(n1), NombreLong(n2 as i32)),
+        (NombreInteger(n1), NombreLong(n2)) => (NombreLong(n1 as i32), NombreLong(n2)),
+        (NombreLong(n1), NombreSingle(n2)) => (NombreSingle(n1 as f32), NombreSingle(n2)),
+        (NombreSingle(n1), NombreLong(n2)) => (NombreSingle(n1), NombreSingle(n2 as f32)),
+        (NombreInteger(n1), NombreSingle(n2)) => (NombreSingle(n1 as f32), NombreSingle(n2)),
+        (NombreSingle(n1), NombreInteger(n2)) => (NombreSingle(n1), NombreSingle(n2 as f32)),
+        _ => (expr1, expr2),
+    }
+}
+
+fn est_nombre(valeur: Valeur) -> bool {
+    match valeur {
+        NombreInteger(_) => true,
+        NombreLong(_) => true,
+        NombreSingle(_) => true,
+        NombreDouble(_) => true,
+        _ => false,
     }
 }

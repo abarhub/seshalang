@@ -1,9 +1,7 @@
-
-use std::fs;
-use std::rc::Rc;
 use crate::basic::exec_basic::execute;
 use crate::basic::parsing_basic::parse_basic;
-
+use std::fs;
+use std::rc::Rc;
 
 #[derive(Debug)]
 pub struct AstProgramme {
@@ -51,11 +49,14 @@ pub enum AstExpression {
     AstNombreSingle(f32),
     AstNombreDouble(f64),
     AstIdentifiant(String),
-    AstOperateurBinaire(AstOperateurBinaireType, Rc<AstExpression>, Rc<AstExpression>),
+    AstOperateurBinaire(
+        AstOperateurBinaireType,
+        Rc<AstExpression>,
+        Rc<AstExpression>,
+    ),
     AstOperateurUnnaire(AstOperateurUnaireType, Rc<AstExpression>),
     AstChaine(String),
 }
-
 
 pub fn parse_basic_file(fichier: String) -> std::io::Result<()> {
     let contenu = fs::read_to_string(fichier)?;
@@ -137,19 +138,65 @@ mod tests {
     #[test]
     fn test_parse_execute7() {
         let fichier = "x=\"XYZ t1\"
-                                print x".to_string();
+                                print x"
+            .to_string();
         let programme = parse_basic(fichier).unwrap();
         let sortie = execute(programme);
         assert_eq!(sortie.len(), 1);
         assert_eq!(sortie[0], "XYZ t1");
     }
+
     #[test]
     fn test_parse_execute8() {
         let fichier = "x=\"ABC\" + \"DEF\"
-                                print x".to_string();
+                                print x"
+            .to_string();
         let programme = parse_basic(fichier).unwrap();
         let sortie = execute(programme);
         assert_eq!(sortie.len(), 1);
         assert_eq!(sortie[0], "ABCDEF");
+    }
+
+    #[test]
+    fn test_parse_execute9() {
+        let fichier = "x=2*3+6*7
+                                print x"
+            .to_string();
+        let programme = parse_basic(fichier).unwrap();
+        let sortie = execute(programme);
+        assert_eq!(sortie.len(), 1);
+        assert_eq!(sortie[0], "48");
+    }
+
+    #[test]
+    fn test_parse_execute10() {
+        let fichier = "print 6\\3
+                              print 6*3
+                              print 6+3
+                              print 6-3"
+            .to_string();
+        let programme = parse_basic(fichier).unwrap();
+        let sortie = execute(programme);
+        assert_eq!(sortie.len(), 4);
+        assert_eq!(sortie[0], "2");
+        assert_eq!(sortie[1], "18");
+        assert_eq!(sortie[2], "9");
+        assert_eq!(sortie[3], "3");
+    }
+
+    #[test]
+    fn test_parse_execute11() {
+        let fichier = "print 6.3\\3
+                              print 6.1*3
+                              print 6.1+3
+                              print 6.1-3"
+            .to_string();
+        let programme = parse_basic(fichier).unwrap();
+        let sortie = execute(programme);
+        assert_eq!(sortie.len(), 4);
+        assert_eq!(sortie[0], "2.1000001");
+        assert_eq!(sortie[1], "18.3");
+        assert_eq!(sortie[2], "9.1");
+        assert_eq!(sortie[3], "3.1");
     }
 }
