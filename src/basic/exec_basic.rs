@@ -73,13 +73,13 @@ fn execute_expression(
     table_symbole: &mut HashMap<String, Valeur>,
 ) -> Valeur {
     if let AstExpression::AstNombreInteger(nombre) = expression {
-        Valeur::NombreInteger(*nombre)
+        NombreInteger(*nombre)
     } else if let AstExpression::AstNombreLong(nombre) = expression {
-        Valeur::NombreLong(*nombre)
+        NombreLong(*nombre)
     } else if let AstExpression::AstNombreSingle(nombre) = expression {
-        Valeur::NombreSingle(*nombre)
+        NombreSingle(*nombre)
     } else if let AstExpression::AstNombreDouble(nombre) = expression {
-        Valeur::NombreDouble(*nombre)
+        NombreDouble(*nombre)
     } else if let AstExpression::AstIdentifiant(ident) = expression {
         return table_symbole.get(ident).unwrap().clone();
     } else if let AstExpression::AstOperateurBinaire(operateur, exp1, exp2) = expression {
