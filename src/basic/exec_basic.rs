@@ -89,66 +89,39 @@ fn execute_expression(
         let expr2 = execute_expression(&(e2.clone()), table_symbole);
         if est_nombre(expr1.clone()) {
             let (expr1, expr2) = normalise(expr1, expr2);
-            return match (operateur, expr1, expr2) {
-                (AstOperateurBinaireType::Plus, NombreInteger(n1), NombreInteger(n2)) => {
-                    NombreInteger(n1 + n2)
-                }
-                (AstOperateurBinaireType::Moins, NombreInteger(n1), NombreInteger(n2)) => {
-                    NombreInteger(n1 - n2)
-                }
-                (AstOperateurBinaireType::Multiplication, NombreInteger(n1), NombreInteger(n2)) => {
-                    NombreInteger(n1 * n2)
-                }
-                (
-                    AstOperateurBinaireType::DivisionEntiere,
-                    NombreInteger(n1),
-                    NombreInteger(n2),
-                ) => NombreInteger(n1 / n2),
-                (AstOperateurBinaireType::DivisionReel, NombreInteger(n1), NombreInteger(n2)) => {
-                    NombreSingle(n1 as f32 / n2 as f32)
-                }
-                (AstOperateurBinaireType::Plus, NombreLong(n1), NombreLong(n2)) => {
-                    NombreLong(n1 + n2)
-                }
-                (AstOperateurBinaireType::Moins, NombreLong(n1), NombreLong(n2)) => {
-                    NombreLong(n1 - n2)
-                }
-                (AstOperateurBinaireType::Multiplication, NombreLong(n1), NombreLong(n2)) => {
-                    NombreLong(n1 * n2)
-                }
-                (AstOperateurBinaireType::DivisionEntiere, NombreLong(n1), NombreLong(n2)) => {
-                    NombreLong(n1 / n2)
-                }
-                (AstOperateurBinaireType::DivisionReel, NombreLong(n1), NombreLong(n2)) => {
-                    NombreSingle(n1 as f32 / n2 as f32)
-                }
-                (AstOperateurBinaireType::Plus, NombreSingle(n1), NombreSingle(n2)) => {
-                    NombreSingle(n1 + n2)
-                }
-                (AstOperateurBinaireType::Moins, NombreSingle(n1), NombreSingle(n2)) => {
-                    NombreSingle(n1 - n2)
-                }
-                (AstOperateurBinaireType::Multiplication, NombreSingle(n1), NombreSingle(n2)) => {
-                    NombreSingle(n1 * n2)
-                }
-                (AstOperateurBinaireType::DivisionEntiere, NombreSingle(n1), NombreSingle(n2)) => {
-                    NombreSingle(n1 / n2)
-                }
-                (AstOperateurBinaireType::DivisionReel, NombreSingle(n1), NombreSingle(n2)) => {
-                    NombreSingle(n1 / n2)
-                }
-                (AstOperateurBinaireType::Plus, NombreDouble(n1), NombreDouble(n2)) => {
-                    NombreDouble(n1 + n2)
-                }
-                (AstOperateurBinaireType::Moins, NombreDouble(n1), NombreDouble(n2)) => {
-                    NombreDouble(n1 - n2)
-                }
-                (AstOperateurBinaireType::Multiplication, NombreDouble(n1), NombreDouble(n2)) => {
-                    NombreDouble(n1 * n2)
-                }
-                (AstOperateurBinaireType::DivisionReel, NombreDouble(n1), NombreDouble(n2)) => {
-                    NombreDouble(n1 / n2)
-                }
+            return match (expr1, expr2) {
+                (NombreInteger(n1), NombreInteger(n2)) => match operateur {
+                    AstOperateurBinaireType::Plus => NombreInteger(n1 + n2),
+                    AstOperateurBinaireType::Moins => NombreInteger(n1 - n2),
+                    AstOperateurBinaireType::Multiplication => NombreInteger(n1 * n2),
+                    AstOperateurBinaireType::DivisionEntiere => NombreInteger(n1 / n2),
+                    AstOperateurBinaireType::DivisionReel => NombreSingle(n1 as f32 / n2 as f32),
+                    _ => panic!("Opérateur inconnu: {:?}", operateur),
+                },
+                (NombreLong(n1), NombreLong(n2)) => match operateur {
+                    AstOperateurBinaireType::Plus => NombreLong(n1 + n2),
+                    AstOperateurBinaireType::Moins => NombreLong(n1 - n2),
+                    AstOperateurBinaireType::Multiplication => NombreLong(n1 * n2),
+                    AstOperateurBinaireType::DivisionEntiere => NombreLong(n1 / n2),
+                    AstOperateurBinaireType::DivisionReel => NombreSingle(n1 as f32 / n2 as f32),
+                    _ => panic!("Opérateur inconnu: {:?}", operateur),
+                },
+                (NombreSingle(n1), NombreSingle(n2)) => match operateur {
+                    AstOperateurBinaireType::Plus => NombreSingle(n1 + n2),
+                    AstOperateurBinaireType::Moins => NombreSingle(n1 - n2),
+                    AstOperateurBinaireType::Multiplication => NombreSingle(n1 * n2),
+                    AstOperateurBinaireType::DivisionEntiere => NombreLong((n1 / n2) as i32),
+                    AstOperateurBinaireType::DivisionReel => NombreSingle(n1 / n2),
+                    _ => panic!("Opérateur inconnu: {:?}", operateur),
+                },
+                (NombreDouble(n1), NombreDouble(n2)) => match operateur {
+                    AstOperateurBinaireType::Plus => NombreDouble(n1 + n2),
+                    AstOperateurBinaireType::Moins => NombreDouble(n1 - n2),
+                    AstOperateurBinaireType::Multiplication => NombreDouble(n1 * n2),
+                    AstOperateurBinaireType::DivisionEntiere => NombreDouble(n1 / n2),
+                    AstOperateurBinaireType::DivisionReel => NombreDouble(n1 / n2),
+                    _ => panic!("Opérateur inconnu: {:?}", operateur),
+                },
                 _ => panic!("Opérateur inconnu: {:?}", operateur),
             };
         } else if let Valeur::Chaine(s1) = expr1 {

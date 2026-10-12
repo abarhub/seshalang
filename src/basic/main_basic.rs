@@ -194,7 +194,7 @@ mod tests {
         let programme = parse_basic(fichier).unwrap();
         let sortie = execute(programme);
         assert_eq!(sortie.len(), 4);
-        assert_eq!(sortie[0], "2.1000001");
+        assert_eq!(sortie[0], "2");
         assert_eq!(sortie[1], "18.3");
         assert_eq!(sortie[2], "9.1");
         assert_eq!(sortie[3], "3.1");
