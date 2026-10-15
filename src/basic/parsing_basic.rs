@@ -229,7 +229,7 @@ fn parsing_programme(liste_tokens: Vec<Vec<Token>>) -> AstProgramme {
                     if token_iterator.len() > 0
                         && separateur_parametre_print(token_iterator.get().unwrap())
                     {
-                        let mut separateur_virgule = true;
+                        let separateur_virgule:bool;
                         if let Some(Token::TokenSeparateur(s, _)) = token_iterator.next() {
                             separateur_virgule = s == VIRGULE;
                         } else {
@@ -386,7 +386,7 @@ fn expr_not(liste_tokens: &mut TokenIterator) -> (AstExpression, u32) {
     if liste_tokens.est_mot_cle(TypeMotCle::Not) {
         let mut op1: (AstExpression, u32) = (AstExpression::AstNombreInteger(0), 0);
         while liste_tokens.est_mot_cle(TypeMotCle::Not) {
-            let token1 = liste_tokens.next().unwrap();
+            liste_tokens.next().unwrap();
             op1 = expr_comparaison(liste_tokens);
             op1 = (
                 AstExpression::AstOperateurUnnaire(AstOperateurUnaireType::Not, Rc::new(op1.0)),
@@ -560,7 +560,7 @@ fn expr_xor(liste_tokens: &mut TokenIterator) -> (AstExpression, u32) {
     op1
 }
 
-fn expr_literaux(mut liste_tokens: &mut TokenIterator) -> (AstExpression, u32) {
+fn expr_literaux(liste_tokens: &mut TokenIterator) -> (AstExpression, u32) {
     if liste_tokens.est_separateur(PARENTO) {
         let mut nb_token: u32 = 0;
         nb_token += 1;

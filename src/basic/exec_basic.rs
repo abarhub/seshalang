@@ -5,6 +5,9 @@ use crate::basic::main_basic::{
 use std::collections::HashMap;
 use std::fmt;
 
+const TRUE: i16 = -1;
+const FALSE: i16 = 0;
+
 #[derive(Debug, Clone)]
 enum Valeur {
     NombreInteger(i16),
@@ -97,13 +100,16 @@ fn execute_expression(
                     AstOperateurBinaireType::DivisionEntiere => NombreInteger(n1 / n2),
                     AstOperateurBinaireType::DivisionReel => NombreSingle(n1 as f32 / n2 as f32),
                     AstOperateurBinaireType::Mod => NombreInteger(n1.checked_rem(n2).unwrap_or(0)),
-                    AstOperateurBinaireType::Exponentiel => NombreInteger(n1.checked_pow(n2 as u32).unwrap_or(0)),
-                    AstOperateurBinaireType::Egal => NombreInteger(if n1 == n2 {-1} else {0}),
-                    AstOperateurBinaireType::Different => NombreInteger(if n1 != n2 {-1} else {0}),
-                    AstOperateurBinaireType::Superieur => NombreInteger(if n1 > n2 {-1} else {0}),
-                    AstOperateurBinaireType::SuperieurEgal => NombreInteger(if n1 >= n2 {-1} else {0}),
-                    AstOperateurBinaireType::Inferieur => NombreInteger(if n1 < n2 {-1} else {0}),
-                    AstOperateurBinaireType::InferieurEgal => NombreInteger(if n1 <= n2 {-1} else {0}),
+                    AstOperateurBinaireType::Exponentiel => {
+                        NombreInteger(n1.checked_pow(n2 as u32).unwrap_or(0))
+                    }
+                    AstOperateurBinaireType::Egal => test(n1 == n2),
+                    AstOperateurBinaireType::Different => test(n1 != n2),
+                    AstOperateurBinaireType::Superieur => test(n1 > n2),
+                    AstOperateurBinaireType::SuperieurEgal => test(n1 >= n2),
+                    AstOperateurBinaireType::Inferieur => test(n1 < n2),
+                    AstOperateurBinaireType::InferieurEgal => test(n1 <= n2),
+                    AstOperateurBinaireType::And => test(n1 != 0 && n2 != 0),
                     _ => panic!("Opérateur inconnu: {:?}", operateur),
                 },
                 (NombreLong(n1), NombreLong(n2)) => match operateur {
@@ -113,13 +119,15 @@ fn execute_expression(
                     AstOperateurBinaireType::DivisionEntiere => NombreLong(n1 / n2),
                     AstOperateurBinaireType::DivisionReel => NombreSingle(n1 as f32 / n2 as f32),
                     AstOperateurBinaireType::Mod => NombreLong(n1.checked_rem(n2).unwrap_or(0)),
-                    AstOperateurBinaireType::Exponentiel => NombreLong(n1.checked_pow(n2 as u32).unwrap_or(0)),
-                    AstOperateurBinaireType::Egal => NombreInteger(if n1 == n2 {-1} else {0}),
-                    AstOperateurBinaireType::Different => NombreInteger(if n1 != n2 {-1} else {0}),
-                    AstOperateurBinaireType::Superieur => NombreInteger(if n1 > n2 {-1} else {0}),
-                    AstOperateurBinaireType::SuperieurEgal => NombreInteger(if n1 >= n2 {-1} else {0}),
-                    AstOperateurBinaireType::Inferieur => NombreInteger(if n1 < n2 {-1} else {0}),
-                    AstOperateurBinaireType::InferieurEgal => NombreInteger(if n1 <= n2 {-1} else {0}),
+                    AstOperateurBinaireType::Exponentiel => {
+                        NombreLong(n1.checked_pow(n2 as u32).unwrap_or(0))
+                    }
+                    AstOperateurBinaireType::Egal => test(n1 == n2),
+                    AstOperateurBinaireType::Different => test(n1 != n2),
+                    AstOperateurBinaireType::Superieur => test(n1 > n2),
+                    AstOperateurBinaireType::SuperieurEgal => test(n1 >= n2),
+                    AstOperateurBinaireType::Inferieur => test(n1 < n2),
+                    AstOperateurBinaireType::InferieurEgal => test(n1 <= n2),
                     _ => panic!("Opérateur inconnu: {:?}", operateur),
                 },
                 (NombreSingle(n1), NombreSingle(n2)) => match operateur {
@@ -129,12 +137,12 @@ fn execute_expression(
                     AstOperateurBinaireType::DivisionEntiere => NombreLong((n1 / n2) as i32),
                     AstOperateurBinaireType::DivisionReel => NombreSingle(n1 / n2),
                     AstOperateurBinaireType::Exponentiel => NombreSingle(n1.powf(n2)),
-                    AstOperateurBinaireType::Egal => NombreInteger(if n1 == n2 {-1} else {0}),
-                    AstOperateurBinaireType::Different => NombreInteger(if n1 != n2 {-1} else {0}),
-                    AstOperateurBinaireType::Superieur => NombreInteger(if n1 > n2 {-1} else {0}),
-                    AstOperateurBinaireType::SuperieurEgal => NombreInteger(if n1 >= n2 {-1} else {0}),
-                    AstOperateurBinaireType::Inferieur => NombreInteger(if n1 < n2 {-1} else {0}),
-                    AstOperateurBinaireType::InferieurEgal => NombreInteger(if n1 <= n2 {-1} else {0}),
+                    AstOperateurBinaireType::Egal => test(n1 == n2),
+                    AstOperateurBinaireType::Different => test(n1 != n2),
+                    AstOperateurBinaireType::Superieur => test(n1 > n2),
+                    AstOperateurBinaireType::SuperieurEgal => test(n1 >= n2),
+                    AstOperateurBinaireType::Inferieur => test(n1 < n2),
+                    AstOperateurBinaireType::InferieurEgal => test(n1 <= n2),
                     _ => panic!("Opérateur inconnu: {:?}", operateur),
                 },
                 (NombreDouble(n1), NombreDouble(n2)) => match operateur {
@@ -144,12 +152,12 @@ fn execute_expression(
                     AstOperateurBinaireType::DivisionEntiere => NombreDouble(n1 / n2),
                     AstOperateurBinaireType::DivisionReel => NombreDouble(n1 / n2),
                     AstOperateurBinaireType::Exponentiel => NombreDouble(n1.powf(n2)),
-                    AstOperateurBinaireType::Egal => NombreInteger(if n1 == n2 {-1} else {0}),
-                    AstOperateurBinaireType::Different => NombreInteger(if n1 != n2 {-1} else {0}),
-                    AstOperateurBinaireType::Superieur => NombreInteger(if n1 > n2 {-1} else {0}),
-                    AstOperateurBinaireType::SuperieurEgal => NombreInteger(if n1 >= n2 {-1} else {0}),
-                    AstOperateurBinaireType::Inferieur => NombreInteger(if n1 < n2 {-1} else {0}),
-                    AstOperateurBinaireType::InferieurEgal => NombreInteger(if n1 <= n2 {-1} else {0}),
+                    AstOperateurBinaireType::Egal => test(n1 == n2),
+                    AstOperateurBinaireType::Different => test(n1 != n2),
+                    AstOperateurBinaireType::Superieur => test(n1 > n2),
+                    AstOperateurBinaireType::SuperieurEgal => test(n1 >= n2),
+                    AstOperateurBinaireType::Inferieur => test(n1 < n2),
+                    AstOperateurBinaireType::InferieurEgal => test(n1 <= n2),
                     _ => panic!("Opérateur inconnu: {:?}", operateur),
                 },
                 _ => panic!("Opérateur inconnu: {:?}", operateur),
@@ -205,4 +213,8 @@ fn est_nombre(valeur: Valeur) -> bool {
         NombreDouble(_) => true,
         _ => false,
     }
+}
+
+fn test(exp: bool) -> Valeur {
+    NombreInteger(if exp { TRUE } else { FALSE })
 }
