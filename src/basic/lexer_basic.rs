@@ -539,6 +539,8 @@ fn calcul_operateur(s: String) -> TypeSeparateur {
         TypeSeparateur::VIRGULE
     } else if s == ";" {
         TypeSeparateur::POINTVIRGULE
+    } else if s == "^" {
+        TypeSeparateur::EXP
     } else {
         panic!("separateur invalide : {}", s)
     }
@@ -589,6 +591,7 @@ fn f64_to_f32(x: f64) -> f32 {
 
 #[cfg(test)]
 mod tests {
+    use crate::basic::lexer_basic::TypeMotCle::Mod;
     // Note this useful idiom: importing names from outer (for mod tests) scope.
     use super::*;
     use crate::basic::lexer_basic::TypeNombre::{Double, Entier, Long, Single};
@@ -747,6 +750,21 @@ cccc"
                 Token::TokenIdentifiant("ccc%".to_string(), PositionToken::new(1, 10)),
                 Token::TokenIdentifiant("ddd#".to_string(), PositionToken::new(1, 15)),
                 Token::TokenIdentifiant("eeee&".to_string(), PositionToken::new(1, 20))
+            ]]
+        );
+    }
+
+    #[test]
+    fn test_lexer_identifiant7() {
+        let fichier = "aaa MOD bbb".to_string();
+        let liste_tokens = lexer(fichier);
+
+        assert_eq!(
+            liste_tokens,
+            vec![vec![
+                Token::TokenIdentifiant("aaa".to_string(), PositionToken::new(1, 0)),
+                Token::TokenMotReserve(Mod, PositionToken::new(1, 4)),
+                Token::TokenIdentifiant("bbb".to_string(), PositionToken::new(1, 8))
             ]]
         );
     }

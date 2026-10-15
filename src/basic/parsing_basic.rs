@@ -5,10 +5,7 @@ use crate::basic::lexer_basic::TypeSeparateur::{
 };
 use crate::basic::lexer_basic::{Token, TypeMotCle, TypeNombre, TypeSeparateur, lexer};
 use crate::basic::main_basic::AstInstruction::AstAffectation;
-use crate::basic::main_basic::AstOperateurBinaireType::{
-    Different, DivisionEntiere, DivisionReel, Egal, Inferieur, InferieurEgal, Moins,
-    Multiplication, Superieur, SuperieurEgal,
-};
+use crate::basic::main_basic::AstOperateurBinaireType::{Different, DivisionEntiere, DivisionReel, Egal, Exponentiel, Inferieur, InferieurEgal, Moins, Multiplication, Superieur, SuperieurEgal};
 use crate::basic::main_basic::{
     AstExpression, AstInstruction, AstOperateurBinaireType, AstOperateurUnaireType, AstProgramme,
 };
@@ -611,7 +608,7 @@ fn calcul_type_operation_binaire(type_operation: TypeSeparateur) -> AstOperateur
         PLUS => AstOperateurBinaireType::Plus,
         MOINS => Moins,
         FOIS => Multiplication,
-        TypeSeparateur::DIVR => DivisionReel,
+        DIVR => DivisionReel,
         DIVE => DivisionEntiere,
         SUP => Superieur,
         SUPE => SuperieurEgal,
@@ -619,6 +616,7 @@ fn calcul_type_operation_binaire(type_operation: TypeSeparateur) -> AstOperateur
         INFE => InferieurEgal,
         DIFF => Different,
         EQU => Egal,
+        EXP => Exponentiel,
         _ => {
             panic!("unsupported type separateur: {:?}", type_operation);
         }

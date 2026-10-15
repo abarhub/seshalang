@@ -33,6 +33,7 @@ pub enum AstOperateurBinaireType {
     Xor,
     Imp,
     Eqv,
+    Exponentiel,
 }
 
 #[derive(Debug, Clone)]
@@ -198,5 +199,44 @@ mod tests {
         assert_eq!(sortie[1], "18.3");
         assert_eq!(sortie[2], "9.1");
         assert_eq!(sortie[3], "3.1");
+    }
+
+    #[test]
+    fn test_parse_execute12() {
+        let fichier = "print 5>3
+                              print 5<5
+                              print 5<=5
+                              print 5<6
+                              print 5<3
+                              print 7=7
+                              print 5=7
+                              print 7<>7
+                              print 7<>5
+                              print 7 MOD 3
+                              print 2^3"
+            .to_string();
+        let programme = parse_basic(fichier).unwrap();
+        let sortie = execute(programme);
+        assert_eq!(sortie.len(), 11);
+        assert_eq!(sortie[0], "-1");
+        assert_eq!(sortie[1], "0");
+        assert_eq!(sortie[2], "-1");
+        assert_eq!(sortie[3], "-1");
+        assert_eq!(sortie[4], "0");
+        assert_eq!(sortie[5], "-1");
+        assert_eq!(sortie[6], "0");
+        assert_eq!(sortie[7], "0");
+        assert_eq!(sortie[8], "-1");
+        assert_eq!(sortie[9], "1");
+        assert_eq!(sortie[10], "8");
+    }
+
+    #[test]
+    fn test_parse_execute13() {
+        let fichier = "print 7  MOD 3".to_string();
+        let programme = parse_basic(fichier).unwrap();
+        let sortie = execute(programme);
+        assert_eq!(sortie.len(), 1);
+        assert_eq!(sortie[0], "1");
     }
 }
