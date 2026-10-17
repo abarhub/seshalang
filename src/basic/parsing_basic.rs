@@ -18,19 +18,12 @@ use crate::basic::main_basic::{
 use std::cmp::max;
 use std::rc::Rc;
 
+const DEBUG_PRINT: bool = false;
+
 #[derive(Debug)]
 struct TokenIterator {
     liste_tokens: Vec<Token>,
     index: i32,
-}
-
-const DEBUG_PRINT: bool = false;
-
-#[derive(Debug, Eq, PartialEq, Clone)]
-enum MotCleFonction {
-    Abs,
-    Asc,
-    Chr,
 }
 
 impl TokenIterator {

@@ -30,12 +30,30 @@ pub enum TypeMotCle {
     Abs,
     Asc,
     Chr,
+    Atn,
+    Cos,
+    Sin,
+    Tan,
+    Cdbl,
+    Csng,
+    Cint,
+    Clng,
 }
 
 impl TypeMotCle {
     pub const fn est_fonction(self) -> bool {
         match self {
-            TypeMotCle::Abs | TypeMotCle::Asc | TypeMotCle::Chr => true,
+            TypeMotCle::Abs
+            | TypeMotCle::Asc
+            | TypeMotCle::Chr
+            | TypeMotCle::Atn
+            | TypeMotCle::Cos
+            | TypeMotCle::Sin
+            | TypeMotCle::Tan
+            | TypeMotCle::Cdbl
+            | TypeMotCle::Csng
+            | TypeMotCle::Cint
+            | TypeMotCle::Clng => true,
             _ => false,
         }
     }
@@ -586,6 +604,14 @@ fn mots_cles(s: String) -> Option<TypeMotCle> {
         "ABS" => Some(TypeMotCle::Abs),
         "ASC" => Some(TypeMotCle::Asc),
         "CHR$" => Some(TypeMotCle::Chr),
+        "ATN" => Some(TypeMotCle::Atn),
+        "COS" => Some(TypeMotCle::Cos),
+        "SIN" => Some(TypeMotCle::Sin),
+        "TAN" => Some(TypeMotCle::Tan),
+        "CDBL" => Some(TypeMotCle::Cdbl),
+        "CSNG" => Some(TypeMotCle::Csng),
+        "CINT" => Some(TypeMotCle::Cint),
+        "CLNG" => Some(TypeMotCle::Clng),
         _ => None,
     }
 }

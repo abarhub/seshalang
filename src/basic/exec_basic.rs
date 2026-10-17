@@ -1,6 +1,7 @@
 use crate::basic::exec_basic::Valeur::{
     Chaine, NombreDouble, NombreInteger, NombreLong, NombreSingle,
 };
+use crate::basic::fonction_basic;
 use crate::basic::lexer_basic::TypeMotCle;
 use crate::basic::main_basic::AstExpression::{AstFonction, AstOperateurUnnaire};
 use crate::basic::main_basic::AstNomMethode::AstNomReserve;
@@ -16,7 +17,7 @@ const FALSE: i16 = 0;
 const DEBUG_PRINT: bool = false;
 
 #[derive(Debug, Clone)]
-enum Valeur {
+pub(crate) enum Valeur {
     NombreInteger(i16),
     NombreLong(i32),
     NombreSingle(f32),
@@ -31,7 +32,7 @@ impl fmt::Display for Valeur {
             NombreLong(n) => write!(f, "{}", n),
             NombreSingle(n) => write!(f, "{}", n),
             NombreDouble(n) => write!(f, "{}", n),
-            Valeur::Chaine(s) => write!(f, "{}", s),
+            Chaine(s) => write!(f, "{}", s),
         }
     }
 }
@@ -58,6 +59,9 @@ pub fn execute(programme: AstProgramme) -> Vec<String> {
                 for expression in parametres.iter() {
                     let resultat = execute_expression(&expression, &mut contexte);
                     if i < separateurs.len() && !separateurs[i] {
+                        if DEBUG_PRINT {
+                            println!("{:?}", resultat);
+                        }
                         print!("{:?} ", resultat);
                         if sortie.is_empty() {
                             sortie.push(resultat.to_string());
@@ -69,7 +73,9 @@ pub fn execute(programme: AstProgramme) -> Vec<String> {
                             sortie[len] = s;
                         }
                     } else {
-                        println!("{:?}", resultat);
+                        if DEBUG_PRINT {
+                            println!("{:?}", resultat);
+                        }
                         sortie.push(resultat.to_string());
                     }
 
@@ -86,7 +92,7 @@ pub fn execute(programme: AstProgramme) -> Vec<String> {
     sortie
 }
 
-fn execute_expression(
+pub fn execute_expression(
     expression: &AstExpression,
     table_symbole: &mut HashMap<String, Valeur>,
 ) -> Valeur {
@@ -215,14 +221,14 @@ fn execute_expression0(
                 panic!("Expression non numérique: {:?}", expr2);
             }
             return match operateur {
-                AstOperateurBinaireType::Plus => Valeur::Chaine(s1 + s2.as_str()),
+                AstOperateurBinaireType::Plus => Chaine(s1 + s2.as_str()),
                 _ => panic!("Opérateur inconnu: {:?}", operateur),
             };
         } else {
             panic!("Expression invalide: {:?}", expr1);
         }
     } else if let AstExpression::AstChaine(chaine) = expression {
-        return Valeur::Chaine(chaine.clone());
+        return Chaine(chaine.clone());
     } else if let AstOperateurUnnaire(operateur, exp1) = expression {
         let e1 = exp1.as_ref();
         let expr1 = execute_expression(&(e1.clone()), table_symbole);
@@ -256,63 +262,11 @@ fn execute_expression0(
             panic!("Expression invalide: {:?}", expr1);
         }
     } else if let AstFonction(nomMethode, liste_expressions) = expression {
-        match nomMethode {
-            AstNomReserve(mot_reserve) => match mot_reserve {
-                TypeMotCle::Abs => {
-                    if liste_expressions.len() != 1 {
-                        panic!("La fonction abs() attend exactement un argument");
-                    }
-                    let e1 = liste_expressions.get(0).unwrap();
-                    let expr1 = execute_expression(&(e1.clone()), table_symbole);
-                    match expr1 {
-                        NombreInteger(n) => {
-                            return NombreInteger(n.abs());
-                        }
-                        NombreLong(n) => {
-                            return NombreLong(n.abs());
-                        }
-                        NombreSingle(n) => {
-                            return NombreSingle(n.abs());
-                        }
-                        NombreDouble(valeur) => {
-                            return NombreDouble(valeur.abs());
-                        }
-                        _ => panic!("La fonction abs() attend un nombre en argument"),
-                    }
-                }
-                TypeMotCle::Asc => {
-                    if liste_expressions.len() != 1 {
-                        panic!("La fonction abs() attend exactement un argument");
-                    }
-                    let e1 = liste_expressions.get(0).unwrap();
-                    let expr1 = execute_expression(&(e1.clone()), table_symbole);
-                    match expr1 {
-                        Chaine(s) => {
-                            return NombreInteger(s.chars().next().unwrap() as i16);
-                        }
-                        _ => panic!("La fonction asc() attend une chaine en argument"),
-                    }
-                }
-                TypeMotCle::Chr => {
-                    if liste_expressions.len() != 1 {
-                        panic!("La fonction char$() attend exactement un argument");
-                    }
-                    let e1 = liste_expressions.get(0).unwrap();
-                    let expr1 = execute_expression(&(e1.clone()), table_symbole);
-                    match expr1 {
-                        NombreInteger(n) => {
-                            return Chaine(format!("{}",  u8::try_from(n).unwrap() as char));
-                        }
-                        NombreLong(n) => {
-                            return Chaine(format!("{}",  u8::try_from(n).unwrap() as char));
-                        }
-                        _ => panic!("La fonction char$() attend un entier en argument"),
-                    }
-                }
-                _ => panic!("La fonction {:?} n'existe pas", mot_reserve),
-            },
-            _ => panic!("Méthode inconnue: {:?}", nomMethode),
-        }
+        return fonction_basic::execute_fonction(
+            nomMethode.clone(),
+            liste_expressions.clone(),
+            table_symbole,
+        );
     } else {
         panic!("Expression inconnue: {:?}", expression);
     }
