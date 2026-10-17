@@ -3,9 +3,14 @@ use crate::basic::lexer_basic::TypeSeparateur::{
     DIFF, DIVE, DIVR, EQU, EXP, FOIS, INF, INFE, MOINS, PARENTF, PARENTO, PLUS, POINTVIRGULE, SUP,
     SUPE, VIRGULE,
 };
-use crate::basic::lexer_basic::{Token, TypeMotCle, TypeNombre, TypeSeparateur, lexer};
+use crate::basic::lexer_basic::{
+    PositionToken, Token, TypeMotCle, TypeNombre, TypeSeparateur, lexer,
+};
 use crate::basic::main_basic::AstInstruction::AstAffectation;
-use crate::basic::main_basic::AstOperateurBinaireType::{Different, DivisionEntiere, DivisionReel, Egal, Exponentiel, Inferieur, InferieurEgal, Moins, Multiplication, Superieur, SuperieurEgal};
+use crate::basic::main_basic::AstOperateurBinaireType::{
+    Different, DivisionEntiere, DivisionReel, Egal, Exponentiel, Inferieur, InferieurEgal, Moins,
+    Multiplication, Superieur, SuperieurEgal,
+};
 use crate::basic::main_basic::{
     AstExpression, AstInstruction, AstOperateurBinaireType, AstOperateurUnaireType, AstProgramme,
 };
@@ -190,6 +195,8 @@ fn parsing_programme(liste_tokens: Vec<Vec<Token>>) -> AstProgramme {
                 let mut separateur_virgule_liste: Vec<bool> = vec![];
                 loop {
                     let exp = parsing_expression(&mut token_iterator);
+                    let tmp = exp.0.clone();
+                    println!("parsing appel exp: {:?}", tmp);
                     liste_expressions.push(exp.0);
                     if token_iterator.len() > 0
                         && separateur_parametre(&ident, token_iterator.get().unwrap())
@@ -225,11 +232,13 @@ fn parsing_programme(liste_tokens: Vec<Vec<Token>>) -> AstProgramme {
                 let mut separateur_virgule_liste: Vec<bool> = vec![];
                 loop {
                     let exp = parsing_expression(&mut token_iterator);
+                    let tmp = exp.0.clone();
+                    println!("parsing appel print exp: {:?}", tmp);
                     liste_expressions.push(exp.0);
                     if token_iterator.len() > 0
                         && separateur_parametre_print(token_iterator.get().unwrap())
                     {
-                        let separateur_virgule:bool;
+                        let separateur_virgule: bool;
                         if let Some(Token::TokenSeparateur(s, _)) = token_iterator.next() {
                             separateur_virgule = s == VIRGULE;
                         } else {
@@ -620,5 +629,111 @@ fn calcul_type_operation_binaire(type_operation: TypeSeparateur) -> AstOperateur
         _ => {
             panic!("unsupported type separateur: {:?}", type_operation);
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::basic::lexer_basic::TypeMotCle::Mod;
+    // Note this useful idiom: importing names from outer (for mod tests) scope.
+    use super::*;
+    use crate::basic::lexer_basic::TypeNombre::{Double, Entier, Long, Single};
+    use crate::basic::lexer_basic::TypeSeparateur::{
+        DIFF, DIVE, DIVR, EQU, EXP, FOIS, INF, INFE, MOINS, PARENTF, PARENTO, PLUS, SUP, SUPE,
+    };
+    use crate::basic::main_basic::AstInstruction::AstAppelMethode;
+
+    #[test]
+    fn test_parser1() {
+        let fichier = "x=1".to_string();
+        let liste_tokens = lexer(fichier);
+        let ast = parsing_programme(liste_tokens);
+
+        assert_eq!(
+            ast.liste_instructions,
+            vec![AstAffectation(
+                "x".to_string(),
+                AstExpression::AstNombreInteger(1)
+            )]
+        );
+    }
+
+    #[test]
+    fn test_parser2() {
+        let fichier = "x = 1 EQV 2".to_string();
+        let liste_tokens = lexer(fichier);
+        let ast = parsing_programme(liste_tokens);
+
+        assert_eq!(
+            ast.liste_instructions,
+            vec![AstAffectation(
+                "x".to_string(),
+                AstExpression::AstOperateurBinaire(
+                    AstOperateurBinaireType::Eqv,
+                    Rc::new(AstExpression::AstNombreInteger(1)),
+                    Rc::new(AstExpression::AstNombreInteger(2))
+                )
+            )]
+        );
+    }
+
+    #[test]
+    fn test_parser_print1() {
+        let fichier = "print 1".to_string();
+        let liste_tokens = lexer(fichier);
+        let ast = parsing_programme(liste_tokens);
+
+        assert_eq!(
+            ast.liste_instructions,
+            vec![AstAppelMethode(
+                "print".to_string(),
+                vec![AstExpression::AstNombreInteger(1)],
+                vec![]
+            )]
+        );
+    }
+
+    #[test]
+    fn test_parser_print2() {
+        let fichier = "print 1 EQV 2".to_string();
+        let liste_tokens = lexer(fichier);
+        let ast = parsing_programme(liste_tokens);
+
+        assert_eq!(
+            ast.liste_instructions,
+            vec![AstAppelMethode(
+                "print".to_string(),
+                vec![AstExpression::AstOperateurBinaire(
+                    AstOperateurBinaireType::Eqv,
+                    Rc::new(AstExpression::AstNombreInteger(1)),
+                    Rc::new(AstExpression::AstNombreInteger(2))
+                )],
+                vec![]
+            )]
+        );
+    }
+
+    #[test]
+    fn test_parser_print3() {
+        let fichier = "print 3 > 2 EQV 0".to_string();
+        let liste_tokens = lexer(fichier);
+        let ast = parsing_programme(liste_tokens);
+
+        assert_eq!(
+            ast.liste_instructions,
+            vec![AstAppelMethode(
+                "print".to_string(),
+                vec![AstExpression::AstOperateurBinaire(
+                    AstOperateurBinaireType::Eqv,
+                    Rc::new(AstExpression::AstOperateurBinaire(
+                        Superieur,
+                        Rc::new(AstExpression::AstNombreInteger(3)),
+                        Rc::new(AstExpression::AstNombreInteger(2))
+                    )),
+                    Rc::new(AstExpression::AstNombreInteger(0))
+                )],
+                vec![]
+            )]
+        );
     }
 }

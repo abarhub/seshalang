@@ -8,13 +8,13 @@ pub struct AstProgramme {
     pub liste_instructions: Vec<AstInstruction>,
 }
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub enum AstInstruction {
     AstAffectation(String, AstExpression),
     AstAppelMethode(String, Vec<AstExpression>, Vec<bool>),
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum AstOperateurBinaireType {
     Plus,
     Moins,
@@ -36,14 +36,14 @@ pub enum AstOperateurBinaireType {
     Exponentiel,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum AstOperateurUnaireType {
     Plus,
     Moins,
     Not,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum AstExpression {
     AstNombreInteger(i16),
     AstNombreLong(i32),
@@ -238,5 +238,86 @@ mod tests {
         let sortie = execute(programme);
         assert_eq!(sortie.len(), 1);
         assert_eq!(sortie[0], "1");
+    }
+
+    #[test]
+    fn test_parse_execute14() {
+        let fichier = "print 5>3 AND 5<3
+                              print 5>3 AND 5>3
+                              print 5>3 OR 5<3
+                              print 5>3 OR 5>3
+                              print 5<3 OR 5<3
+                              print 5>3 XOR 5<3
+                              print 5>3 XOR 5>3
+                              print 5>3 EQV 5<3
+                              print 5>3 EQV 5>3
+                              print 5<3 EQV 5>3
+                              print 5<3 EQV 5<3
+                              print 5>3 IMP 5<3
+                              print 5>3 IMP 5>3
+                              print 5<3 IMP 5>3
+                              print 5<3 IMP 5<3
+                              print -7
+                              print +7
+                              print NOT (5>3)"
+            .to_string();
+        let programme = parse_basic(fichier).unwrap();
+        let sortie = execute(programme);
+        assert_eq!(sortie.len(), 18);
+        assert_eq!(sortie[0], "0"); // AND
+        assert_eq!(sortie[1], "-1");
+        assert_eq!(sortie[2], "-1"); // OR
+        assert_eq!(sortie[3], "-1");
+        assert_eq!(sortie[4], "0");
+        assert_eq!(sortie[5], "-1"); //XOR
+        assert_eq!(sortie[6], "0");
+        assert_eq!(sortie[7], "0"); //EQ
+        assert_eq!(sortie[8], "-1");
+        assert_eq!(sortie[9], "0");
+        assert_eq!(sortie[10], "-1");
+        assert_eq!(sortie[11], "0"); //IMP
+        assert_eq!(sortie[12], "-1");
+        assert_eq!(sortie[13], "-1");
+        assert_eq!(sortie[14], "-1");
+        assert_eq!(sortie[15], "-7"); // -
+        assert_eq!(sortie[16], "7"); // +
+        assert_eq!(sortie[17], "0"); // NOT
+    }
+
+    #[test]
+    fn test_parse_execute15() {
+        let fichier = "t=5>3
+                              f=5<3
+                              print t EQV f
+                              print t EQV t
+                              print f EQV t
+                              print f EQV f"
+            .to_string();
+        let programme = parse_basic(fichier).unwrap();
+        let sortie = execute(programme);
+        assert_eq!(sortie.len(), 4);
+        let t=-1;
+        let f=0;
+        let x=!(t ^ f);
+        println!("{:?}", x);
+        assert_eq!(sortie[0], "0"); //EQ
+        assert_eq!(sortie[1], "-1");
+        assert_eq!(sortie[2], "0");
+        assert_eq!(sortie[3], "-1");
+    }
+
+
+    #[test]
+    fn test_parse_execute16() {
+        let fichier = "print 3>2 EQV 0"
+            .to_string();
+        let programme = parse_basic(fichier).unwrap();
+        let sortie = execute(programme);
+        assert_eq!(sortie.len(), 1);
+        let t=-1;
+        let f=0;
+        let x=!(t ^ f);
+        println!("{:?}", x);
+        assert_eq!(sortie[0], "0"); //EQ
     }
 }

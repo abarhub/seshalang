@@ -1,6 +1,7 @@
 use crate::basic::exec_basic::Valeur::{NombreDouble, NombreInteger, NombreLong, NombreSingle};
+use crate::basic::main_basic::AstExpression::AstOperateurUnnaire;
 use crate::basic::main_basic::{
-    AstExpression, AstInstruction, AstOperateurBinaireType, AstProgramme,
+    AstExpression, AstInstruction, AstOperateurBinaireType, AstOperateurUnaireType, AstProgramme,
 };
 use std::collections::HashMap;
 use std::fmt;
@@ -33,10 +34,14 @@ pub fn execute(programme: AstProgramme) -> Vec<String> {
     let mut sortie: Vec<String> = Vec::new();
     let mut contexte: HashMap<String, Valeur> = HashMap::new();
 
+    println!("programme a executer: {:?}", programme);
+    
     for instruction in programme.liste_instructions.iter() {
         if let AstInstruction::AstAffectation(ident, expression) = instruction {
             let resultat = execute_expression(&expression, &mut contexte);
+            let tmp = resultat.clone();
             contexte.insert(ident.clone(), resultat);
+            println!("affect {:?} := {:?}", ident.clone(), tmp);
         } else if let AstInstruction::AstAppelMethode(nom, parametres, separateurs) = instruction {
             if nom.to_lowercase() == "print" {
                 let mut i = 0;
@@ -75,6 +80,16 @@ fn execute_expression(
     expression: &AstExpression,
     table_symbole: &mut HashMap<String, Valeur>,
 ) -> Valeur {
+    let tmp=execute_expression0(expression,table_symbole);
+    println!("res => {:?}",tmp);
+    return tmp;
+}
+
+fn execute_expression0(
+    expression: &AstExpression,
+    table_symbole: &mut HashMap<String, Valeur>,
+) -> Valeur {
+    println!("exp={:?}",expression);
     if let AstExpression::AstNombreInteger(nombre) = expression {
         NombreInteger(*nombre)
     } else if let AstExpression::AstNombreLong(nombre) = expression {
@@ -90,6 +105,7 @@ fn execute_expression(
         let e2 = exp2.as_ref();
         let expr1 = execute_expression(&(e1.clone()), table_symbole);
         let expr2 = execute_expression(&(e2.clone()), table_symbole);
+        println!("op={:?}",operateur);
         if est_nombre(expr1.clone()) {
             let (expr1, expr2) = normalise(expr1, expr2);
             return match (expr1, expr2) {
@@ -109,7 +125,13 @@ fn execute_expression(
                     AstOperateurBinaireType::SuperieurEgal => test(n1 >= n2),
                     AstOperateurBinaireType::Inferieur => test(n1 < n2),
                     AstOperateurBinaireType::InferieurEgal => test(n1 <= n2),
-                    AstOperateurBinaireType::And => test(n1 != 0 && n2 != 0),
+                    AstOperateurBinaireType::And => NombreInteger(n1 & n2),
+                    AstOperateurBinaireType::Or => NombreInteger(n1 | n2),
+                    AstOperateurBinaireType::Xor => NombreInteger(n1 ^ n2),
+                    AstOperateurBinaireType::Imp => NombreInteger(!n1 | n2),
+                    AstOperateurBinaireType::Eqv => {
+                        println!("eqv: {} et {} : {}",n1,n2,!(n1 ^ n2));
+                        NombreInteger(!(n1 ^ n2))},
                     _ => panic!("Opérateur inconnu: {:?}", operateur),
                 },
                 (NombreLong(n1), NombreLong(n2)) => match operateur {
@@ -128,6 +150,11 @@ fn execute_expression(
                     AstOperateurBinaireType::SuperieurEgal => test(n1 >= n2),
                     AstOperateurBinaireType::Inferieur => test(n1 < n2),
                     AstOperateurBinaireType::InferieurEgal => test(n1 <= n2),
+                    AstOperateurBinaireType::And => NombreLong(n1 & n2),
+                    AstOperateurBinaireType::Or => NombreLong(n1 | n2),
+                    AstOperateurBinaireType::Xor => NombreLong(n1 ^ n2),
+                    AstOperateurBinaireType::Imp => NombreLong(!n1 | n2),
+                    AstOperateurBinaireType::Eqv => NombreLong(!(n1 ^ n2)),
                     _ => panic!("Opérateur inconnu: {:?}", operateur),
                 },
                 (NombreSingle(n1), NombreSingle(n2)) => match operateur {
@@ -178,6 +205,38 @@ fn execute_expression(
         }
     } else if let AstExpression::AstChaine(chaine) = expression {
         return Valeur::Chaine(chaine.clone());
+    } else if let AstOperateurUnnaire(operateur, exp1) = expression {
+        let e1 = exp1.as_ref();
+        let expr1 = execute_expression(&(e1.clone()), table_symbole);
+        if est_nombre(expr1.clone()) {
+            return match expr1 {
+                NombreInteger(n) => match operateur {
+                    AstOperateurUnaireType::Plus => expr1,
+                    AstOperateurUnaireType::Moins => NombreInteger(-n),
+                    AstOperateurUnaireType::Not => NombreInteger(!n),
+                    _ => panic!("Opérateur inconnu: {:?}", operateur),
+                },
+                NombreLong(n) => match operateur {
+                    AstOperateurUnaireType::Plus => expr1,
+                    AstOperateurUnaireType::Moins => NombreLong(-n),
+                    AstOperateurUnaireType::Not => NombreLong(!n),
+                    _ => panic!("Opérateur inconnu: {:?}", operateur),
+                },
+                NombreSingle(n) => match operateur {
+                    AstOperateurUnaireType::Plus => expr1,
+                    AstOperateurUnaireType::Moins => NombreSingle(-n),
+                    _ => panic!("Opérateur inconnu: {:?}", operateur),
+                },
+                NombreDouble(n) => match operateur {
+                    AstOperateurUnaireType::Plus => expr1,
+                    AstOperateurUnaireType::Moins => NombreDouble(-n),
+                    _ => panic!("Opérateur inconnu: {:?}", operateur),
+                },
+                _ => panic!("Opérateur inconnu: {:?}", operateur),
+            };
+        } else {
+            panic!("Expression invalide: {:?}", expr1);
+        }
     } else {
         panic!("Expression inconnue: {:?}", expression);
     }
