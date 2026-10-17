@@ -50,6 +50,7 @@ pub enum TypeMotCle {
     Fix,
     Int,
     Time,
+    Instr,
 }
 
 impl TypeMotCle {
@@ -78,6 +79,7 @@ impl TypeMotCle {
             | TypeMotCle::Fix
             | TypeMotCle::Int
             | TypeMotCle::Time
+            | TypeMotCle::Instr
             => true,
             _ => false,
         }
@@ -307,18 +309,18 @@ pub fn lexer(contenu_fichier: String) -> Vec<Vec<Token>> {
                 // nombre
                 let mut s = "".to_string();
                 s.push(mot);
-                // let mut nombre = mot.to_digit(10).unwrap();
 
                 while iter.next_is_type_charactere(1, TypeCharactere::Nombre)
                     || iter.next_is_character(1, '.')
                     || iter.next_is_ident(1, 'e')
                     || iter.next_is_ident(1, 'd')
-                    || iter.next_is_character(1, '#')
-                    || iter.next_is_character(1, '!')
+                    || iter.next_is_ident(1, '#')
+                    || iter.next_is_ident(1, '!')
+                    || iter.next_is_ident(1, '&')
+                    || iter.next_is_ident(1, '%')
                 {
                     if let Some(mot2) = iter.next() {
                         s.push(mot2);
-                        // nombre = nombre * 10 + mot2.to_digit(10).unwrap();
                     } else {
                         break;
                     }
@@ -405,6 +407,8 @@ fn creation_token_nombre(s: String, pos: PositionToken) -> Token {
     let mut exposant = false;
     let mut nombre_exposant = 0i32;
     let mut iter = CharIterator::new(s.clone());
+    let mut est_long = false;
+    let mut est_integer = false;
 
     // partie entiere du nombre
     while iter.next_is_number(1) {
@@ -442,16 +446,33 @@ fn creation_token_nombre(s: String, pos: PositionToken) -> Token {
             nombre_exposant = -nombre_exposant;
         }
     }
-    if iter.next_is_character(1, '#') || iter.next_is_character(1, '!') {
+    if iter.next_is_ident(1, '#') || iter.next_is_ident(1, '!') {
         decimal = true;
-        decimal_double = iter.next_is_character(1, '#');
+        decimal_double = iter.next_is_ident(1, '#');
+        iter.next().unwrap();
+    } else if iter.next_is_ident(1, '&'){
+        est_long = true;
+        iter.next().unwrap();
+    } else if iter.next_is_ident(1, '%'){
+        est_integer = true;
         iter.next().unwrap();
     }
     if iter.no_next() {
         panic!("Nombre invalide {}", s);
     }
+    // vérification
+    if est_integer && est_long {
+        panic!("Nombre invalide {}", s);
+    } else if (est_integer||est_long)&&(decimal||exposant) {
+        panic!("Nombre invalide {}", s);
+    } else if est_integer &&nombre_entier>32767 {
+        panic!("Nombre invalide {}", s);
+    } else if est_long &&nombre_entier>2147483647 {
+        panic!("Nombre invalide {}", s);
+    }
+    // construction du token
     if !decimal && !exposant {
-        if nombre_entier <= 32768 {
+        if nombre_entier <= 32768&&!est_long {
             Token::TokenNombre(
                 i16::try_from(nombre_entier).unwrap(),
                 0,
@@ -649,6 +670,7 @@ fn mots_cles(s: String) -> Option<TypeMotCle> {
         "FIX" => Some(TypeMotCle::Fix),
         "INT" => Some(TypeMotCle::Int),
         "TIME$" => Some(TypeMotCle::Time),
+        "INSTR" => Some(TypeMotCle::Instr),
         _ => None,
     }
 }
@@ -665,7 +687,7 @@ fn f64_to_f32(x: f64) -> f32 {
 
 #[cfg(test)]
 mod tests {
-    use crate::basic::lexer_basic::TypeMotCle::{Chr, Mod};
+    use crate::basic::lexer_basic::TypeMotCle::{Cdbl, Chr, Integer, Mod};
     // Note this useful idiom: importing names from outer (for mod tests) scope.
     use super::*;
     use crate::basic::lexer_basic::TypeNombre::{Double, Entier, Long, Single};
@@ -721,6 +743,78 @@ mod tests {
                 0,
                 0.,
                 12345.6,
+                Double,
+                PositionToken::new(1, 0)
+            )]]
+        );
+    }
+
+    #[test]
+    fn test_lexer_nombre4() {
+        let fichier = "10%".to_string();
+        let liste_tokens = lexer(fichier);
+
+        assert_eq!(
+            liste_tokens,
+            vec![vec![Token::TokenNombre(
+                10,
+                0,
+                0.,
+                0.,
+                Entier,
+                PositionToken::new(1, 0)
+            )]]
+        );
+    }
+
+    #[test]
+    fn test_lexer_nombre5() {
+        let fichier = "10&".to_string();
+        let liste_tokens = lexer(fichier);
+
+        assert_eq!(
+            liste_tokens,
+            vec![vec![Token::TokenNombre(
+                0,
+                10,
+                0.,
+                0.,
+                Long,
+                PositionToken::new(1, 0)
+            )]]
+        );
+    }
+
+    #[test]
+    fn test_lexer_nombre6() {
+        let fichier = "10!".to_string();
+        let liste_tokens = lexer(fichier);
+
+        assert_eq!(
+            liste_tokens,
+            vec![vec![Token::TokenNombre(
+                0,
+                0,
+                10.,
+                0.,
+                Single,
+                PositionToken::new(1, 0)
+            )]]
+        );
+    }
+
+    #[test]
+    fn test_lexer_nombre7() {
+        let fichier = "10#".to_string();
+        let liste_tokens = lexer(fichier);
+
+        assert_eq!(
+            liste_tokens,
+            vec![vec![Token::TokenNombre(
+                0,
+                0,
+                0.,
+                10.,
                 Double,
                 PositionToken::new(1, 0)
             )]]
@@ -851,6 +945,17 @@ cccc"
         assert_eq!(
             liste_tokens,
             vec![vec![Token::TokenMotReserve(Chr, PositionToken::new(1, 0))]]
+        );
+    }
+
+    #[test]
+    fn test_lexer_identifiant9() {
+        let fichier = "CDBL".to_string();
+        let liste_tokens = lexer(fichier);
+
+        assert_eq!(
+            liste_tokens,
+            vec![vec![Token::TokenMotReserve(Cdbl, PositionToken::new(1, 0))]]
         );
     }
 

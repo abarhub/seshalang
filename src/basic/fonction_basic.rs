@@ -1,5 +1,6 @@
 use crate::basic::exec_basic;
 use crate::basic::exec_basic::Valeur;
+use crate::basic::exec_basic::Valeur::NombreInteger;
 use crate::basic::lexer_basic::TypeMotCle;
 use crate::basic::main_basic::AstNomMethode::AstNomReserve;
 use crate::basic::main_basic::{AstExpression, AstNomMethode};
@@ -215,7 +216,7 @@ pub fn execute_fonction(
                 }
                 Valeur::Chaine(Local::now().format("%H:%M:%S").to_string())
             }
-
+            TypeMotCle::Instr => calcul_instr(liste_expressions, table_symbole),
             _ => panic!("La fonction {:?} n'existe pas", mot_reserve),
         },
         _ => panic!("Méthode inconnue: {:?}", nom_methode),
@@ -241,10 +242,64 @@ fn appliquer_double<F: Fn(f64) -> f64>(
     nom: String,
 ) -> Valeur {
     match verification_un_parametre(nom.clone(), liste_expressions, table_symbole) {
-        Valeur::NombreInteger(n) => Valeur::NombreDouble(f(n as f64)),
+        NombreInteger(n) => Valeur::NombreDouble(f(n as f64)),
         Valeur::NombreLong(n) => Valeur::NombreDouble(f(n as f64)),
         Valeur::NombreSingle(n) => Valeur::NombreDouble(f(n as f64)),
         Valeur::NombreDouble(valeur) => Valeur::NombreDouble(f(valeur)),
         _ => panic!("La fonction {} attend un nombre en argument", nom),
     }
+}
+
+fn calcul_instr(
+    liste_expressions: Vec<AstExpression>,
+    table_symbole: &mut HashMap<String, Valeur>,
+) -> Valeur {
+    if liste_expressions.len() != 2 || liste_expressions.len() != 3 {
+        panic!("La fonction instr attend 2 ou 3 arguments");
+    }
+    let pos_debut: usize;
+    let chaine_a_chercher: String;
+    let chaine_recherche: String;
+    let resultat: i16;
+    let param_debut: usize;
+    if liste_expressions.len() == 2 {
+        pos_debut = 1;
+        param_debut = 0;
+    } else {
+        let e1 = liste_expressions.get(0).unwrap();
+        let expr1 = exec_basic::execute_expression(&(e1.clone()), table_symbole);
+        match expr1 {
+            NombreInteger(n) => pos_debut = n as usize,
+            _ => panic!("La fonction instr attend un nombre en argument"),
+        }
+        param_debut = 1;
+    }
+    let e1 = liste_expressions.get(param_debut).unwrap();
+    let expr1 = exec_basic::execute_expression(&(e1.clone()), table_symbole);
+    match expr1 {
+        Valeur::Chaine(s) => chaine_a_chercher = s,
+        _ => panic!(
+            "Le parametre {} doit être une chaine de caractères",
+            param_debut + 1
+        ),
+    }
+    let e2 = liste_expressions.get(param_debut + 1).unwrap();
+    let expr2 = exec_basic::execute_expression(&(e2.clone()), table_symbole);
+    match expr2 {
+        Valeur::Chaine(s) => chaine_recherche = s,
+        _ => panic!(
+            "Le parametre {} doit être une chaine de caractères",
+            param_debut + 2
+        ),
+    }
+    if pos_debut < chaine_a_chercher.len() {
+        if let Some(pos) = chaine_a_chercher[pos_debut..].find(&chaine_recherche) {
+            resultat = pos as i16;
+        } else {
+            resultat = 0;
+        }
+    } else {
+        resultat = 0;
+    }
+    NombreInteger(resultat)
 }

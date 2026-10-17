@@ -342,4 +342,52 @@ mod tests {
         assert_eq!(sortie[0], "65");
         assert_eq!(sortie[1], "B");
     }
+
+    #[test]
+    fn test_parse_execute19() {
+        let fichier = "print atn(0)
+                              print cos(0)
+                              print sin(0)
+                              print tan(0)
+                              print cdbl(3)
+                              print csng(5)
+                              print cint(4.5)
+                              print clng(8.5)"
+            .to_string();
+        let programme = parse_basic(fichier).unwrap();
+        let sortie = execute(programme);
+        assert_eq!(sortie.len(), 8);
+        assert_eq!(sortie[0], "0");
+        assert_eq!(sortie[1], "1");
+        assert_eq!(sortie[2], "0");
+        assert_eq!(sortie[3], "0");
+        assert_eq!(sortie[4], "3");
+        assert_eq!(sortie[5], "5");
+        assert_eq!(sortie[6], "4");
+        assert_eq!(sortie[7], "8");
+    }
+
+    #[test]
+    fn test_parse_execute20() {
+        let fichier = "print mki$(5%)
+                              print mkl$(10&)
+                              print mks$(15.632!)
+                              print mkd$(20.951#)
+                              print cvi(\"8\")
+                              print cvl(\"10\")
+                              print cvs(\"4.5\")
+                              print cvd(\"8.5\")"
+            .to_string();
+        let programme = parse_basic(fichier).unwrap();
+        let sortie = execute(programme);
+        assert_eq!(sortie.len(), 8);
+        assert_eq!(sortie[0], "5");
+        assert_eq!(sortie[1], "10");
+        assert_eq!(sortie[2], "15.632");
+        assert_eq!(sortie[3], "20.951");
+        assert_eq!(sortie[4], "8");
+        assert_eq!(sortie[5], "10");
+        assert_eq!(sortie[6], "4.5");
+        assert_eq!(sortie[7], "8.5");
+    }
 }
