@@ -4,7 +4,7 @@ use crate::basic::lexer_basic::TypeSeparateur::{
     SUPE, VIRGULE,
 };
 use crate::basic::lexer_basic::{
-    PositionToken, Token, TypeMotCle, TypeNombre, TypeSeparateur, lexer,
+    Token, TypeMotCle, TypeNombre, TypeSeparateur, lexer,
 };
 use crate::basic::main_basic::AstInstruction::AstAffectation;
 use crate::basic::main_basic::AstOperateurBinaireType::{
@@ -12,7 +12,8 @@ use crate::basic::main_basic::AstOperateurBinaireType::{
     Multiplication, Superieur, SuperieurEgal,
 };
 use crate::basic::main_basic::{
-    AstExpression, AstInstruction, AstOperateurBinaireType, AstOperateurUnaireType, AstProgramme,
+    AstExpression, AstInstruction, AstNomMethode, AstOperateurBinaireType, AstOperateurUnaireType,
+    AstProgramme,
 };
 use std::cmp::max;
 use std::rc::Rc;
@@ -23,7 +24,14 @@ struct TokenIterator {
     index: i32,
 }
 
-const DEBUG_PRINT: bool =false;
+const DEBUG_PRINT: bool = false;
+
+#[derive(Debug, Eq, PartialEq, Clone)]
+enum MotCleFonction {
+    Abs,
+    Asc,
+    Chr,
+}
 
 impl TokenIterator {
     fn new(liste: Vec<Token>) -> TokenIterator {
@@ -78,6 +86,14 @@ impl TokenIterator {
     fn est_mot_cle(&self, mot_cle: TypeMotCle) -> bool {
         if let Some(Token::TokenMotReserve(mot_reserve, _)) = self.get() {
             mot_cle == mot_reserve
+        } else {
+            false
+        }
+    }
+
+    fn est_mot_cle_fonction(&self) -> bool {
+        if let Some(Token::TokenMotReserve(mot_reserve, _)) = self.get() {
+            mot_reserve.est_fonction()
         } else {
             false
         }
@@ -617,6 +633,39 @@ fn expr_literaux(liste_tokens: &mut TokenIterator) -> (AstExpression, u32) {
         } else {
             panic!("chaine inconnue: {:?}", liste_tokens.get());
         }
+    } else if liste_tokens.est_mot_cle_fonction() {
+        if let Token::TokenMotReserve(ident, _) = liste_tokens.next().unwrap() {
+            let mut nb_token: u32 = 1;
+            let mut liste_expressions: Vec<AstExpression> = Vec::new();
+
+            if liste_tokens.est_separateur(PARENTO) {
+                nb_token += 1;
+                liste_tokens.next();
+                loop {
+                    let res = parsing_expression(liste_tokens);
+                    nb_token += res.1;
+                    liste_expressions.push(res.0);
+                    if liste_tokens.est_separateur(VIRGULE) {
+                        nb_token += 1;
+                        liste_tokens.next();
+                    } else {
+                        break;
+                    }
+                }
+                if liste_tokens.est_separateur(PARENTF) {
+                    nb_token += 1;
+                } else {
+                    panic!("parenthèse fermante attendue");
+                }
+            } else {
+            }
+            return (
+                AstExpression::AstFonction(AstNomMethode::AstNomReserve(ident), liste_expressions),
+                nb_token,
+            );
+        } else {
+            panic!("identifiant inconnu");
+        }
     } else {
         panic!("expression inconnue: {:?}", liste_tokens);
     }
@@ -644,13 +693,8 @@ fn calcul_type_operation_binaire(type_operation: TypeSeparateur) -> AstOperateur
 
 #[cfg(test)]
 mod tests {
-    use crate::basic::lexer_basic::TypeMotCle::Mod;
     // Note this useful idiom: importing names from outer (for mod tests) scope.
     use super::*;
-    use crate::basic::lexer_basic::TypeNombre::{Double, Entier, Long, Single};
-    use crate::basic::lexer_basic::TypeSeparateur::{
-        DIFF, DIVE, DIVR, EQU, EXP, FOIS, INF, INFE, MOINS, PARENTF, PARENTO, PLUS, SUP, SUPE,
-    };
     use crate::basic::main_basic::AstInstruction::AstAppelMethode;
 
     #[test]

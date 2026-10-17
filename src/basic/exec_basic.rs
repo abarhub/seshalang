@@ -1,5 +1,9 @@
-use crate::basic::exec_basic::Valeur::{NombreDouble, NombreInteger, NombreLong, NombreSingle};
-use crate::basic::main_basic::AstExpression::AstOperateurUnnaire;
+use crate::basic::exec_basic::Valeur::{
+    Chaine, NombreDouble, NombreInteger, NombreLong, NombreSingle,
+};
+use crate::basic::lexer_basic::TypeMotCle;
+use crate::basic::main_basic::AstExpression::{AstFonction, AstOperateurUnnaire};
+use crate::basic::main_basic::AstNomMethode::AstNomReserve;
 use crate::basic::main_basic::{
     AstExpression, AstInstruction, AstOperateurBinaireType, AstOperateurUnaireType, AstProgramme,
 };
@@ -109,7 +113,11 @@ fn execute_expression0(
     } else if let AstExpression::AstNombreDouble(nombre) = expression {
         NombreDouble(*nombre)
     } else if let AstExpression::AstIdentifiant(ident) = expression {
-        return table_symbole.get(ident).unwrap().clone();
+        if table_symbole.contains_key(ident) {
+            return table_symbole.get(ident).unwrap().clone();
+        } else {
+            panic!("Identifiant {} non déclaré", ident);
+        }
     } else if let AstExpression::AstOperateurBinaire(operateur, exp1, exp2) = expression {
         let e1 = exp1.as_ref();
         let e2 = exp2.as_ref();
@@ -246,6 +254,64 @@ fn execute_expression0(
             };
         } else {
             panic!("Expression invalide: {:?}", expr1);
+        }
+    } else if let AstFonction(nomMethode, liste_expressions) = expression {
+        match nomMethode {
+            AstNomReserve(mot_reserve) => match mot_reserve {
+                TypeMotCle::Abs => {
+                    if liste_expressions.len() != 1 {
+                        panic!("La fonction abs() attend exactement un argument");
+                    }
+                    let e1 = liste_expressions.get(0).unwrap();
+                    let expr1 = execute_expression(&(e1.clone()), table_symbole);
+                    match expr1 {
+                        NombreInteger(n) => {
+                            return NombreInteger(n.abs());
+                        }
+                        NombreLong(n) => {
+                            return NombreLong(n.abs());
+                        }
+                        NombreSingle(n) => {
+                            return NombreSingle(n.abs());
+                        }
+                        NombreDouble(valeur) => {
+                            return NombreDouble(valeur.abs());
+                        }
+                        _ => panic!("La fonction abs() attend un nombre en argument"),
+                    }
+                }
+                TypeMotCle::Asc => {
+                    if liste_expressions.len() != 1 {
+                        panic!("La fonction abs() attend exactement un argument");
+                    }
+                    let e1 = liste_expressions.get(0).unwrap();
+                    let expr1 = execute_expression(&(e1.clone()), table_symbole);
+                    match expr1 {
+                        Chaine(s) => {
+                            return NombreInteger(s.chars().next().unwrap() as i16);
+                        }
+                        _ => panic!("La fonction asc() attend une chaine en argument"),
+                    }
+                }
+                TypeMotCle::Chr => {
+                    if liste_expressions.len() != 1 {
+                        panic!("La fonction char$() attend exactement un argument");
+                    }
+                    let e1 = liste_expressions.get(0).unwrap();
+                    let expr1 = execute_expression(&(e1.clone()), table_symbole);
+                    match expr1 {
+                        NombreInteger(n) => {
+                            return Chaine(format!("{}",  u8::try_from(n).unwrap() as char));
+                        }
+                        NombreLong(n) => {
+                            return Chaine(format!("{}",  u8::try_from(n).unwrap() as char));
+                        }
+                        _ => panic!("La fonction char$() attend un entier en argument"),
+                    }
+                }
+                _ => panic!("La fonction {:?} n'existe pas", mot_reserve),
+            },
+            _ => panic!("Méthode inconnue: {:?}", nomMethode),
         }
     } else {
         panic!("Expression inconnue: {:?}", expression);

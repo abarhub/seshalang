@@ -1,4 +1,5 @@
 use crate::basic::exec_basic::execute;
+use crate::basic::lexer_basic::TypeMotCle;
 use crate::basic::parsing_basic::parse_basic;
 use std::fs;
 use std::rc::Rc;
@@ -44,6 +45,12 @@ pub enum AstOperateurUnaireType {
 }
 
 #[derive(Debug, Clone, PartialEq)]
+pub enum AstNomMethode {
+    AstNomFonction(String),
+    AstNomReserve(TypeMotCle),
+}
+
+#[derive(Debug, Clone, PartialEq)]
 pub enum AstExpression {
     AstNombreInteger(i16),
     AstNombreLong(i32),
@@ -57,6 +64,7 @@ pub enum AstExpression {
     ),
     AstOperateurUnnaire(AstOperateurUnaireType, Rc<AstExpression>),
     AstChaine(String),
+    AstFonction(AstNomMethode, Vec<AstExpression>),
 }
 
 pub fn parse_basic_file(fichier: String) -> std::io::Result<()> {
@@ -296,28 +304,42 @@ mod tests {
         let programme = parse_basic(fichier).unwrap();
         let sortie = execute(programme);
         assert_eq!(sortie.len(), 4);
-        let t=-1;
-        let f=0;
-        let x=!(t ^ f);
-        println!("{:?}", x);
         assert_eq!(sortie[0], "0"); //EQ
         assert_eq!(sortie[1], "-1");
         assert_eq!(sortie[2], "0");
         assert_eq!(sortie[3], "-1");
     }
 
-
     #[test]
     fn test_parse_execute16() {
-        let fichier = "print 3>2 EQV 0"
-            .to_string();
+        let fichier = "print 3>2 EQV 0".to_string();
         let programme = parse_basic(fichier).unwrap();
         let sortie = execute(programme);
         assert_eq!(sortie.len(), 1);
-        let t=-1;
-        let f=0;
-        let x=!(t ^ f);
-        println!("{:?}", x);
         assert_eq!(sortie[0], "0"); //EQ
+    }
+
+    #[test]
+    fn test_parse_execute17() {
+        let fichier = "print abs(-10)
+                              print abs(-15.10)"
+            .to_string();
+        let programme = parse_basic(fichier).unwrap();
+        let sortie = execute(programme);
+        assert_eq!(sortie.len(), 2);
+        assert_eq!(sortie[0], "10");
+        assert_eq!(sortie[1], "15.1");
+    }
+
+    #[test]
+    fn test_parse_execute18() {
+        let fichier = "print asc(\"A\")
+                              print chr$(66)"
+            .to_string();
+        let programme = parse_basic(fichier).unwrap();
+        let sortie = execute(programme);
+        assert_eq!(sortie.len(), 2);
+        assert_eq!(sortie[0], "65");
+        assert_eq!(sortie[1], "B");
     }
 }
