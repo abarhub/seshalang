@@ -116,6 +116,70 @@ pub fn execute_fonction(
                 Valeur::NombreDouble(n) => Valeur::NombreInteger(n as i16),
                 _ => panic!("La fonction cint() attend un entier en argument"),
             },
+            TypeMotCle::Mki => match verification_un_parametre(
+                "mki$()".to_string(),
+                liste_expressions,
+                table_symbole,
+            ) {
+                Valeur::NombreInteger(n) => Valeur::Chaine(n.to_string()),
+                _ => panic!("La fonction mki$() attend un integer en argument"),
+            },
+            TypeMotCle::Mkl => match verification_un_parametre(
+                "mkl$()".to_string(),
+                liste_expressions,
+                table_symbole,
+            ) {
+                Valeur::NombreLong(n) => Valeur::Chaine(n.to_string()),
+                _ => panic!("La fonction mkl$() attend un long en argument"),
+            },
+            TypeMotCle::Mks => match verification_un_parametre(
+                "mks$()".to_string(),
+                liste_expressions,
+                table_symbole,
+            ) {
+                Valeur::NombreSingle(n) => Valeur::Chaine(n.to_string()),
+                _ => panic!("La fonction mks$() attend un single en argument"),
+            },
+            TypeMotCle::Mkd => match verification_un_parametre(
+                "mkd$()".to_string(),
+                liste_expressions,
+                table_symbole,
+            ) {
+                Valeur::NombreDouble(n) => Valeur::Chaine(n.to_string()),
+                _ => panic!("La fonction mki$() attend un double en argument"),
+            },
+            TypeMotCle::Cvi => match verification_un_parametre(
+                "Cvi()".to_string(),
+                liste_expressions,
+                table_symbole,
+            ) {
+                Valeur::Chaine(s) => Valeur::NombreInteger(s.parse::<i16>().unwrap()),
+                _ => panic!("La fonction Cvi() attend une chaine en argument"),
+            },
+            TypeMotCle::Cvl => match verification_un_parametre(
+                "Cvl()".to_string(),
+                liste_expressions,
+                table_symbole,
+            ) {
+                Valeur::Chaine(s) => Valeur::NombreLong(s.parse::<i32>().unwrap()),
+                _ => panic!("La fonction Cvl() attend une chaine en argument"),
+            },
+            TypeMotCle::Cvs => match verification_un_parametre(
+                "Cvs()".to_string(),
+                liste_expressions,
+                table_symbole,
+            ) {
+                Valeur::Chaine(s) => Valeur::NombreSingle(s.parse::<f32>().unwrap()),
+                _ => panic!("La fonction Cvs() attend une chaine en argument"),
+            },
+            TypeMotCle::Cvd => match verification_un_parametre(
+                "Cvd()".to_string(),
+                liste_expressions,
+                table_symbole,
+            ) {
+                Valeur::Chaine(s) => Valeur::NombreDouble(s.parse::<f64>().unwrap()),
+                _ => panic!("La fonction Cvd() attend une chaine en argument"),
+            },
             _ => panic!("La fonction {:?} n'existe pas", mot_reserve),
         },
         _ => panic!("Méthode inconnue: {:?}", nom_methode),

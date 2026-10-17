@@ -38,6 +38,14 @@ pub enum TypeMotCle {
     Csng,
     Cint,
     Clng,
+    Mki,
+    Mkl,
+    Mks,
+    Mkd,
+    Cvi,
+    Cvl,
+    Cvs,
+    Cvd,
 }
 
 impl TypeMotCle {
@@ -53,7 +61,16 @@ impl TypeMotCle {
             | TypeMotCle::Cdbl
             | TypeMotCle::Csng
             | TypeMotCle::Cint
-            | TypeMotCle::Clng => true,
+            | TypeMotCle::Clng
+            | TypeMotCle::Mki
+            | TypeMotCle::Mkl
+            | TypeMotCle::Mks
+            | TypeMotCle::Mkd
+            | TypeMotCle::Cvi
+            | TypeMotCle::Cvl
+            | TypeMotCle::Cvs
+            | TypeMotCle::Cvd
+            => true,
             _ => false,
         }
     }
@@ -612,6 +629,14 @@ fn mots_cles(s: String) -> Option<TypeMotCle> {
         "CSNG" => Some(TypeMotCle::Csng),
         "CINT" => Some(TypeMotCle::Cint),
         "CLNG" => Some(TypeMotCle::Clng),
+        "MKI$" => Some(TypeMotCle::Mki),
+        "MKL$" => Some(TypeMotCle::Mkl),
+        "MKS$" => Some(TypeMotCle::Mks),
+        "MKD$" => Some(TypeMotCle::Mkd),
+        "CVI" => Some(TypeMotCle::Cvi),
+        "CVL" => Some(TypeMotCle::Cvl),
+        "CVS" => Some(TypeMotCle::Cvs),
+        "CVD" => Some(TypeMotCle::Cvd),
         _ => None,
     }
 }
