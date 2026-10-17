@@ -9,6 +9,8 @@ use std::fmt;
 const TRUE: i16 = -1;
 const FALSE: i16 = 0;
 
+const DEBUG_PRINT: bool = false;
+
 #[derive(Debug, Clone)]
 enum Valeur {
     NombreInteger(i16),
@@ -21,10 +23,10 @@ enum Valeur {
 impl fmt::Display for Valeur {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            Valeur::NombreInteger(n) => write!(f, "{}", n),
-            Valeur::NombreLong(n) => write!(f, "{}", n),
-            Valeur::NombreSingle(n) => write!(f, "{}", n),
-            Valeur::NombreDouble(n) => write!(f, "{}", n),
+            NombreInteger(n) => write!(f, "{}", n),
+            NombreLong(n) => write!(f, "{}", n),
+            NombreSingle(n) => write!(f, "{}", n),
+            NombreDouble(n) => write!(f, "{}", n),
             Valeur::Chaine(s) => write!(f, "{}", s),
         }
     }
@@ -34,14 +36,18 @@ pub fn execute(programme: AstProgramme) -> Vec<String> {
     let mut sortie: Vec<String> = Vec::new();
     let mut contexte: HashMap<String, Valeur> = HashMap::new();
 
-    println!("programme a executer: {:?}", programme);
-    
+    if DEBUG_PRINT {
+        println!("programme a executer: {:?}", programme);
+    }
+
     for instruction in programme.liste_instructions.iter() {
         if let AstInstruction::AstAffectation(ident, expression) = instruction {
             let resultat = execute_expression(&expression, &mut contexte);
             let tmp = resultat.clone();
             contexte.insert(ident.clone(), resultat);
-            println!("affect {:?} := {:?}", ident.clone(), tmp);
+            if DEBUG_PRINT {
+                println!("affect {:?} := {:?}", ident.clone(), tmp);
+            }
         } else if let AstInstruction::AstAppelMethode(nom, parametres, separateurs) = instruction {
             if nom.to_lowercase() == "print" {
                 let mut i = 0;
@@ -80,16 +86,20 @@ fn execute_expression(
     expression: &AstExpression,
     table_symbole: &mut HashMap<String, Valeur>,
 ) -> Valeur {
-    let tmp=execute_expression0(expression,table_symbole);
-    println!("res => {:?}",tmp);
-    return tmp;
+    let tmp = execute_expression0(expression, table_symbole);
+    if DEBUG_PRINT {
+        println!("res => {:?}", tmp);
+    }
+    tmp
 }
 
 fn execute_expression0(
     expression: &AstExpression,
     table_symbole: &mut HashMap<String, Valeur>,
 ) -> Valeur {
-    println!("exp={:?}",expression);
+    if DEBUG_PRINT {
+        println!("exp={:?}", expression);
+    }
     if let AstExpression::AstNombreInteger(nombre) = expression {
         NombreInteger(*nombre)
     } else if let AstExpression::AstNombreLong(nombre) = expression {
@@ -105,7 +115,9 @@ fn execute_expression0(
         let e2 = exp2.as_ref();
         let expr1 = execute_expression(&(e1.clone()), table_symbole);
         let expr2 = execute_expression(&(e2.clone()), table_symbole);
-        println!("op={:?}",operateur);
+        if DEBUG_PRINT {
+            println!("op={:?}", operateur);
+        }
         if est_nombre(expr1.clone()) {
             let (expr1, expr2) = normalise(expr1, expr2);
             return match (expr1, expr2) {
@@ -129,9 +141,7 @@ fn execute_expression0(
                     AstOperateurBinaireType::Or => NombreInteger(n1 | n2),
                     AstOperateurBinaireType::Xor => NombreInteger(n1 ^ n2),
                     AstOperateurBinaireType::Imp => NombreInteger(!n1 | n2),
-                    AstOperateurBinaireType::Eqv => {
-                        println!("eqv: {} et {} : {}",n1,n2,!(n1 ^ n2));
-                        NombreInteger(!(n1 ^ n2))},
+                    AstOperateurBinaireType::Eqv => NombreInteger(!(n1 ^ n2)),
                     _ => panic!("Opérateur inconnu: {:?}", operateur),
                 },
                 (NombreLong(n1), NombreLong(n2)) => match operateur {

@@ -23,6 +23,8 @@ struct TokenIterator {
     index: i32,
 }
 
+const DEBUG_PRINT: bool =false;
+
 impl TokenIterator {
     fn new(liste: Vec<Token>) -> TokenIterator {
         TokenIterator {
@@ -156,7 +158,9 @@ impl Iterator for TokenIterator {
 pub fn parse_basic(contenu_fichier: String) -> std::io::Result<AstProgramme> {
     let liste_tokens: Vec<Vec<Token>> = lexer(contenu_fichier);
 
-    println!("liste token : {:?}", liste_tokens);
+    if DEBUG_PRINT {
+        println!("liste token : {:?}", liste_tokens);
+    }
 
     let programme = parsing_programme(liste_tokens);
 
@@ -174,12 +178,12 @@ fn parsing_programme(liste_tokens: Vec<Vec<Token>>) -> AstProgramme {
 
         let mut token_iterator = TokenIterator::new(ligne);
 
-        if token_iterator.est_identifiant()
-            && token_iterator.est_separateur_pos(TypeSeparateur::EQU, 1)
-        {
+        if token_iterator.est_identifiant() && token_iterator.est_separateur_pos(EQU, 1) {
             // affectation
             if let Token::TokenIdentifiant(ident, _) = token_iterator.next().unwrap() {
-                println!("affectation {}", ident);
+                if DEBUG_PRINT {
+                    println!("affectation {}", ident);
+                }
                 token_iterator.next();
                 let exp = parsing_expression(&mut token_iterator);
                 let instruction = AstAffectation(ident.clone(), exp.0);
@@ -190,13 +194,17 @@ fn parsing_programme(liste_tokens: Vec<Vec<Token>>) -> AstProgramme {
         } else if token_iterator.est_identifiant() {
             // appel de méthode
             if let Token::TokenIdentifiant(ident, _) = token_iterator.next().unwrap() {
-                println!("appel {}", ident);
+                if DEBUG_PRINT {
+                    println!("appel {}", ident);
+                }
                 let mut liste_expressions: Vec<AstExpression> = vec![];
                 let mut separateur_virgule_liste: Vec<bool> = vec![];
                 loop {
                     let exp = parsing_expression(&mut token_iterator);
                     let tmp = exp.0.clone();
-                    println!("parsing appel exp: {:?}", tmp);
+                    if DEBUG_PRINT {
+                        println!("parsing appel exp: {:?}", tmp);
+                    }
                     liste_expressions.push(exp.0);
                     if token_iterator.len() > 0
                         && separateur_parametre(&ident, token_iterator.get().unwrap())
@@ -233,7 +241,9 @@ fn parsing_programme(liste_tokens: Vec<Vec<Token>>) -> AstProgramme {
                 loop {
                     let exp = parsing_expression(&mut token_iterator);
                     let tmp = exp.0.clone();
-                    println!("parsing appel print exp: {:?}", tmp);
+                    if DEBUG_PRINT {
+                        println!("parsing appel print exp: {:?}", tmp);
+                    }
                     liste_expressions.push(exp.0);
                     if token_iterator.len() > 0
                         && separateur_parametre_print(token_iterator.get().unwrap())
@@ -264,7 +274,7 @@ fn parsing_programme(liste_tokens: Vec<Vec<Token>>) -> AstProgramme {
                 panic!("token {:?} n'est pas un identifiant", token_iterator.get());
             }
         } else {
-            panic!("instruction inconnue");
+            panic!("instruction inconnue {:?}", token_iterator.get());
         }
     }
 

@@ -269,10 +269,6 @@ pub fn lexer(contenu_fichier: String) -> Vec<Vec<Token>> {
                     }
                 }
 
-                // if iter.next_is_character(1, '.'){
-                //
-                // }
-
                 let token = creation_token_nombre(s, pos);
                 liste_tokens_ligne.push(token);
             } else if iter.is_type_charactere(TypeCharactere::Separateur) {
@@ -332,7 +328,7 @@ pub fn lexer(contenu_fichier: String) -> Vec<Vec<Token>> {
                 if mot == ' ' || mot == '\n' {
                     // caractères espaces
                 } else {
-                    println!("caractere ignore: {}", mot)
+                    panic!("caractere invalide: {}", mot)
                 }
             }
         }
