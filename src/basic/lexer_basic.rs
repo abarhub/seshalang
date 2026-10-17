@@ -46,6 +46,10 @@ pub enum TypeMotCle {
     Cvl,
     Cvs,
     Cvd,
+    Date,
+    Fix,
+    Int,
+    Time,
 }
 
 impl TypeMotCle {
@@ -70,6 +74,10 @@ impl TypeMotCle {
             | TypeMotCle::Cvl
             | TypeMotCle::Cvs
             | TypeMotCle::Cvd
+            | TypeMotCle::Date
+            | TypeMotCle::Fix
+            | TypeMotCle::Int
+            | TypeMotCle::Time
             => true,
             _ => false,
         }
@@ -637,6 +645,10 @@ fn mots_cles(s: String) -> Option<TypeMotCle> {
         "CVL" => Some(TypeMotCle::Cvl),
         "CVS" => Some(TypeMotCle::Cvs),
         "CVD" => Some(TypeMotCle::Cvd),
+        "DATE$" => Some(TypeMotCle::Date),
+        "FIX" => Some(TypeMotCle::Fix),
+        "INT" => Some(TypeMotCle::Int),
+        "TIME$" => Some(TypeMotCle::Time),
         _ => None,
     }
 }

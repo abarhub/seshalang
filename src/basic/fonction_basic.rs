@@ -3,6 +3,7 @@ use crate::basic::exec_basic::Valeur;
 use crate::basic::lexer_basic::TypeMotCle;
 use crate::basic::main_basic::AstNomMethode::AstNomReserve;
 use crate::basic::main_basic::{AstExpression, AstNomMethode};
+use chrono::Local;
 use std::collections::HashMap;
 
 pub fn execute_fonction(
@@ -180,6 +181,41 @@ pub fn execute_fonction(
                 Valeur::Chaine(s) => Valeur::NombreDouble(s.parse::<f64>().unwrap()),
                 _ => panic!("La fonction Cvd() attend une chaine en argument"),
             },
+            TypeMotCle::Fix => match verification_un_parametre(
+                "fix()".to_string(),
+                liste_expressions,
+                table_symbole,
+            ) {
+                Valeur::NombreInteger(n) => Valeur::NombreInteger(n),
+                Valeur::NombreLong(n) => Valeur::NombreInteger(n as i16),
+                Valeur::NombreSingle(n) => Valeur::NombreInteger(n.floor() as i16),
+                Valeur::NombreDouble(n) => Valeur::NombreInteger(n.floor() as i16),
+                _ => panic!("La fonction fix() attend un entier en argument"),
+            },
+            TypeMotCle::Int => match verification_un_parametre(
+                "int()".to_string(),
+                liste_expressions,
+                table_symbole,
+            ) {
+                Valeur::NombreInteger(n) => Valeur::NombreInteger(n),
+                Valeur::NombreLong(n) => Valeur::NombreInteger(n as i16),
+                Valeur::NombreSingle(n) => Valeur::NombreInteger(n.round() as i16),
+                Valeur::NombreDouble(n) => Valeur::NombreInteger(n.round() as i16),
+                _ => panic!("La fonction int() attend un entier en argument"),
+            },
+            TypeMotCle::Date => {
+                if liste_expressions.len() != 0 {
+                    panic!("La fonction date$ n'attend aucun argument");
+                }
+                Valeur::Chaine(Local::now().format("%m-%d-%Y").to_string())
+            }
+            TypeMotCle::Time => {
+                if liste_expressions.len() != 0 {
+                    panic!("La fonction time$ n'attend aucun argument");
+                }
+                Valeur::Chaine(Local::now().format("%H:%M:%S").to_string())
+            }
+
             _ => panic!("La fonction {:?} n'existe pas", mot_reserve),
         },
         _ => panic!("Méthode inconnue: {:?}", nom_methode),
