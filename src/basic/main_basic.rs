@@ -1,5 +1,6 @@
 use crate::basic::exec_basic::execute;
 use crate::basic::lexer_basic::TypeMotCle;
+use crate::basic::main_basic::AstInstruction::{AstAffectation, AstAppelMethode, AstGoto, AstIf};
 use crate::basic::parsing_basic::parse_basic;
 use std::fs;
 use std::rc::Rc;
@@ -9,7 +10,7 @@ pub struct AstProgramme {
     pub liste_instructions: Vec<AstInstruction>,
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone)]
 pub enum AstLabelEnum {
     AstLabel(String),
 }
@@ -21,6 +22,18 @@ pub enum AstInstruction {
     AstInstrLabel(Option<AstLabelEnum>),
     AstIf(AstExpression, Option<AstLabelEnum>, AstLabelEnum),
     AstGoto(Option<AstLabelEnum>, AstLabelEnum),
+}
+
+impl AstInstruction {
+    pub(crate) fn getLabel(&self) -> Option<AstLabelEnum> {
+        match self {
+            AstInstruction::AstInstrLabel(label) => label.clone(),
+            AstAffectation(_, _, label) => label.clone(),
+            AstAppelMethode(_, _, _, label) => label.clone(),
+            AstIf(_, label, _) => label.clone(),
+            AstGoto(label, _) => label.clone(),
+        }
+    }
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -425,5 +438,19 @@ mod tests {
         assert_eq!(sortie[7], "0");
         assert_eq!(sortie[8], "14"); // hex
         assert_eq!(sortie[9], "24"); // oct
+    }
+
+    #[test]
+    fn test_parse_execute22() {
+        let fichier = "print 1
+                              goto label1
+                              print 2
+                              label1: print 3"
+            .to_string();
+        let programme = parse_basic(fichier).unwrap();
+        let sortie = execute(programme);
+        assert_eq!(sortie.len(), 2);
+        assert_eq!(sortie[0], "1");
+        assert_eq!(sortie[1], "3");
     }
 }

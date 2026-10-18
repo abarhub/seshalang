@@ -2,11 +2,11 @@ use crate::basic::exec_basic::Valeur::{
     Chaine, NombreDouble, NombreInteger, NombreLong, NombreSingle,
 };
 use crate::basic::fonction_basic;
-use crate::basic::lexer_basic::TypeMotCle;
 use crate::basic::main_basic::AstExpression::{AstFonction, AstOperateurUnnaire};
-use crate::basic::main_basic::AstNomMethode::AstNomReserve;
+use crate::basic::main_basic::AstLabelEnum::AstLabel;
 use crate::basic::main_basic::{
-    AstExpression, AstInstruction, AstOperateurBinaireType, AstOperateurUnaireType, AstProgramme,
+    AstExpression, AstInstruction, AstLabelEnum, AstOperateurBinaireType, AstOperateurUnaireType,
+    AstProgramme,
 };
 use std::collections::HashMap;
 use std::fmt;
@@ -45,7 +45,13 @@ pub fn execute(programme: AstProgramme) -> Vec<String> {
         println!("programme a executer: {:?}", programme);
     }
 
-    for instruction in programme.liste_instructions.iter() {
+    let mut pos_instruction = 0;
+
+    while pos_instruction < programme.liste_instructions.len() {
+        let instruction = &programme.liste_instructions[pos_instruction];
+
+        let mut pos_change = false;
+
         if let AstInstruction::AstAffectation(ident, expression, _) = instruction {
             let resultat = execute_expression(&expression, &mut contexte);
             let tmp = resultat.clone();
@@ -85,12 +91,36 @@ pub fn execute(programme: AstProgramme) -> Vec<String> {
             } else {
                 panic!("appel de méthode {} inconnue: {:?}", nom, instruction);
             }
+        } else if let AstInstruction::AstGoto(label1, label2) = instruction {
+            let pos = trouve_label(label2, &programme.liste_instructions);
+            pos_instruction = pos;
+            pos_change = true;
         } else {
             panic!("instruction inconnue: {:?}", instruction);
+        }
+        if !pos_change {
+            pos_instruction += 1;
         }
     }
 
     sortie
+}
+
+fn trouve_label(label: &AstLabelEnum, liste_instructions: &Vec<AstInstruction>) -> usize {
+    if let AstLabel(nom_label) = label {
+        let mut pos = 0;
+        for instr in liste_instructions {
+            if let Some(AstLabel(label2)) = instr.getLabel() {
+                if *nom_label == label2 {
+                    return pos;
+                }
+            }
+            pos += 1;
+        }
+        pos
+    } else {
+        panic!("label {:?} non trouvé", label);
+    }
 }
 
 pub fn execute_expression(

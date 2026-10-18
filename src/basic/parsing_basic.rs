@@ -1,4 +1,5 @@
 use crate::basic::lexer_basic::Token::TokenNombre;
+use crate::basic::lexer_basic::TypeMotCle::Goto;
 use crate::basic::lexer_basic::TypeNombre::{Entier, Long, Single};
 use crate::basic::lexer_basic::TypeSeparateur::{
     DEUXPOINT, DIFF, DIVE, DIVR, EQU, EXP, FOIS, INF, INFE, MOINS, PARENTF, PARENTO, PLUS,
@@ -201,6 +202,7 @@ fn parsing_programme(liste_tokens: Vec<Vec<Token>>) -> AstProgramme {
 
         let mut label: Option<AstLabelEnum> = None;
 
+        // la label
         if token_iterator.est_nombre() {
             let nombre = token_iterator.next().unwrap();
             match nombre.clone() {
@@ -233,6 +235,7 @@ fn parsing_programme(liste_tokens: Vec<Vec<Token>>) -> AstProgramme {
             }
         }
 
+        // les instructions
         if token_iterator.len() == 0 {
             if label.is_some() {
                 let instruction = AstInstrLabel(label);
@@ -334,6 +337,15 @@ fn parsing_programme(liste_tokens: Vec<Vec<Token>>) -> AstProgramme {
                 programme.liste_instructions.push(instruction);
             } else {
                 panic!("token {:?} n'est pas un identifiant", token_iterator.get());
+            }
+        } else if token_iterator.est_mot_cle(Goto) {
+            token_iterator.next();
+            let identifiant = token_iterator.next().unwrap();
+            if let Token::TokenIdentifiant(s, _) = identifiant {
+                let instruction = AstInstruction::AstGoto(label, AstLabel(s.to_string()));
+                programme.liste_instructions.push(instruction);
+            } else {
+                panic!("token {:?} n'est pas un identifiant", identifiant);
             }
         } else {
             panic!("instruction inconnue {:?}", token_iterator.get());
