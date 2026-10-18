@@ -611,8 +611,6 @@ fn calcul_operateur(s: String) -> TypeSeparateur {
         TypeSeparateur::VIRGULE
     } else if s == ";" {
         TypeSeparateur::POINTVIRGULE
-    } else if s == "^" {
-        TypeSeparateur::EXP
     } else {
         panic!("separateur invalide : {}", s)
     }
