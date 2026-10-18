@@ -453,4 +453,27 @@ mod tests {
         assert_eq!(sortie[0], "1");
         assert_eq!(sortie[1], "3");
     }
+
+    #[test]
+    fn test_parse_execute23() {
+        let fichier = "if 5>3 then print 1
+                              print 2"
+            .to_string();
+        let programme = parse_basic(fichier).unwrap();
+        let sortie = execute(programme);
+        assert_eq!(sortie.len(), 2);
+        assert_eq!(sortie[0], "1");
+        assert_eq!(sortie[1], "2");
+    }
+
+    #[test]
+    fn test_parse_execute24() {
+        let fichier = "if 5>8 then print 1
+                              print 2"
+            .to_string();
+        let programme = parse_basic(fichier).unwrap();
+        let sortie = execute(programme);
+        assert_eq!(sortie.len(), 1);
+        assert_eq!(sortie[0], "2");
+    }
 }

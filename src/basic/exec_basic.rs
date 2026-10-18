@@ -3,6 +3,7 @@ use crate::basic::exec_basic::Valeur::{
 };
 use crate::basic::fonction_basic;
 use crate::basic::main_basic::AstExpression::{AstFonction, AstOperateurUnnaire};
+use crate::basic::main_basic::AstInstruction::AstInstrLabel;
 use crate::basic::main_basic::AstLabelEnum::AstLabel;
 use crate::basic::main_basic::{
     AstExpression, AstInstruction, AstLabelEnum, AstOperateurBinaireType, AstOperateurUnaireType,
@@ -91,10 +92,24 @@ pub fn execute(programme: AstProgramme) -> Vec<String> {
             } else {
                 panic!("appel de méthode {} inconnue: {:?}", nom, instruction);
             }
-        } else if let AstInstruction::AstGoto(label1, label2) = instruction {
+        } else if let AstInstruction::AstGoto(_, label2) = instruction {
             let pos = trouve_label(label2, &programme.liste_instructions);
             pos_instruction = pos;
             pos_change = true;
+        } else if let AstInstruction::AstIf(expr, _, label) = instruction {
+            let resultat = execute_expression(&expr, &mut contexte);
+            let valeur_true = match resultat {
+                NombreInteger(n) => n != 0,
+                NombreLong(n) => n != 0,
+                _ => false,
+            };
+            if valeur_true {
+                let pos = trouve_label(label, &programme.liste_instructions);
+                pos_instruction = pos;
+                pos_change = true;
+            }
+        } else if let AstInstrLabel(_) = instruction {
+            // on ne fait rien
         } else {
             panic!("instruction inconnue: {:?}", instruction);
         }
