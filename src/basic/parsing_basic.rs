@@ -5,7 +5,7 @@ use crate::basic::lexer_basic::TypeSeparateur::{
     POINTVIRGULE, SUP, SUPE, VIRGULE,
 };
 use crate::basic::lexer_basic::{Token, TypeMotCle, TypeNombre, TypeSeparateur, lexer};
-use crate::basic::main_basic::AstInstruction::AstAffectation;
+use crate::basic::main_basic::AstInstruction::{AstAffectation, AstInstrLabel};
 use crate::basic::main_basic::AstLabelEnum::AstLabel;
 use crate::basic::main_basic::AstOperateurBinaireType::{
     Different, DivisionEntiere, DivisionReel, Egal, Exponentiel, Inferieur, InferieurEgal, Moins,
@@ -233,7 +233,12 @@ fn parsing_programme(liste_tokens: Vec<Vec<Token>>) -> AstProgramme {
             }
         }
 
-        if token_iterator.est_identifiant() && token_iterator.est_separateur_pos(EQU, 1) {
+        if token_iterator.len() == 0 {
+            if label.is_some() {
+                let instruction = AstInstrLabel(label);
+                programme.liste_instructions.push(instruction);
+            }
+        } else if token_iterator.est_identifiant() && token_iterator.est_separateur_pos(EQU, 1) {
             // affectation
             if let Token::TokenIdentifiant(ident, _) = token_iterator.next().unwrap() {
                 if DEBUG_PRINT {
@@ -834,6 +839,64 @@ mod tests {
                 vec![],
                 None,
             )]
+        );
+    }
+
+    #[test]
+    fn test_parser_label1() {
+        let fichier = "label1: print 1".to_string();
+        let liste_tokens = lexer(fichier);
+        let ast = parsing_programme(liste_tokens);
+
+        assert_eq!(
+            ast.liste_instructions,
+            vec![AstAppelMethode(
+                "print".to_string(),
+                vec![AstExpression::AstNombreInteger(1)],
+                vec![],
+                Some(AstLabel("label1".to_string())),
+            )]
+        );
+    }
+
+    #[test]
+    fn test_parser_label2() {
+        let fichier = "123 print 1".to_string();
+        let liste_tokens = lexer(fichier);
+        let ast = parsing_programme(liste_tokens);
+
+        assert_eq!(
+            ast.liste_instructions,
+            vec![AstAppelMethode(
+                "print".to_string(),
+                vec![AstExpression::AstNombreInteger(1)],
+                vec![],
+                Some(AstLabel("123".to_string())),
+            )]
+        );
+    }
+
+    #[test]
+    fn test_parser_label3() {
+        let fichier = "label5:".to_string();
+        let liste_tokens = lexer(fichier);
+        let ast = parsing_programme(liste_tokens);
+
+        assert_eq!(
+            ast.liste_instructions,
+            vec![AstInstrLabel(Some(AstLabel("label5".to_string())),)]
+        );
+    }
+
+    #[test]
+    fn test_parser_label4() {
+        let fichier = "4".to_string();
+        let liste_tokens = lexer(fichier);
+        let ast = parsing_programme(liste_tokens);
+
+        assert_eq!(
+            ast.liste_instructions,
+            vec![AstInstrLabel(Some(AstLabel("4".to_string())),)]
         );
     }
 }
