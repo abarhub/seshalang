@@ -1,5 +1,5 @@
 use crate::basic::lexer_basic::Token::TokenNombre;
-use crate::basic::lexer_basic::TypeMotCle::{Goto, If, Then};
+use crate::basic::lexer_basic::TypeMotCle::{End, Goto, If, Then};
 use crate::basic::lexer_basic::TypeNombre::{Entier, Long, Single};
 use crate::basic::lexer_basic::TypeSeparateur::{
     DEUXPOINT, DIFF, DIVE, DIVR, EQU, EXP, FOIS, INF, INFE, MOINS, PARENTF, PARENTO, PLUS,
@@ -17,7 +17,9 @@ use crate::basic::main_basic::{
     AstOperateurUnaireType, AstProgramme,
 };
 use std::cmp::max;
+use std::fmt::format;
 use std::rc::Rc;
+use std::slice::Iter;
 
 const DEBUG_PRINT: bool = false;
 
@@ -79,6 +81,14 @@ impl TokenIterator {
 
     fn est_mot_cle(&self, mot_cle: TypeMotCle) -> bool {
         if let Some(Token::TokenMotReserve(mot_reserve, _)) = self.get() {
+            mot_cle == mot_reserve
+        } else {
+            false
+        }
+    }
+
+    fn est_mot_cle_pos(&self, mot_cle: TypeMotCle, position: i32) -> bool {
+        if let Some(Token::TokenMotReserve(mot_reserve, _)) = self.get_pos(position) {
             mot_cle == mot_reserve
         } else {
             false
@@ -177,6 +187,23 @@ impl Iterator for TokenIterator {
     }
 }
 
+#[derive(Debug)]
+struct Compteur {
+    compteur_if: i32,
+}
+
+impl Compteur {
+    fn new() -> Compteur {
+        Compteur { compteur_if: 1 }
+    }
+
+    fn next_if(&mut self) -> i32 {
+        let no = self.compteur_if;
+        self.compteur_if += 1;
+        no
+    }
+}
+
 pub fn parse_basic(contenu_fichier: String) -> std::io::Result<AstProgramme> {
     let liste_tokens: Vec<Vec<Token>> = lexer(contenu_fichier);
 
@@ -193,12 +220,18 @@ fn parsing_programme(liste_tokens: Vec<Vec<Token>>) -> AstProgramme {
     let mut programme = AstProgramme {
         liste_instructions: Vec::new(),
     };
-    for ligne in liste_tokens {
+
+    let mut compteur = Compteur::new();
+
+    let mut iter = liste_tokens.iter();
+
+    //for ligne in liste_tokens {
+    while let Some(ligne) = iter.next() {
         if ligne.len() == 0 {
             continue;
         }
 
-        let mut token_iterator = TokenIterator::new(ligne);
+        let mut token_iterator = TokenIterator::new(ligne.clone());
 
         let mut label: Option<AstLabelEnum> = None;
 
@@ -236,7 +269,8 @@ fn parsing_programme(liste_tokens: Vec<Vec<Token>>) -> AstProgramme {
         }
 
         // les instructions
-        let mut liste_instructions = parse_instruction(&mut token_iterator, label);
+        let mut liste_instructions =
+            parse_instruction(&mut token_iterator, label, &mut iter, &mut compteur);
         if !liste_instructions.is_empty() {
             programme.liste_instructions.append(&mut liste_instructions);
         }
@@ -248,6 +282,8 @@ fn parsing_programme(liste_tokens: Vec<Vec<Token>>) -> AstProgramme {
 fn parse_instruction(
     mut token_iterator: &mut TokenIterator,
     label: Option<AstLabelEnum>,
+    liste_instructions_iter: &mut Iter<Vec<Token>>,
+    compteur: &mut Compteur,
 ) -> Vec<AstInstruction> {
     if token_iterator.len() == 0 {
         if label.is_some() {
@@ -371,11 +407,50 @@ fn parse_instruction(
             panic!("token {:?} n'est pas un mot clé Then", token_iterator.get());
         }
         if token_iterator.len() == 0 {
-            panic!("token {:?} n'est pas un mot clé Then", token_iterator.get());
+            let no = compteur.next_if();
+            let label2 = AstLabel(format!("_if_then{}", no).to_string());
+            let label3 = AstLabel(format!("_if_end{}", no).to_string());
+            let mut liste_instruction = vec![];
+
+            let mut liste_instruction3 = vec![];
+            while let instr = liste_instructions_iter.next() {
+                if let Some(ligne) = instr {
+                    let mut token_iterator2 = TokenIterator::new(ligne.clone());
+
+                    if token_iterator2.est_mot_cle(End) && token_iterator2.est_mot_cle_pos(If, 1) {
+                        break;
+                    } else {
+                        let v: Vec<Vec<Token>> = vec![];
+                        let mut iter = v.iter();
+
+                        let mut liste_instructions2 =
+                            parse_instruction(&mut token_iterator2, None, &mut iter, compteur);
+                        liste_instruction3.append(&mut liste_instructions2);
+                    }
+                } else {
+                    break;
+                }
+            }
+
+            liste_instruction.push(AstIf(exp.0, label, label2.clone()));
+            liste_instruction.push(AstGoto(None, label3.clone()));
+            liste_instruction.push(AstInstrLabel(Some(label2)));
+            liste_instruction.append(&mut liste_instruction3);
+            liste_instruction.push(AstInstrLabel(Some(label3)));
+
+            liste_instruction
         } else {
-            let label2 = AstLabel("label2".to_string());
-            let label3 = AstLabel("label3".to_string());
-            let mut instruction = parse_instruction(&mut token_iterator, Some(label2.clone()));
+            let no = compteur.next_if();
+            let label2 = AstLabel(format!("_if_then{}", no).to_string());
+            let label3 = AstLabel(format!("_if_end{}", no).to_string());
+            let v: Vec<Vec<Token>> = vec![];
+            let mut iter = v.iter();
+            let mut instruction = parse_instruction(
+                &mut token_iterator,
+                Some(label2.clone()),
+                &mut iter,
+                compteur,
+            );
             if !instruction.is_empty() {
                 let mut liste_instruction = vec![];
                 liste_instruction.push(AstIf(exp.0, label, label2));
@@ -384,7 +459,7 @@ fn parse_instruction(
                 liste_instruction.push(AstInstrLabel(Some(label3)));
                 liste_instruction
             } else {
-                panic!("Erreur")
+                panic!("Erreur: pas d'instruction pour le then du if")
             }
         }
     } else {

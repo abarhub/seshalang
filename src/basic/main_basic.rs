@@ -476,4 +476,49 @@ mod tests {
         assert_eq!(sortie.len(), 1);
         assert_eq!(sortie[0], "2");
     }
+
+    #[test]
+    fn test_parse_execute25() {
+        let fichier = "if 5>3 then
+                              print 1
+                              end if
+                              print 2"
+            .to_string();
+        let programme = parse_basic(fichier).unwrap();
+        let sortie = execute(programme);
+        assert_eq!(sortie.len(), 2);
+        assert_eq!(sortie[0], "1");
+        assert_eq!(sortie[1], "2");
+    }
+
+    #[test]
+    fn test_parse_execute26() {
+        let fichier = "if 5>8 then
+                              print 1
+                              end if
+                              print 2"
+            .to_string();
+        let programme = parse_basic(fichier).unwrap();
+        let sortie = execute(programme);
+        assert_eq!(sortie.len(), 1);
+        assert_eq!(sortie[0], "2");
+    }
+
+    #[test]
+    fn test_parse_execute27() {
+        let fichier = "if 5>3 then
+                              print 1
+                              print 10
+                              print 100
+                              end if
+                              print 2"
+            .to_string();
+        let programme = parse_basic(fichier).unwrap();
+        let sortie = execute(programme);
+        assert_eq!(sortie.len(), 4);
+        assert_eq!(sortie[0], "1");
+        assert_eq!(sortie[1], "10");
+        assert_eq!(sortie[2], "100");
+        assert_eq!(sortie[3], "2");
+    }
 }
