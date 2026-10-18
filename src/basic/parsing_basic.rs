@@ -1,19 +1,19 @@
+use crate::basic::lexer_basic::Token::TokenNombre;
 use crate::basic::lexer_basic::TypeNombre::{Entier, Long, Single};
 use crate::basic::lexer_basic::TypeSeparateur::{
-    DIFF, DIVE, DIVR, EQU, EXP, FOIS, INF, INFE, MOINS, PARENTF, PARENTO, PLUS, POINTVIRGULE, SUP,
-    SUPE, VIRGULE,
+    DEUXPOINT, DIFF, DIVE, DIVR, EQU, EXP, FOIS, INF, INFE, MOINS, PARENTF, PARENTO, PLUS,
+    POINTVIRGULE, SUP, SUPE, VIRGULE,
 };
-use crate::basic::lexer_basic::{
-    Token, TypeMotCle, TypeNombre, TypeSeparateur, lexer,
-};
+use crate::basic::lexer_basic::{Token, TypeMotCle, TypeNombre, TypeSeparateur, lexer};
 use crate::basic::main_basic::AstInstruction::AstAffectation;
+use crate::basic::main_basic::AstLabelEnum::AstLabel;
 use crate::basic::main_basic::AstOperateurBinaireType::{
     Different, DivisionEntiere, DivisionReel, Egal, Exponentiel, Inferieur, InferieurEgal, Moins,
     Multiplication, Superieur, SuperieurEgal,
 };
 use crate::basic::main_basic::{
-    AstExpression, AstInstruction, AstNomMethode, AstOperateurBinaireType, AstOperateurUnaireType,
-    AstProgramme,
+    AstExpression, AstInstruction, AstLabelEnum, AstNomMethode, AstOperateurBinaireType,
+    AstOperateurUnaireType, AstProgramme,
 };
 use std::cmp::max;
 use std::rc::Rc;
@@ -140,6 +140,18 @@ impl TokenIterator {
         }
     }
 
+    fn est_label(&self) -> bool {
+        if let Some(Token::TokenIdentifiant(_, _)) = self.get() {
+            let mut i = 1;
+            while self.est_identifiant_pos(i) {
+                i += 1;
+            }
+            self.est_separateur_pos(DEUXPOINT, i)
+        } else {
+            false
+        }
+    }
+
     fn len(&self) -> usize {
         if self.index < 0 {
             self.liste_tokens.len()
@@ -187,6 +199,40 @@ fn parsing_programme(liste_tokens: Vec<Vec<Token>>) -> AstProgramme {
 
         let mut token_iterator = TokenIterator::new(ligne);
 
+        let mut label: Option<AstLabelEnum> = None;
+
+        if token_iterator.est_nombre() {
+            let nombre = token_iterator.next().unwrap();
+            match nombre.clone() {
+                TokenNombre(n16, n32, _, _, typeNombre, _) => {
+                    label = {
+                        match typeNombre {
+                            Entier => Some(AstLabel(n16.to_string())),
+                            Long => Some(AstLabel(n32.to_string())),
+                            _ => {
+                                panic!("token {:?} n'est pas un nombre entier", nombre);
+                            }
+                        }
+                    }
+                }
+                _ => {
+                    panic!("token {:?} n'est pas un nombre", nombre);
+                }
+            }
+        } else if token_iterator.est_label() {
+            let label_ident = token_iterator.next().unwrap();
+            if let Token::TokenIdentifiant(ident, _) = label_ident {
+                label = Some(AstLabel(ident));
+                let deux_point = token_iterator.next().unwrap();
+                if let Token::TokenSeparateur(DEUXPOINT, _) = deux_point {
+                } else {
+                    panic!("token {:?} n'est pas un deux point", deux_point);
+                }
+            } else {
+                panic!("token {:?} n'est pas un label", label_ident);
+            }
+        }
+
         if token_iterator.est_identifiant() && token_iterator.est_separateur_pos(EQU, 1) {
             // affectation
             if let Token::TokenIdentifiant(ident, _) = token_iterator.next().unwrap() {
@@ -195,7 +241,7 @@ fn parsing_programme(liste_tokens: Vec<Vec<Token>>) -> AstProgramme {
                 }
                 token_iterator.next();
                 let exp = parsing_expression(&mut token_iterator);
-                let instruction = AstAffectation(ident.clone(), exp.0);
+                let instruction = AstAffectation(ident.clone(), exp.0, label);
                 programme.liste_instructions.push(instruction);
             } else {
                 panic!("token {:?} n'est pas un identifiant", token_iterator.get());
@@ -237,6 +283,7 @@ fn parsing_programme(liste_tokens: Vec<Vec<Token>>) -> AstProgramme {
                     ident,
                     liste_expressions,
                     separateur_virgule_liste,
+                    label,
                 );
 
                 programme.liste_instructions.push(instruction);
@@ -276,6 +323,7 @@ fn parsing_programme(liste_tokens: Vec<Vec<Token>>) -> AstProgramme {
                     "print".to_string(),
                     liste_expressions,
                     separateur_virgule_liste,
+                    label,
                 );
 
                 programme.liste_instructions.push(instruction);
@@ -700,7 +748,8 @@ mod tests {
             ast.liste_instructions,
             vec![AstAffectation(
                 "x".to_string(),
-                AstExpression::AstNombreInteger(1)
+                AstExpression::AstNombreInteger(1),
+                None,
             )]
         );
     }
@@ -719,7 +768,8 @@ mod tests {
                     AstOperateurBinaireType::Eqv,
                     Rc::new(AstExpression::AstNombreInteger(1)),
                     Rc::new(AstExpression::AstNombreInteger(2))
-                )
+                ),
+                None,
             )]
         );
     }
@@ -735,7 +785,8 @@ mod tests {
             vec![AstAppelMethode(
                 "print".to_string(),
                 vec![AstExpression::AstNombreInteger(1)],
-                vec![]
+                vec![],
+                None,
             )]
         );
     }
@@ -755,7 +806,8 @@ mod tests {
                     Rc::new(AstExpression::AstNombreInteger(1)),
                     Rc::new(AstExpression::AstNombreInteger(2))
                 )],
-                vec![]
+                vec![],
+                None,
             )]
         );
     }
@@ -779,7 +831,8 @@ mod tests {
                     )),
                     Rc::new(AstExpression::AstNombreInteger(0))
                 )],
-                vec![]
+                vec![],
+                None,
             )]
         );
     }

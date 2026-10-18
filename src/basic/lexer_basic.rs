@@ -117,6 +117,7 @@ pub enum TypeSeparateur {
     PARENTF,
     VIRGULE,
     POINTVIRGULE,
+    DEUXPOINT
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -615,6 +616,8 @@ fn calcul_operateur(s: String) -> TypeSeparateur {
         TypeSeparateur::VIRGULE
     } else if s == ";" {
         TypeSeparateur::POINTVIRGULE
+    } else if s == ":" {
+        TypeSeparateur::DEUXPOINT
     } else {
         panic!("separateur invalide : {}", s)
     }

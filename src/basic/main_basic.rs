@@ -10,9 +10,17 @@ pub struct AstProgramme {
 }
 
 #[derive(Debug, PartialEq)]
+pub enum AstLabelEnum {
+    AstLabel(String),
+}
+
+#[derive(Debug, PartialEq)]
 pub enum AstInstruction {
-    AstAffectation(String, AstExpression),
-    AstAppelMethode(String, Vec<AstExpression>, Vec<bool>),
+    AstAffectation(String, AstExpression, Option<AstLabelEnum>),
+    AstAppelMethode(String, Vec<AstExpression>, Vec<bool>, Option<AstLabelEnum>),
+    AstInstrLabel(Option<AstLabelEnum>),
+    AstIf(AstExpression, Option<AstLabelEnum>, AstLabelEnum),
+    AstGoto(Option<AstLabelEnum>, AstLabelEnum),
 }
 
 #[derive(Debug, Clone, PartialEq)]

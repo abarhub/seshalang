@@ -46,14 +46,15 @@ pub fn execute(programme: AstProgramme) -> Vec<String> {
     }
 
     for instruction in programme.liste_instructions.iter() {
-        if let AstInstruction::AstAffectation(ident, expression) = instruction {
+        if let AstInstruction::AstAffectation(ident, expression, _) = instruction {
             let resultat = execute_expression(&expression, &mut contexte);
             let tmp = resultat.clone();
             contexte.insert(ident.clone(), resultat);
             if DEBUG_PRINT {
                 println!("affect {:?} := {:?}", ident.clone(), tmp);
             }
-        } else if let AstInstruction::AstAppelMethode(nom, parametres, separateurs) = instruction {
+        } else if let AstInstruction::AstAppelMethode(nom, parametres, separateurs, _) = instruction
+        {
             if nom.to_lowercase() == "print" {
                 let mut i = 0;
                 for expression in parametres.iter() {
