@@ -1,6 +1,8 @@
 use crate::basic::exec_basic;
 use crate::basic::exec_basic::Valeur;
-use crate::basic::exec_basic::Valeur::NombreInteger;
+use crate::basic::exec_basic::Valeur::{
+    Chaine, NombreDouble, NombreInteger, NombreLong, NombreSingle,
+};
 use crate::basic::lexer_basic::TypeMotCle;
 use crate::basic::main_basic::AstNomMethode::AstNomReserve;
 use crate::basic::main_basic::{AstExpression, AstNomMethode};
@@ -20,10 +22,10 @@ pub fn execute_fonction(
                     liste_expressions,
                     table_symbole,
                 ) {
-                    Valeur::NombreInteger(n) => Valeur::NombreInteger(n.abs()),
-                    Valeur::NombreLong(n) => Valeur::NombreLong(n.abs()),
-                    Valeur::NombreSingle(n) => Valeur::NombreSingle(n.abs()),
-                    Valeur::NombreDouble(valeur) => Valeur::NombreDouble(valeur.abs()),
+                    NombreInteger(n) => NombreInteger(n.abs()),
+                    NombreLong(n) => NombreLong(n.abs()),
+                    NombreSingle(n) => NombreSingle(n.abs()),
+                    NombreDouble(valeur) => NombreDouble(valeur.abs()),
                     _ => panic!("La fonction abs() attend un nombre en argument"),
                 }
             }
@@ -33,7 +35,7 @@ pub fn execute_fonction(
                     liste_expressions,
                     table_symbole,
                 ) {
-                    Valeur::Chaine(s) => Valeur::NombreInteger(s.chars().next().unwrap() as i16),
+                    Valeur::Chaine(s) => NombreInteger(s.chars().next().unwrap() as i16),
                     _ => panic!("La fonction asc() attend une chaine en argument"),
                 }
             }
@@ -43,12 +45,8 @@ pub fn execute_fonction(
                     liste_expressions,
                     table_symbole,
                 ) {
-                    Valeur::NombreInteger(n) => {
-                        Valeur::Chaine(format!("{}", u8::try_from(n).unwrap() as char))
-                    }
-                    Valeur::NombreLong(n) => {
-                        Valeur::Chaine(format!("{}", u8::try_from(n).unwrap() as char))
-                    }
+                    NombreInteger(n) => Chaine(format!("{}", u8::try_from(n).unwrap() as char)),
+                    NombreLong(n) => Chaine(format!("{}", u8::try_from(n).unwrap() as char)),
                     _ => panic!("La fonction char$() attend un entier en argument"),
                 }
             }
@@ -82,8 +80,8 @@ pub fn execute_fonction(
                     liste_expressions,
                     table_symbole,
                 ) {
-                    Valeur::NombreInteger(n) => Valeur::NombreDouble(n as f64),
-                    Valeur::NombreLong(n) => Valeur::NombreDouble(n as f64),
+                    NombreInteger(n) => NombreDouble(n as f64),
+                    NombreLong(n) => NombreDouble(n as f64),
                     _ => panic!("La fonction cdbl() attend un entier en argument"),
                 }
             }
@@ -92,8 +90,8 @@ pub fn execute_fonction(
                 liste_expressions,
                 table_symbole,
             ) {
-                Valeur::NombreInteger(n) => Valeur::NombreSingle(n as f32),
-                Valeur::NombreLong(n) => Valeur::NombreSingle(n as f32),
+                NombreInteger(n) => NombreSingle(n as f32),
+                NombreLong(n) => NombreSingle(n as f32),
                 _ => panic!("La fonction csng() attend un entier en argument"),
             },
             TypeMotCle::Clng => match verification_un_parametre(
@@ -101,10 +99,10 @@ pub fn execute_fonction(
                 liste_expressions,
                 table_symbole,
             ) {
-                Valeur::NombreInteger(n) => Valeur::NombreLong(n as i32),
-                Valeur::NombreLong(n) => Valeur::NombreLong(n),
-                Valeur::NombreSingle(n) => Valeur::NombreLong(n as i32),
-                Valeur::NombreDouble(n) => Valeur::NombreLong(n as i32),
+                NombreInteger(n) => NombreLong(n as i32),
+                NombreLong(n) => NombreLong(n),
+                NombreSingle(n) => NombreLong(n as i32),
+                NombreDouble(n) => NombreLong(n as i32),
                 _ => panic!("La fonction clng() attend un entier en argument"),
             },
             TypeMotCle::Cint => match verification_un_parametre(
@@ -112,10 +110,10 @@ pub fn execute_fonction(
                 liste_expressions,
                 table_symbole,
             ) {
-                Valeur::NombreInteger(n) => Valeur::NombreInteger(n),
-                Valeur::NombreLong(n) => Valeur::NombreInteger(n as i16),
-                Valeur::NombreSingle(n) => Valeur::NombreInteger(n as i16),
-                Valeur::NombreDouble(n) => Valeur::NombreInteger(n as i16),
+                NombreInteger(n) => NombreInteger(n),
+                NombreLong(n) => NombreInteger(n as i16),
+                NombreSingle(n) => NombreInteger(n as i16),
+                NombreDouble(n) => NombreInteger(n as i16),
                 _ => panic!("La fonction cint() attend un entier en argument"),
             },
             TypeMotCle::Mki => match verification_un_parametre(
@@ -123,7 +121,7 @@ pub fn execute_fonction(
                 liste_expressions,
                 table_symbole,
             ) {
-                Valeur::NombreInteger(n) => Valeur::Chaine(n.to_string()),
+                NombreInteger(n) => Chaine(n.to_string()),
                 _ => panic!("La fonction mki$() attend un integer en argument"),
             },
             TypeMotCle::Mkl => match verification_un_parametre(
@@ -131,7 +129,7 @@ pub fn execute_fonction(
                 liste_expressions,
                 table_symbole,
             ) {
-                Valeur::NombreLong(n) => Valeur::Chaine(n.to_string()),
+                NombreLong(n) => Chaine(n.to_string()),
                 _ => panic!("La fonction mkl$() attend un long en argument"),
             },
             TypeMotCle::Mks => match verification_un_parametre(
@@ -139,7 +137,7 @@ pub fn execute_fonction(
                 liste_expressions,
                 table_symbole,
             ) {
-                Valeur::NombreSingle(n) => Valeur::Chaine(n.to_string()),
+                NombreSingle(n) => Chaine(n.to_string()),
                 _ => panic!("La fonction mks$() attend un single en argument"),
             },
             TypeMotCle::Mkd => match verification_un_parametre(
@@ -147,7 +145,7 @@ pub fn execute_fonction(
                 liste_expressions,
                 table_symbole,
             ) {
-                Valeur::NombreDouble(n) => Valeur::Chaine(n.to_string()),
+                NombreDouble(n) => Chaine(n.to_string()),
                 _ => panic!("La fonction mki$() attend un double en argument"),
             },
             TypeMotCle::Cvi => match verification_un_parametre(
@@ -155,7 +153,7 @@ pub fn execute_fonction(
                 liste_expressions,
                 table_symbole,
             ) {
-                Valeur::Chaine(s) => Valeur::NombreInteger(s.parse::<i16>().unwrap()),
+                Chaine(s) => NombreInteger(s.parse::<i16>().unwrap()),
                 _ => panic!("La fonction Cvi() attend une chaine en argument"),
             },
             TypeMotCle::Cvl => match verification_un_parametre(
@@ -163,7 +161,7 @@ pub fn execute_fonction(
                 liste_expressions,
                 table_symbole,
             ) {
-                Valeur::Chaine(s) => Valeur::NombreLong(s.parse::<i32>().unwrap()),
+                Chaine(s) => NombreLong(s.parse::<i32>().unwrap()),
                 _ => panic!("La fonction Cvl() attend une chaine en argument"),
             },
             TypeMotCle::Cvs => match verification_un_parametre(
@@ -171,7 +169,7 @@ pub fn execute_fonction(
                 liste_expressions,
                 table_symbole,
             ) {
-                Valeur::Chaine(s) => Valeur::NombreSingle(s.parse::<f32>().unwrap()),
+                Chaine(s) => NombreSingle(s.parse::<f32>().unwrap()),
                 _ => panic!("La fonction Cvs() attend une chaine en argument"),
             },
             TypeMotCle::Cvd => match verification_un_parametre(
@@ -179,7 +177,7 @@ pub fn execute_fonction(
                 liste_expressions,
                 table_symbole,
             ) {
-                Valeur::Chaine(s) => Valeur::NombreDouble(s.parse::<f64>().unwrap()),
+                Chaine(s) => NombreDouble(s.parse::<f64>().unwrap()),
                 _ => panic!("La fonction Cvd() attend une chaine en argument"),
             },
             TypeMotCle::Fix => match verification_un_parametre(
@@ -187,10 +185,10 @@ pub fn execute_fonction(
                 liste_expressions,
                 table_symbole,
             ) {
-                Valeur::NombreInteger(n) => Valeur::NombreInteger(n),
-                Valeur::NombreLong(n) => Valeur::NombreInteger(n as i16),
-                Valeur::NombreSingle(n) => Valeur::NombreInteger(n.floor() as i16),
-                Valeur::NombreDouble(n) => Valeur::NombreInteger(n.floor() as i16),
+                NombreInteger(n) => NombreInteger(n),
+                NombreLong(n) => NombreInteger(n as i16),
+                NombreSingle(n) => NombreInteger(n.floor() as i16),
+                NombreDouble(n) => NombreInteger(n.floor() as i16),
                 _ => panic!("La fonction fix() attend un entier en argument"),
             },
             TypeMotCle::Int => match verification_un_parametre(
@@ -198,25 +196,51 @@ pub fn execute_fonction(
                 liste_expressions,
                 table_symbole,
             ) {
-                Valeur::NombreInteger(n) => Valeur::NombreInteger(n),
-                Valeur::NombreLong(n) => Valeur::NombreInteger(n as i16),
-                Valeur::NombreSingle(n) => Valeur::NombreInteger(n.round() as i16),
-                Valeur::NombreDouble(n) => Valeur::NombreInteger(n.round() as i16),
+                NombreInteger(n) => NombreInteger(n),
+                NombreLong(n) => NombreInteger(n as i16),
+                NombreSingle(n) => NombreInteger(n.round() as i16),
+                NombreDouble(n) => NombreInteger(n.round() as i16),
                 _ => panic!("La fonction int() attend un entier en argument"),
             },
             TypeMotCle::Date => {
                 if liste_expressions.len() != 0 {
                     panic!("La fonction date$ n'attend aucun argument");
                 }
-                Valeur::Chaine(Local::now().format("%m-%d-%Y").to_string())
+                Chaine(Local::now().format("%m-%d-%Y").to_string())
             }
             TypeMotCle::Time => {
                 if liste_expressions.len() != 0 {
                     panic!("La fonction time$ n'attend aucun argument");
                 }
-                Valeur::Chaine(Local::now().format("%H:%M:%S").to_string())
+                Chaine(Local::now().format("%H:%M:%S").to_string())
             }
             TypeMotCle::Instr => calcul_instr(liste_expressions, table_symbole),
+            TypeMotCle::Hex => {
+                match verification_un_parametre(
+                    "hex$()".to_string(),
+                    liste_expressions,
+                    table_symbole,
+                ) {
+                    NombreInteger(n) => Chaine(format!("{:x}", n)),
+                    NombreLong(n) => Chaine(format!("{:x}", n)),
+                    NombreSingle(n) => Chaine(format!("{:x}", n.round() as i32)),
+                    NombreDouble(n) => Chaine(format!("{:x}", n.round() as i32)),
+                    _ => panic!("La fonction hex() attend exactement un argument"),
+                }
+            }
+            TypeMotCle::Oct => {
+                match verification_un_parametre(
+                    "oct$()".to_string(),
+                    liste_expressions,
+                    table_symbole,
+                ) {
+                    NombreInteger(n) => Chaine(format!("{:o}", n)),
+                    NombreLong(n) => Chaine(format!("{:o}", n)),
+                    NombreSingle(n) => Chaine(format!("{:o}", n.round() as i32)),
+                    NombreDouble(n) => Chaine(format!("{:o}", n.round() as i32)),
+                    _ => panic!("La fonction oct() attend exactement un argument"),
+                }
+            }
             _ => panic!("La fonction {:?} n'existe pas", mot_reserve),
         },
         _ => panic!("Méthode inconnue: {:?}", nom_methode),
@@ -242,10 +266,10 @@ fn appliquer_double<F: Fn(f64) -> f64>(
     nom: String,
 ) -> Valeur {
     match verification_un_parametre(nom.clone(), liste_expressions, table_symbole) {
-        NombreInteger(n) => Valeur::NombreDouble(f(n as f64)),
-        Valeur::NombreLong(n) => Valeur::NombreDouble(f(n as f64)),
-        Valeur::NombreSingle(n) => Valeur::NombreDouble(f(n as f64)),
-        Valeur::NombreDouble(valeur) => Valeur::NombreDouble(f(valeur)),
+        NombreInteger(n) => NombreDouble(f(n as f64)),
+        NombreLong(n) => NombreDouble(f(n as f64)),
+        NombreSingle(n) => NombreDouble(f(n as f64)),
+        NombreDouble(valeur) => NombreDouble(f(valeur)),
         _ => panic!("La fonction {} attend un nombre en argument", nom),
     }
 }
@@ -254,8 +278,11 @@ fn calcul_instr(
     liste_expressions: Vec<AstExpression>,
     table_symbole: &mut HashMap<String, Valeur>,
 ) -> Valeur {
-    if liste_expressions.len() != 2 || liste_expressions.len() != 3 {
-        panic!("La fonction instr attend 2 ou 3 arguments");
+    if liste_expressions.len() != 2 && liste_expressions.len() != 3 {
+        panic!(
+            "La fonction instr attend 2 ou 3 arguments (nb arguments: {})",
+            liste_expressions.len()
+        );
     }
     let pos_debut: usize;
     let chaine_a_chercher: String;
@@ -277,7 +304,7 @@ fn calcul_instr(
     let e1 = liste_expressions.get(param_debut).unwrap();
     let expr1 = exec_basic::execute_expression(&(e1.clone()), table_symbole);
     match expr1 {
-        Valeur::Chaine(s) => chaine_a_chercher = s,
+        Chaine(s) => chaine_a_chercher = s,
         _ => panic!(
             "Le parametre {} doit être une chaine de caractères",
             param_debut + 1
@@ -286,15 +313,15 @@ fn calcul_instr(
     let e2 = liste_expressions.get(param_debut + 1).unwrap();
     let expr2 = exec_basic::execute_expression(&(e2.clone()), table_symbole);
     match expr2 {
-        Valeur::Chaine(s) => chaine_recherche = s,
+        Chaine(s) => chaine_recherche = s,
         _ => panic!(
             "Le parametre {} doit être une chaine de caractères",
             param_debut + 2
         ),
     }
-    if pos_debut < chaine_a_chercher.len() {
-        if let Some(pos) = chaine_a_chercher[pos_debut..].find(&chaine_recherche) {
-            resultat = pos as i16;
+    if pos_debut >= 1 && pos_debut < chaine_a_chercher.len() {
+        if let Some(pos) = chaine_a_chercher[pos_debut - 1..].find(&chaine_recherche) {
+            resultat = pos as i16 + 1 + (pos_debut as i16 - 1);
         } else {
             resultat = 0;
         }

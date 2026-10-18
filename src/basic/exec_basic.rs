@@ -261,9 +261,9 @@ fn execute_expression0(
         } else {
             panic!("Expression invalide: {:?}", expr1);
         }
-    } else if let AstFonction(nomMethode, liste_expressions) = expression {
+    } else if let AstFonction(nom_methode, liste_expressions) = expression {
         return fonction_basic::execute_fonction(
-            nomMethode.clone(),
+            nom_methode.clone(),
             liste_expressions.clone(),
             table_symbole,
         );

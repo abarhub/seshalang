@@ -390,4 +390,32 @@ mod tests {
         assert_eq!(sortie[6], "4.5");
         assert_eq!(sortie[7], "8.5");
     }
+
+    #[test]
+    fn test_parse_execute21() {
+        let fichier = "print fix(5.2)
+                              print fix(5.5)
+                              print int(6.4)
+                              print int(6.7)
+                              print instr(1,\"abcdefcd\",\"cd\")
+                              print instr(4,\"abcdefcd\",\"cd\")
+                              print instr(\"abcabcaaa\",\"bc\")
+                              print instr(\"abcabcaaa\",\"xy\")
+                              print hex$(20)
+                              print oct$(20)"
+            .to_string();
+        let programme = parse_basic(fichier).unwrap();
+        let sortie = execute(programme);
+        assert_eq!(sortie.len(), 10);
+        assert_eq!(sortie[0], "5"); // fix
+        assert_eq!(sortie[1], "5");
+        assert_eq!(sortie[2], "6"); // int
+        assert_eq!(sortie[3], "7");
+        assert_eq!(sortie[4], "3"); // instr
+        assert_eq!(sortie[5], "7");
+        assert_eq!(sortie[6], "2");
+        assert_eq!(sortie[7], "0");
+        assert_eq!(sortie[8], "14"); // hex
+        assert_eq!(sortie[9], "24"); // oct
+    }
 }

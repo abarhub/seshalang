@@ -51,6 +51,8 @@ pub enum TypeMotCle {
     Int,
     Time,
     Instr,
+    Hex,
+    Oct,
 }
 
 impl TypeMotCle {
@@ -80,6 +82,8 @@ impl TypeMotCle {
             | TypeMotCle::Int
             | TypeMotCle::Time
             | TypeMotCle::Instr
+            | TypeMotCle::Hex
+            | TypeMotCle::Oct
             => true,
             _ => false,
         }
@@ -669,6 +673,8 @@ fn mots_cles(s: String) -> Option<TypeMotCle> {
         "INT" => Some(TypeMotCle::Int),
         "TIME$" => Some(TypeMotCle::Time),
         "INSTR" => Some(TypeMotCle::Instr),
+        "HEX$" => Some(TypeMotCle::Hex),
+        "OCT$" => Some(TypeMotCle::Oct),
         _ => None,
     }
 }
