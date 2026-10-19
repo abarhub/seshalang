@@ -521,4 +521,60 @@ mod tests {
         assert_eq!(sortie[2], "100");
         assert_eq!(sortie[3], "2");
     }
+
+    #[test]
+    fn test_parse_execute28() {
+        let fichier = "if 5>3 then print 1 else print 2
+                              print 3"
+            .to_string();
+        let programme = parse_basic(fichier).unwrap();
+        let sortie = execute(programme);
+        assert_eq!(sortie.len(), 2);
+        assert_eq!(sortie[0], "1");
+        assert_eq!(sortie[1], "3");
+    }
+
+    #[test]
+    fn test_parse_execute29() {
+        let fichier = "if 5>8 then print 1 else print 2
+                              print 3"
+            .to_string();
+        let programme = parse_basic(fichier).unwrap();
+        let sortie = execute(programme);
+        assert_eq!(sortie.len(), 2);
+        assert_eq!(sortie[0], "2");
+        assert_eq!(sortie[1], "3");
+    }
+
+    #[test]
+    fn test_parse_execute30() {
+        let fichier = "if 5>3 then
+                              print 1
+                              else  
+                              print 2
+                              end if
+                              print 3"
+            .to_string();
+        let programme = parse_basic(fichier).unwrap();
+        let sortie = execute(programme);
+        assert_eq!(sortie.len(), 2);
+        assert_eq!(sortie[0], "1");
+        assert_eq!(sortie[1], "3");
+    }
+
+    #[test]
+    fn test_parse_execute31() {
+        let fichier = "if 5>10 then
+                              print 1
+                              else  
+                              print 2
+                              end if
+                              print 3"
+            .to_string();
+        let programme = parse_basic(fichier).unwrap();
+        let sortie = execute(programme);
+        assert_eq!(sortie.len(), 2);
+        assert_eq!(sortie[0], "2");
+        assert_eq!(sortie[1], "3");
+    }
 }

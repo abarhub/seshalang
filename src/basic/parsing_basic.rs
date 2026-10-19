@@ -1,5 +1,5 @@
 use crate::basic::lexer_basic::Token::TokenNombre;
-use crate::basic::lexer_basic::TypeMotCle::{End, Goto, If, Then};
+use crate::basic::lexer_basic::TypeMotCle::{Else, End, Goto, If, Then};
 use crate::basic::lexer_basic::TypeNombre::{Entier, Long, Single};
 use crate::basic::lexer_basic::TypeSeparateur::{
     DEUXPOINT, DIFF, DIVE, DIVR, EQU, EXP, FOIS, INF, INFE, MOINS, PARENTF, PARENTO, PLUS,
@@ -408,55 +408,81 @@ fn parse_instruction(
         }
         if token_iterator.len() == 0 {
             let no = compteur.next_if();
-            let label2 = AstLabel(format!("_if_then{}", no).to_string());
-            let label3 = AstLabel(format!("_if_end{}", no).to_string());
+            let label_if = AstLabel(format!("_if_then{}", no).to_string());
+            let label_end = AstLabel(format!("_if_end{}", no).to_string());
+            let label_else = AstLabel(format!("_if_else{}", no).to_string());
             let mut liste_instruction = vec![];
 
-            let mut liste_instruction3 = vec![];
+            let mut liste_instruction_if: Vec<AstInstruction> = vec![];
+            let mut liste_instruction_else: Vec<AstInstruction> = vec![];
+            let mut liste_instruction_actif: &mut Vec<AstInstruction> = &mut liste_instruction_if;
             while let instr = liste_instructions_iter.next() {
                 if let Some(ligne) = instr {
                     let mut token_iterator2 = TokenIterator::new(ligne.clone());
 
                     if token_iterator2.est_mot_cle(End) && token_iterator2.est_mot_cle_pos(If, 1) {
                         break;
+                    } else if token_iterator2.est_mot_cle(Else) {
+                        liste_instruction_actif = &mut liste_instruction_else;
                     } else {
                         let v: Vec<Vec<Token>> = vec![];
                         let mut iter = v.iter();
 
                         let mut liste_instructions2 =
                             parse_instruction(&mut token_iterator2, None, &mut iter, compteur);
-                        liste_instruction3.append(&mut liste_instructions2);
+                        liste_instruction_actif.append(&mut liste_instructions2);
                     }
                 } else {
                     break;
                 }
             }
 
-            liste_instruction.push(AstIf(exp.0, label, label2.clone()));
-            liste_instruction.push(AstGoto(None, label3.clone()));
-            liste_instruction.push(AstInstrLabel(Some(label2)));
-            liste_instruction.append(&mut liste_instruction3);
-            liste_instruction.push(AstInstrLabel(Some(label3)));
+            liste_instruction.push(AstIf(exp.0, label, label_if.clone()));
+            liste_instruction.push(AstGoto(None, label_else.clone()));
+            liste_instruction.push(AstInstrLabel(Some(label_if)));
+            liste_instruction.append(&mut liste_instruction_if);
+            liste_instruction.push(AstGoto(None, label_end.clone()));
+            liste_instruction.push(AstInstrLabel(Some(label_else)));
+            liste_instruction.append(&mut liste_instruction_else);
+            liste_instruction.push(AstInstrLabel(Some(label_end)));
 
             liste_instruction
         } else {
             let no = compteur.next_if();
-            let label2 = AstLabel(format!("_if_then{}", no).to_string());
-            let label3 = AstLabel(format!("_if_end{}", no).to_string());
+            let label_if = AstLabel(format!("_if_then{}", no).to_string());
+            let label_end = AstLabel(format!("_if_end{}", no).to_string());
+            let label_else = AstLabel(format!("_if_else{}", no).to_string());
             let v: Vec<Vec<Token>> = vec![];
             let mut iter = v.iter();
             let mut instruction = parse_instruction(
                 &mut token_iterator,
-                Some(label2.clone()),
+                Some(label_if.clone()),
                 &mut iter,
                 compteur,
             );
-            if !instruction.is_empty() {
+            let mut instruction_else: Vec<AstInstruction> = vec![];
+            if token_iterator.est_mot_cle(Else) {
+                token_iterator.next();
+
+                instruction_else =
+                    parse_instruction(&mut token_iterator, None, &mut iter, compteur);
+            }
+            if !instruction.is_empty() || !instruction_else.is_empty() {
                 let mut liste_instruction = vec![];
-                liste_instruction.push(AstIf(exp.0, label, label2));
-                liste_instruction.push(AstGoto(None, label3.clone()));
-                liste_instruction.append(&mut instruction);
-                liste_instruction.push(AstInstrLabel(Some(label3)));
+                if instruction_else.is_empty() {
+                    liste_instruction.push(AstIf(exp.0, label, label_if));
+                    liste_instruction.push(AstGoto(None, label_end.clone()));
+                    liste_instruction.append(&mut instruction);
+                    liste_instruction.push(AstInstrLabel(Some(label_end)));
+                } else {
+                    liste_instruction.push(AstIf(exp.0, label, label_if));
+                    liste_instruction.push(AstGoto(None, label_else.clone()));
+                    liste_instruction.append(&mut instruction);
+                    liste_instruction.push(AstGoto(None, label_end.clone()));
+                    liste_instruction.push(AstInstrLabel(Some(label_else)));
+                    liste_instruction.append(&mut instruction_else);
+                    liste_instruction.push(AstInstrLabel(Some(label_end)));
+                }
                 liste_instruction
             } else {
                 panic!("Erreur: pas d'instruction pour le then du if")
