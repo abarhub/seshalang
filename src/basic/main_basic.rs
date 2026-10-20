@@ -15,7 +15,7 @@ pub enum AstLabelEnum {
     AstLabel(String),
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone)]
 pub enum AstInstruction {
     AstAffectation(String, AstExpression, Option<AstLabelEnum>),
     AstAppelMethode(String, Vec<AstExpression>, Vec<bool>, Option<AstLabelEnum>),
@@ -576,5 +576,79 @@ mod tests {
         assert_eq!(sortie.len(), 2);
         assert_eq!(sortie[0], "2");
         assert_eq!(sortie[1], "3");
+    }
+
+    #[test]
+    fn test_parse_execute32() {
+        let fichier = "if 5>3 then
+                              print 1
+                              else if 5>3 then
+                              print 2
+                              else
+                              print 3
+                              end if
+                              print 4"
+            .to_string();
+        let programme = parse_basic(fichier).unwrap();
+        let sortie = execute(programme);
+        assert_eq!(sortie.len(), 2);
+        assert_eq!(sortie[0], "1");
+        assert_eq!(sortie[1], "4");
+    }
+
+    #[test]
+    fn test_parse_execute33() {
+        let fichier = "if 5>10 then
+                              print 1
+                              else if 5>3 then
+                              print 2
+                              else
+                              print 3
+                              end if
+                              print 4"
+            .to_string();
+        let programme = parse_basic(fichier).unwrap();
+        let sortie = execute(programme);
+        assert_eq!(sortie.len(), 2);
+        assert_eq!(sortie[0], "2");
+        assert_eq!(sortie[1], "4");
+    }
+
+    #[test]
+    fn test_parse_execute34() {
+        let fichier = "if 5>10 then
+                              print 1
+                              else if 5>8 then
+                              print 2
+                              else
+                              print 3
+                              end if
+                              print 4"
+            .to_string();
+        let programme = parse_basic(fichier).unwrap();
+        let sortie = execute(programme);
+        assert_eq!(sortie.len(), 2);
+        assert_eq!(sortie[0], "3");
+        assert_eq!(sortie[1], "4");
+    }
+
+    #[test]
+    fn test_parse_execute35() {
+        let fichier = "if 5>10 then
+                              print 1
+                              else if 5>7 then
+                              print 2
+                              else if 5>2 then
+                              print 3
+                              else
+                              print 4
+                              end if
+                              print 5"
+            .to_string();
+        let programme = parse_basic(fichier).unwrap();
+        let sortie = execute(programme);
+        assert_eq!(sortie.len(), 2);
+        assert_eq!(sortie[0], "3");
+        assert_eq!(sortie[1], "5");
     }
 }

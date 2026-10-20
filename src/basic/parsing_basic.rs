@@ -17,7 +17,6 @@ use crate::basic::main_basic::{
     AstOperateurUnaireType, AstProgramme,
 };
 use std::cmp::max;
-use std::fmt::format;
 use std::rc::Rc;
 use std::slice::Iter;
 
@@ -411,20 +410,70 @@ fn parse_instruction(
             let label_if = AstLabel(format!("_if_then{}", no).to_string());
             let label_end = AstLabel(format!("_if_end{}", no).to_string());
             let label_else = AstLabel(format!("_if_else{}", no).to_string());
+            let label_else_if_debut = AstLabel(format!("_if_else_if_debut{}", no).to_string());
+            let mut label_else_if_debut2 = label_else_if_debut.clone();
+            let mut liste_label_else_if: Vec<AstLabelEnum> = vec![];
             let mut liste_instruction = vec![];
+            let mut compteur_label_else_if = 1;
 
             let mut liste_instruction_if: Vec<AstInstruction> = vec![];
             let mut liste_instruction_else: Vec<AstInstruction> = vec![];
+            let mut liste_instruction_else_if: Vec<Vec<AstInstruction>> = vec![];
             let mut liste_instruction_actif: &mut Vec<AstInstruction> = &mut liste_instruction_if;
             while let instr = liste_instructions_iter.next() {
                 if let Some(ligne) = instr {
                     let mut token_iterator2 = TokenIterator::new(ligne.clone());
 
                     if token_iterator2.est_mot_cle(End) && token_iterator2.est_mot_cle_pos(If, 1) {
+                        // end if
                         break;
+                    } else if token_iterator2.est_mot_cle(Else)
+                        && token_iterator2.est_mot_cle_pos(If, 1)
+                    {
+                        // else if
+                        if !liste_instruction_else.is_empty() {
+                            panic!("else if apres un else");
+                        }
+                        token_iterator2.next();
+                        token_iterator2.next();
+                        liste_instruction_else_if.push(vec![]);
+                        liste_instruction_actif = liste_instruction_else_if.last_mut().unwrap();
+                        let n = compteur_label_else_if;
+                        compteur_label_else_if += 1;
+                        let exp = parsing_expression(&mut token_iterator2);
+
+                        if token_iterator2.est_mot_cle(Then) {
+                            token_iterator2.next();
+                        } else {
+                            panic!(
+                                "token {:?} n'est pas un mot clé Then",
+                                token_iterator2.get()
+                            );
+                        }
+
+                        // let liste_instructions2 =
+                        //     parse_instruction(&mut token_iterator2, None, liste_instruction_actif, compteur);
+                        // liste_instruction_actif.append(&mut liste_instructions2);
+                        let label_else_if =
+                            AstLabel(format!("_if_else_if{}_{}", no, n).to_string());
+                        let label_else_if_suite =
+                            AstLabel(format!("_if_else_if_suite{}_{}", no, n).to_string());
+                        liste_instruction_actif
+                            .push(AstInstrLabel(Some(label_else_if_debut2.clone())));
+                        liste_instruction_actif.push(AstIf(exp.0, None, label_else_if.clone()));
+                        liste_instruction_actif.push(AstGoto(None, label_else_if_suite.clone()));
+                        liste_instruction_actif.push(AstInstrLabel(Some(label_else_if)));
+                        liste_label_else_if.push(label_else_if_suite.clone());
+                        label_else_if_debut2 = label_else_if_suite;
+                        //label_else_if_debut2=label_else_if_suite;
                     } else if token_iterator2.est_mot_cle(Else) {
+                        // else
+                        if !liste_instruction_else.is_empty() {
+                            panic!("else apres un else");
+                        }
                         liste_instruction_actif = &mut liste_instruction_else;
                     } else {
+                        // les intructions
                         let v: Vec<Vec<Token>> = vec![];
                         let mut iter = v.iter();
 
@@ -437,14 +486,47 @@ fn parse_instruction(
                 }
             }
 
+            let mut label_suite_if = &label_else;
+            if !liste_instruction_else_if.is_empty() {
+                label_suite_if = &label_else_if_debut;
+            }
+            // if
             liste_instruction.push(AstIf(exp.0, label, label_if.clone()));
-            liste_instruction.push(AstGoto(None, label_else.clone()));
+            liste_instruction.push(AstGoto(None, label_suite_if.clone()));
             liste_instruction.push(AstInstrLabel(Some(label_if)));
             liste_instruction.append(&mut liste_instruction_if);
             liste_instruction.push(AstGoto(None, label_end.clone()));
+
+            // else if
+            if !liste_instruction_else_if.is_empty() {
+                // liste_instruction.push(AstInstrLabel(Some(
+                //     label_else_if_debut,
+                // )));
+                for mut liste_instr in liste_instruction_else_if {
+                    // liste_instruction.push(AstInstrLabel(Some(
+                    //     liste_label_else_if.get(0).unwrap().clone(),
+                    // )));
+                    liste_instruction.append(&mut liste_instr);
+                    // liste_instruction
+                    //     .append(&mut liste_instruction_else_if.get(0).unwrap().clone());
+                    liste_instruction.push(AstGoto(None, label_end.clone()));
+                }
+
+                let label_fin_else_if = liste_label_else_if
+                    .get(liste_label_else_if.len() - 1)
+                    .unwrap()
+                    .clone();
+                liste_instruction.push(AstInstrLabel(Some(label_fin_else_if)));
+            }
+
+            // else
             liste_instruction.push(AstInstrLabel(Some(label_else)));
             liste_instruction.append(&mut liste_instruction_else);
             liste_instruction.push(AstInstrLabel(Some(label_end)));
+
+            for tmp in liste_instruction.clone() {
+                println!("{:?}", tmp);
+            }
 
             liste_instruction
         } else {
