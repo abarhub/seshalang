@@ -392,7 +392,7 @@ fn parse_instruction(
         token_iterator.next();
         let identifiant = token_iterator.next().unwrap();
         if let Token::TokenIdentifiant(s, _) = identifiant {
-            let instruction = AstInstruction::AstGoto(label, AstLabel(s.to_string()));
+            let instruction = AstGoto(label, AstLabel(s.to_string()));
             vec![instruction]
         } else {
             panic!("token {:?} n'est pas un identifiant", identifiant);
@@ -451,9 +451,6 @@ fn parse_instruction(
                             );
                         }
 
-                        // let liste_instructions2 =
-                        //     parse_instruction(&mut token_iterator2, None, liste_instruction_actif, compteur);
-                        // liste_instruction_actif.append(&mut liste_instructions2);
                         let label_else_if =
                             AstLabel(format!("_if_else_if{}_{}", no, n).to_string());
                         let label_else_if_suite =
@@ -465,7 +462,6 @@ fn parse_instruction(
                         liste_instruction_actif.push(AstInstrLabel(Some(label_else_if)));
                         liste_label_else_if.push(label_else_if_suite.clone());
                         label_else_if_debut2 = label_else_if_suite;
-                        //label_else_if_debut2=label_else_if_suite;
                     } else if token_iterator2.est_mot_cle(Else) {
                         // else
                         if !liste_instruction_else.is_empty() {
@@ -499,16 +495,8 @@ fn parse_instruction(
 
             // else if
             if !liste_instruction_else_if.is_empty() {
-                // liste_instruction.push(AstInstrLabel(Some(
-                //     label_else_if_debut,
-                // )));
                 for mut liste_instr in liste_instruction_else_if {
-                    // liste_instruction.push(AstInstrLabel(Some(
-                    //     liste_label_else_if.get(0).unwrap().clone(),
-                    // )));
                     liste_instruction.append(&mut liste_instr);
-                    // liste_instruction
-                    //     .append(&mut liste_instruction_else_if.get(0).unwrap().clone());
                     liste_instruction.push(AstGoto(None, label_end.clone()));
                 }
 
