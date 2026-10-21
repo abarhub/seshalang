@@ -4,6 +4,7 @@ mod parsing_basic;
 mod exec_basic;
 mod lexer_basic;
 mod fonction_basic;
+mod struct_basic;
 
 pub fn main_basic(fichier: String) {
     let mut x = 5;

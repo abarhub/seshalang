@@ -6,19 +6,14 @@ use crate::basic::lexer_basic::TypeSeparateur::{
     POINTVIRGULE, SUP, SUPE, VIRGULE,
 };
 use crate::basic::lexer_basic::{Token, TypeMotCle, TypeNombre, TypeSeparateur, lexer};
-use crate::basic::main_basic::AstInstruction::{AstAffectation, AstGoto, AstIf, AstInstrLabel};
-use crate::basic::main_basic::AstLabelEnum::AstLabel;
-use crate::basic::main_basic::AstOperateurBinaireType::{
-    Different, DivisionEntiere, DivisionReel, Egal, Exponentiel, Inferieur, InferieurEgal, Moins,
-    Multiplication, Superieur, SuperieurEgal,
-};
-use crate::basic::main_basic::{
-    AstExpression, AstInstruction, AstLabelEnum, AstNomMethode, AstOperateurBinaireType,
-    AstOperateurUnaireType, AstProgramme,
-};
+
 use std::cmp::max;
 use std::rc::Rc;
 use std::slice::Iter;
+use crate::basic::struct_basic::{AstExpression, AstInstruction, AstLabelEnum, AstNomMethode, AstOperateurBinaireType, AstOperateurUnaireType, AstProgramme};
+use crate::basic::struct_basic::AstInstruction::{AstAffectation, AstGoto, AstIf, AstInstrLabel};
+use crate::basic::struct_basic::AstLabelEnum::AstLabel;
+use crate::basic::struct_basic::AstOperateurBinaireType::{Different, DivisionEntiere, DivisionReel, Egal, Exponentiel, Inferieur, InferieurEgal, Moins, Multiplication, Superieur, SuperieurEgal};
 
 const DEBUG_PRINT: bool = false;
 
@@ -959,9 +954,9 @@ fn calcul_type_operation_binaire(type_operation: TypeSeparateur) -> AstOperateur
 
 #[cfg(test)]
 mod tests {
+    use crate::basic::struct_basic::AstInstruction::AstAppelMethode;
     // Note this useful idiom: importing names from outer (for mod tests) scope.
     use super::*;
-    use crate::basic::main_basic::AstInstruction::AstAppelMethode;
 
     #[test]
     fn test_parser1() {

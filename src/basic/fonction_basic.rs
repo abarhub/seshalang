@@ -4,10 +4,11 @@ use crate::basic::exec_basic::Valeur::{
     Chaine, NombreDouble, NombreInteger, NombreLong, NombreSingle,
 };
 use crate::basic::lexer_basic::TypeMotCle;
-use crate::basic::main_basic::AstNomMethode::AstNomReserve;
-use crate::basic::main_basic::{AstExpression, AstNomMethode};
+
 use chrono::Local;
 use std::collections::HashMap;
+use crate::basic::struct_basic::{AstExpression, AstNomMethode};
+use crate::basic::struct_basic::AstNomMethode::AstNomReserve;
 
 pub fn execute_fonction(
     nom_methode: AstNomMethode,

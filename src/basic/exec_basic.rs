@@ -2,15 +2,13 @@ use crate::basic::exec_basic::Valeur::{
     Chaine, NombreDouble, NombreInteger, NombreLong, NombreSingle,
 };
 use crate::basic::fonction_basic;
-use crate::basic::main_basic::AstExpression::{AstFonction, AstOperateurUnnaire};
-use crate::basic::main_basic::AstInstruction::AstInstrLabel;
-use crate::basic::main_basic::AstLabelEnum::AstLabel;
-use crate::basic::main_basic::{
-    AstExpression, AstInstruction, AstLabelEnum, AstOperateurBinaireType, AstOperateurUnaireType,
-    AstProgramme,
-};
+
 use std::collections::HashMap;
 use std::fmt;
+use crate::basic::struct_basic::AstInstruction::{AstAffectation, AstAppelMethode, AstGoto, AstIf, AstInstrLabel};
+use crate::basic::struct_basic::{AstExpression, AstInstruction, AstLabelEnum, AstOperateurBinaireType, AstOperateurUnaireType, AstProgramme};
+use crate::basic::struct_basic::AstExpression::{AstFonction, AstOperateurUnnaire};
+use crate::basic::struct_basic::AstLabelEnum::AstLabel;
 
 const TRUE: i16 = -1;
 const FALSE: i16 = 0;
@@ -53,14 +51,14 @@ pub fn execute(programme: AstProgramme) -> Vec<String> {
 
         let mut pos_change = false;
 
-        if let AstInstruction::AstAffectation(ident, expression, _) = instruction {
+        if let AstAffectation(ident, expression, _) = instruction {
             let resultat = execute_expression(&expression, &mut contexte);
             let tmp = resultat.clone();
             contexte.insert(ident.clone(), resultat);
             if DEBUG_PRINT {
                 println!("affect {:?} := {:?}", ident.clone(), tmp);
             }
-        } else if let AstInstruction::AstAppelMethode(nom, parametres, separateurs, _) = instruction
+        } else if let AstAppelMethode(nom, parametres, separateurs, _) = instruction
         {
             if nom.to_lowercase() == "print" {
                 let mut i = 0;
@@ -92,11 +90,11 @@ pub fn execute(programme: AstProgramme) -> Vec<String> {
             } else {
                 panic!("appel de méthode {} inconnue: {:?}", nom, instruction);
             }
-        } else if let AstInstruction::AstGoto(_, label2) = instruction {
+        } else if let AstGoto(_, label2) = instruction {
             let pos = trouve_label(label2, &programme.liste_instructions);
             pos_instruction = pos;
             pos_change = true;
-        } else if let AstInstruction::AstIf(expr, _, label) = instruction {
+        } else if let AstIf(expr, _, label) = instruction {
             let resultat = execute_expression(&expr, &mut contexte);
             let valeur_true = match resultat {
                 NombreInteger(n) => n != 0,
