@@ -1,6 +1,8 @@
-use std::rc::Rc;
 use crate::basic::lexer_basic::TypeMotCle;
-use crate::basic::struct_basic::AstInstruction::{AstAffectation, AstAppelMethode, AstGoto, AstIf};
+use crate::basic::struct_basic::AstInstruction::{
+    AstAffectation, AstAppelMethode, AstGoto, AstIf, AstInput,
+};
+use std::rc::Rc;
 
 #[derive(Debug)]
 pub struct AstProgramme {
@@ -19,6 +21,13 @@ pub enum AstInstruction {
     AstInstrLabel(Option<AstLabelEnum>),
     AstIf(AstExpression, Option<AstLabelEnum>, AstLabelEnum),
     AstGoto(Option<AstLabelEnum>, AstLabelEnum),
+    AstInput(
+        Option<AstLabelEnum>,
+        Option<String>,
+        Vec<String>,
+        bool,
+        bool,
+    ),
 }
 
 impl AstInstruction {
@@ -29,6 +38,7 @@ impl AstInstruction {
             AstAppelMethode(_, _, _, label) => label.clone(),
             AstIf(_, label, _) => label.clone(),
             AstGoto(label, _) => label.clone(),
+            AstInput(label, _, _, _, _) => label.clone(),
         }
     }
 }

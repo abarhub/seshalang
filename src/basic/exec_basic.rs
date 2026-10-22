@@ -3,12 +3,17 @@ use crate::basic::exec_basic::Valeur::{
 };
 use crate::basic::fonction_basic;
 
+use crate::basic::struct_basic::AstExpression::{AstFonction, AstOperateurUnnaire};
+use crate::basic::struct_basic::AstInstruction::{
+    AstAffectation, AstAppelMethode, AstGoto, AstIf, AstInput, AstInstrLabel,
+};
+use crate::basic::struct_basic::AstLabelEnum::AstLabel;
+use crate::basic::struct_basic::{
+    AstExpression, AstInstruction, AstLabelEnum, AstOperateurBinaireType, AstOperateurUnaireType,
+    AstProgramme,
+};
 use std::collections::HashMap;
 use std::fmt;
-use crate::basic::struct_basic::AstInstruction::{AstAffectation, AstAppelMethode, AstGoto, AstIf, AstInstrLabel};
-use crate::basic::struct_basic::{AstExpression, AstInstruction, AstLabelEnum, AstOperateurBinaireType, AstOperateurUnaireType, AstProgramme};
-use crate::basic::struct_basic::AstExpression::{AstFonction, AstOperateurUnnaire};
-use crate::basic::struct_basic::AstLabelEnum::AstLabel;
 
 const TRUE: i16 = -1;
 const FALSE: i16 = 0;
@@ -58,8 +63,7 @@ pub fn execute(programme: AstProgramme) -> Vec<String> {
             if DEBUG_PRINT {
                 println!("affect {:?} := {:?}", ident.clone(), tmp);
             }
-        } else if let AstAppelMethode(nom, parametres, separateurs, _) = instruction
-        {
+        } else if let AstAppelMethode(nom, parametres, separateurs, _) = instruction {
             if nom.to_lowercase() == "print" {
                 let mut i = 0;
                 for expression in parametres.iter() {
@@ -108,6 +112,14 @@ pub fn execute(programme: AstProgramme) -> Vec<String> {
             }
         } else if let AstInstrLabel(_) = instruction {
             // on ne fait rien
+        } else if let AstInput(_, message, liste_variable, retour_ligne, question) = instruction {
+            input(
+                message,
+                liste_variable,
+                retour_ligne,
+                question,
+                &mut contexte,
+            );
         } else {
             panic!("instruction inconnue: {:?}", instruction);
         }
@@ -117,6 +129,50 @@ pub fn execute(programme: AstProgramme) -> Vec<String> {
     }
 
     sortie
+}
+
+fn input(
+    message: &Option<String>,
+    liste_variables: &Vec<String>,
+    retour_ligne: &bool,
+    question: &bool,
+    contexte: &mut HashMap<String, Valeur>,
+) {
+    if let Some(message) = message {
+        if *question {
+            print!("{} ? ", message);
+        } else {
+            print!("{}", message);
+        }
+    } else if *question {
+        print!("? ");
+    }
+    if !liste_variables.is_empty() {
+        for nom_var in liste_variables {
+            loop {
+                let mut valeur = String::new();
+                std::io::stdin().read_line(&mut valeur).unwrap();
+                valeur.pop();
+                valeur = valeur.trim().to_string();
+                if valeur.is_empty() {
+                    let valeur = NombreInteger(0);
+                    contexte.insert(nom_var.clone(), valeur);
+                    break;
+                }
+                let nombre_opt = valeur.parse::<i32>();
+                if nombre_opt.is_ok() {
+                    let valeur = NombreLong(nombre_opt.unwrap());
+                    contexte.insert(nom_var.clone(), valeur.clone());
+                    break;
+                } else {
+                    println!("Redo from start");
+                }
+            }
+        }
+    }
+    if *retour_ligne {
+        println!();
+    }
 }
 
 fn trouve_label(label: &AstLabelEnum, liste_instructions: &Vec<AstInstruction>) -> usize {

@@ -1,5 +1,5 @@
 use crate::basic::lexer_basic::Token::TokenNombre;
-use crate::basic::lexer_basic::TypeMotCle::{Else, End, Goto, If, Then};
+use crate::basic::lexer_basic::TypeMotCle::{Else, End, Goto, If, Input, Then};
 use crate::basic::lexer_basic::TypeNombre::{Entier, Long, Single};
 use crate::basic::lexer_basic::TypeSeparateur::{
     DEUXPOINT, DIFF, DIVE, DIVR, EQU, EXP, FOIS, INF, INFE, MOINS, PARENTF, PARENTO, PLUS,
@@ -7,13 +7,21 @@ use crate::basic::lexer_basic::TypeSeparateur::{
 };
 use crate::basic::lexer_basic::{Token, TypeMotCle, TypeNombre, TypeSeparateur, lexer};
 
+use crate::basic::struct_basic::AstInstruction::{
+    AstAffectation, AstGoto, AstIf, AstInput, AstInstrLabel,
+};
+use crate::basic::struct_basic::AstLabelEnum::AstLabel;
+use crate::basic::struct_basic::AstOperateurBinaireType::{
+    Different, DivisionEntiere, DivisionReel, Egal, Exponentiel, Inferieur, InferieurEgal, Moins,
+    Multiplication, Superieur, SuperieurEgal,
+};
+use crate::basic::struct_basic::{
+    AstExpression, AstInstruction, AstLabelEnum, AstNomMethode, AstOperateurBinaireType,
+    AstOperateurUnaireType, AstProgramme,
+};
 use std::cmp::max;
 use std::rc::Rc;
 use std::slice::Iter;
-use crate::basic::struct_basic::{AstExpression, AstInstruction, AstLabelEnum, AstNomMethode, AstOperateurBinaireType, AstOperateurUnaireType, AstProgramme};
-use crate::basic::struct_basic::AstInstruction::{AstAffectation, AstGoto, AstIf, AstInstrLabel};
-use crate::basic::struct_basic::AstLabelEnum::AstLabel;
-use crate::basic::struct_basic::AstOperateurBinaireType::{Different, DivisionEntiere, DivisionReel, Egal, Exponentiel, Inferieur, InferieurEgal, Moins, Multiplication, Superieur, SuperieurEgal};
 
 const DEBUG_PRINT: bool = false;
 
@@ -219,7 +227,6 @@ fn parsing_programme(liste_tokens: Vec<Vec<Token>>) -> AstProgramme {
 
     let mut iter = liste_tokens.iter();
 
-    //for ligne in liste_tokens {
     while let Some(ligne) = iter.next() {
         if ligne.len() == 0 {
             continue;
@@ -553,6 +560,49 @@ fn parse_instruction(
                 panic!("Erreur: pas d'instruction pour le then du if")
             }
         }
+    } else if token_iterator.est_mot_cle(Input) {
+        token_iterator.next();
+        let retour_ligne: bool;
+        if token_iterator.est_separateur(POINTVIRGULE) {
+            token_iterator.next();
+            retour_ligne = false;
+        } else {
+            retour_ligne = true;
+        }
+        let mut prompt: Option<String> = None;
+        if token_iterator.est_chaine() {
+            if let Token::TokenChaine(chaine, _) = token_iterator.next().unwrap() {
+                prompt = Some(chaine.clone());
+            }
+        }
+        let point_interrogation: bool;
+        if token_iterator.est_separateur(POINTVIRGULE) {
+            token_iterator.next();
+            point_interrogation = true;
+        } else if token_iterator.est_separateur(VIRGULE) {
+            token_iterator.next();
+            point_interrogation = false;
+        } else {
+            point_interrogation = false;
+        }
+        let mut liste_variables: Vec<String> = Vec::new();
+        while token_iterator.est_identifiant() {
+            if let Token::TokenIdentifiant(identifiant, _) = token_iterator.next().unwrap() {
+                liste_variables.push(identifiant.clone());
+            }
+            if token_iterator.est_separateur(VIRGULE) {
+                token_iterator.next();
+            }
+        }
+        let mut liste_instruction = vec![];
+        liste_instruction.push(AstInput(
+            label,
+            prompt,
+            liste_variables,
+            retour_ligne,
+            point_interrogation,
+        ));
+        liste_instruction
     } else {
         panic!("instruction inconnue {:?}", token_iterator.get());
     }
@@ -1112,6 +1162,72 @@ mod tests {
         assert_eq!(
             ast.liste_instructions,
             vec![AstInstrLabel(Some(AstLabel("4".to_string())),)]
+        );
+    }
+
+    #[test]
+    fn test_parser_input() {
+        let fichier = "input abc".to_string();
+        let liste_tokens = lexer(fichier);
+        let ast = parsing_programme(liste_tokens);
+
+        assert_eq!(
+            ast.liste_instructions,
+            vec![AstInput(None, None, vec!["abc".to_string()], true, false)]
+        );
+    }
+
+    #[test]
+    fn test_parser_input2() {
+        let fichier = "input \"aaa\"; xxx".to_string();
+        let liste_tokens = lexer(fichier);
+        let ast = parsing_programme(liste_tokens);
+
+        assert_eq!(
+            ast.liste_instructions,
+            vec![AstInput(
+                None,
+                Some("aaa".to_string()),
+                vec!["xxx".to_string()],
+                true,
+                true
+            )]
+        );
+    }
+
+    #[test]
+    fn test_parser_input3() {
+        let fichier = "input ; \"gg\"; t".to_string();
+        let liste_tokens = lexer(fichier);
+        let ast = parsing_programme(liste_tokens);
+
+        assert_eq!(
+            ast.liste_instructions,
+            vec![AstInput(
+                None,
+                Some("gg".to_string()),
+                vec!["t".to_string()],
+                false,
+                true
+            )]
+        );
+    }
+
+    #[test]
+    fn test_parser_input4() {
+        let fichier = "input \"f\", a,b,c".to_string();
+        let liste_tokens = lexer(fichier);
+        let ast = parsing_programme(liste_tokens);
+
+        assert_eq!(
+            ast.liste_instructions,
+            vec![AstInput(
+                None,
+                Some("f".to_string()),
+                vec!["a".to_string(), "b".to_string(), "c".to_string()],
+                true,
+                false
+            )]
         );
     }
 }

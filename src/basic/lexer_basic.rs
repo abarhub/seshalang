@@ -53,6 +53,7 @@ pub enum TypeMotCle {
     Instr,
     Hex,
     Oct,
+    Input,
 }
 
 impl TypeMotCle {
@@ -678,6 +679,7 @@ fn mots_cles(s: String) -> Option<TypeMotCle> {
         "INSTR" => Some(TypeMotCle::Instr),
         "HEX$" => Some(TypeMotCle::Hex),
         "OCT$" => Some(TypeMotCle::Oct),
+        "INPUT" => Some(TypeMotCle::Input),
         _ => None,
     }
 }
