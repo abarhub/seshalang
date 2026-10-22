@@ -65,32 +65,7 @@ pub fn execute(programme: AstProgramme) -> Vec<String> {
             }
         } else if let AstAppelMethode(nom, parametres, separateurs, _) = instruction {
             if nom.to_lowercase() == "print" {
-                let mut i = 0;
-                for expression in parametres.iter() {
-                    let resultat = execute_expression(&expression, &mut contexte);
-                    if i < separateurs.len() && !separateurs[i] {
-                        if DEBUG_PRINT {
-                            println!("{:?}", resultat);
-                        }
-                        print!("{:?} ", resultat);
-                        if sortie.is_empty() {
-                            sortie.push(resultat.to_string());
-                        } else {
-                            let len = sortie.len() - 1;
-                            let mut s = sortie[len].clone();
-                            let s2 = resultat.to_string();
-                            s += s2.as_str();
-                            sortie[len] = s;
-                        }
-                    } else {
-                        if DEBUG_PRINT {
-                            println!("{:?}", resultat);
-                        }
-                        sortie.push(resultat.to_string());
-                    }
-
-                    i += 1;
-                }
+                print(&mut sortie, &mut contexte, parametres, separateurs);
             } else {
                 panic!("appel de méthode {} inconnue: {:?}", nom, instruction);
             }
@@ -129,6 +104,35 @@ pub fn execute(programme: AstProgramme) -> Vec<String> {
     }
 
     sortie
+}
+
+fn print(sortie: &mut Vec<String>, mut contexte: &mut HashMap<String, Valeur>, parametres: &Vec<AstExpression>, separateurs: &Vec<bool>) {
+    let mut i = 0;
+    for expression in parametres.iter() {
+        let resultat = execute_expression(&expression, &mut contexte);
+        if i < separateurs.len() && !separateurs[i] {
+            if DEBUG_PRINT {
+                println!("{:?}", resultat);
+            }
+            print!("{:?} ", resultat);
+            if sortie.is_empty() {
+                sortie.push(resultat.to_string());
+            } else {
+                let len = sortie.len() - 1;
+                let mut s = sortie[len].clone();
+                let s2 = resultat.to_string();
+                s += s2.as_str();
+                sortie[len] = s;
+            }
+        } else {
+            if DEBUG_PRINT {
+                println!("{:?}", resultat);
+            }
+            sortie.push(resultat.to_string());
+        }
+
+        i += 1;
+    }
 }
 
 fn input(

@@ -7,9 +7,5 @@ mod fonction_basic;
 mod struct_basic;
 
 pub fn main_basic(fichier: String) {
-    let mut x = 5;
-    x += 1;
-    println!("x2 is {}", x);
-    println!("fichier: {}", fichier);
     main_basic::parse_basic_file(fichier).expect("Erreur pour lire le fichier");
 }

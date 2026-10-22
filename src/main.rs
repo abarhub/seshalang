@@ -5,10 +5,6 @@ mod basic;
 
 
 fn main() {
-    let mut x = 5;
-    x += 1;
-    println!("x is {}", x);
-
     let args: Vec<String> = env::args().collect();
 
     if args.len() > 1 {
