@@ -532,7 +532,18 @@ mod tests {
         assert_eq!(sortie[1], " 5 ");
     }
 
-    fn exec(fichier:String)->Vec<String>{
+    #[test]
+    fn test_parse_execute36() {
+        let fichier = "print 1
+                              end
+                              print 2"
+            .to_string();
+        let sortie = exec(fichier);
+        assert_eq!(sortie.len(), 1);
+        assert_eq!(sortie[0], " 1 ");
+    }
+
+    fn exec(fichier: String) -> Vec<String> {
         let mut sortie = Sortie::new(false);
         let programme = parse_basic(fichier).unwrap();
         execute(programme, &mut sortie);

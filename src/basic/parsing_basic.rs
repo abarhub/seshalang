@@ -8,7 +8,7 @@ use crate::basic::lexer_basic::TypeSeparateur::{
 use crate::basic::lexer_basic::{Token, TypeMotCle, TypeNombre, TypeSeparateur, lexer};
 
 use crate::basic::struct_basic::AstInstruction::{
-    AstAffectation, AstGoto, AstIf, AstInput, AstInstrLabel,
+    AstAffectation, AstEnd, AstGoto, AstIf, AstInput, AstInstrLabel,
 };
 use crate::basic::struct_basic::AstLabelEnum::AstLabel;
 use crate::basic::struct_basic::AstOperateurBinaireType::{
@@ -320,11 +320,19 @@ fn parse_instruction(
     } else if token_iterator.est_mot_cle(Input) {
         parse_input(&mut token_iterator, &mut debut_instr);
         debut_instr
+    } else if token_iterator.est_mot_cle(End) {
+        parse_end(&mut token_iterator, &mut debut_instr);
+        debut_instr
     } else {
         panic!("instruction inconnue {:?}", token_iterator.get());
     }
 }
 
+fn parse_end(token_iterator: &mut &mut TokenIterator, debut_instr: &mut Vec<AstInstruction>) {
+    token_iterator.next();
+    let instruction = AstEnd();
+    debut_instr.push(instruction);
+}
 fn parse_goto(token_iterator: &mut &mut TokenIterator, debut_instr: &mut Vec<AstInstruction>) {
     token_iterator.next();
     let identifiant = token_iterator.next().unwrap();

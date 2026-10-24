@@ -6,7 +6,7 @@ use std::cmp::PartialEq;
 
 use crate::basic::struct_basic::AstExpression::{AstFonction, AstOperateurUnnaire};
 use crate::basic::struct_basic::AstInstruction::{
-    AstAffectation, AstAppelMethode, AstGoto, AstIf, AstInput, AstInstrLabel,
+    AstAffectation, AstAppelMethode, AstEnd, AstGoto, AstIf, AstInput, AstInstrLabel,
 };
 use crate::basic::struct_basic::AstLabelEnum::AstLabel;
 use crate::basic::struct_basic::{
@@ -118,6 +118,8 @@ pub fn execute(programme: AstProgramme, mut sortie: &mut Sortie) {
                 question,
                 &mut contexte,
             );
+        } else if let AstEnd() = instruction {
+            break;
         } else {
             panic!("instruction inconnue: {:?}", instruction);
         }
