@@ -1,6 +1,6 @@
 use crate::basic::lexer_basic::Token::TokenNombre;
 use crate::basic::lexer_basic::TypeMotCle::{
-    Else, ElseIf, End, Goto, If, Input, Then, Wend, While,
+    Do, Else, ElseIf, End, For, Goto, If, Input, Loop, Then, Until, Wend, While,
 };
 use crate::basic::lexer_basic::TypeNombre::{Entier, Long, Single};
 use crate::basic::lexer_basic::TypeSeparateur::{
@@ -333,9 +333,135 @@ fn parse_instruction(
             liste_instructions_iter,
         );
         debut_instr
+    } else if token_iterator.est_mot_cle(Do) {
+        parse_do_while(
+            &mut token_iterator,
+            &mut debut_instr,
+            compteur,
+            liste_instructions_iter,
+        );
+        debut_instr
+    } else if token_iterator.est_mot_cle(For) {
+        parse_for(
+            &mut token_iterator,
+            &mut debut_instr,
+            compteur,
+            liste_instructions_iter,
+        );
+        debut_instr
     } else {
         panic!("instruction inconnue {:?}", token_iterator.get());
     }
+}
+
+fn parse_for(
+    mut token_iterator: &mut TokenIterator,
+    debut_instr: &mut Vec<AstInstruction>,
+    compteur: &mut Compteur,
+    liste_instructions_iter: &mut Iter<Vec<Token>>,
+) {
+    todo!()
+}
+
+fn parse_do_while(
+    mut token_iterator: &mut TokenIterator,
+    debut_instr: &mut Vec<AstInstruction>,
+    compteur: &mut Compteur,
+    liste_instructions_iter: &mut Iter<Vec<Token>>,
+) {
+    token_iterator.next();
+
+    let mut debut_while = false;
+    let mut debut_until = false;
+    let mut fin_while = false;
+    let mut fin_until = false;
+    let mut exp_debut: Option<AstExpression> = None;
+    let mut exp_fin: Option<AstExpression> = None;
+
+    if token_iterator.est_mot_cle(While) {
+        token_iterator.next();
+        debut_while = true;
+    } else if token_iterator.est_mot_cle(Until) {
+        token_iterator.next();
+        debut_until = true;
+    }
+
+    if (debut_while || debut_until) {
+        let exp = parsing_expression(&mut token_iterator);
+        exp_debut = Some(exp.0);
+    }
+
+    let mut liste_instruction_actif: Vec<AstInstruction> = vec![];
+
+    while let Some(ligne) = liste_instructions_iter.next() {
+        let mut token_iterator2 = TokenIterator::new(ligne.clone());
+
+        if token_iterator2.est_mot_cle(Loop) {
+            token_iterator2.next();
+
+            if token_iterator2.est_mot_cle(While) {
+                token_iterator2.next();
+                fin_while = true;
+            } else if token_iterator2.est_mot_cle(Until) {
+                token_iterator2.next();
+                fin_until = true;
+            }
+
+            if fin_while || fin_until {
+                let exp = parsing_expression(&mut token_iterator2);
+                exp_fin = Some(exp.0);
+            }
+
+            break;
+        } else {
+            // les intructions
+            let v: Vec<Vec<Token>> = vec![];
+            let mut iter = v.iter();
+
+            let mut liste_instructions2 =
+                parse_instruction(&mut token_iterator2, None, &mut iter, compteur);
+            liste_instruction_actif.append(&mut liste_instructions2);
+        }
+    }
+
+    if (debut_while || debut_until) && (fin_while || fin_until) {
+        panic!("while ou until au début et à la fin");
+    }
+
+    let no = compteur.next_if();
+    let label_debut = AstLabel(format!("_do_while_debut{}", no).to_string());
+    let label_suite = AstLabel(format!("_do_while_suite{}", no).to_string());
+    let label_fin = AstLabel(format!("_do_while_fin{}", no).to_string());
+
+    if fin_while || fin_until {
+        debut_instr.push(AstGoto(label_suite.clone()));
+    }
+
+    debut_instr.push(AstInstrLabel(label_debut.clone()));
+
+    if debut_while || fin_while {
+        if debut_while {
+            debut_instr.push(AstIf(exp_debut.unwrap(), label_suite.clone()));
+        } else {
+            debut_instr.push(AstIf(exp_fin.unwrap(), label_suite.clone()));
+        }
+        debut_instr.push(AstGoto(label_fin.clone()));
+    } else if debut_until || fin_until {
+        if debut_until {
+            debut_instr.push(AstIf(exp_debut.unwrap(), label_fin.clone()));
+        } else {
+            debut_instr.push(AstIf(exp_fin.unwrap(), label_fin.clone()));
+        }
+        debut_instr.push(AstGoto(label_suite.clone()));
+    }
+
+    debut_instr.push(AstInstrLabel(label_suite));
+
+    debut_instr.append(&mut liste_instruction_actif);
+
+    debut_instr.push(AstGoto(label_debut));
+
+    debut_instr.push(AstInstrLabel(label_fin));
 }
 
 fn parse_while(

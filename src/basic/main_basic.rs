@@ -549,7 +549,7 @@ mod tests {
                               print x
                               while x<5
                                   x=x+1
-                                  print x 
+                                  print x
                               wend
                               print x"
             .to_string();
@@ -561,6 +561,79 @@ mod tests {
         assert_eq!(sortie[3], " 4 ");
         assert_eq!(sortie[4], " 5 ");
         assert_eq!(sortie[5], " 5 ");
+    }
+
+    #[test]
+    fn test_parse_execute38() {
+        let fichier = "x=1
+                              print x
+                              do while x<5
+                                  x=x+1
+                                  print x
+                              loop
+                              print x"
+            .to_string();
+        let sortie = exec(fichier);
+        assert_eq!(sortie.len(), 6);
+        assert_eq!(sortie[0], " 1 ");
+        assert_eq!(sortie[1], " 2 ");
+        assert_eq!(sortie[2], " 3 ");
+        assert_eq!(sortie[3], " 4 ");
+        assert_eq!(sortie[4], " 5 ");
+        assert_eq!(sortie[5], " 5 ");
+    }
+
+    #[test]
+    fn test_parse_execute39() {
+        let fichier = "x=1
+                              print x
+                              do until x<5
+                                  x=x+1
+                                  print x
+                              loop
+                              print x"
+            .to_string();
+        let sortie = exec(fichier);
+        assert_eq!(sortie.len(), 2);
+        assert_eq!(sortie[0], " 1 ");
+        assert_eq!(sortie[1], " 1 ");
+    }
+
+    #[test]
+    fn test_parse_execute40() {
+        let fichier = "x=1
+                              print x
+                              do
+                                  x=x+1
+                                  print x
+                              loop while x<5
+                              print x"
+            .to_string();
+        let sortie = exec(fichier);
+        assert_eq!(sortie.len(), 6);
+        assert_eq!(sortie[0], " 1 ");
+        assert_eq!(sortie[1], " 2 ");
+        assert_eq!(sortie[2], " 3 ");
+        assert_eq!(sortie[3], " 4 ");
+        assert_eq!(sortie[4], " 5 ");
+        assert_eq!(sortie[5], " 5 ");
+    }
+
+    #[test]
+    fn test_parse_execute41() {
+        let fichier = "x=1
+                              print x
+                              do
+                                  x=x+1
+                                  print x
+                              loop until x<5
+                              print x"
+            .to_string();
+        let sortie = exec(fichier);
+        assert_eq!(sortie.len(), 3);
+        assert_eq!(sortie[0], " 1 ");
+        assert_eq!(sortie[1], " 2 ");
+        assert_eq!(sortie[2], " 2 ");
     }
 
     fn exec(fichier: String) -> Vec<String> {

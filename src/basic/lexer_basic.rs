@@ -56,6 +56,10 @@ pub enum TypeMotCle {
     Input,
     While,
     Wend,
+    Until,
+    Do,
+    Loop,
+    To,
 }
 
 impl TypeMotCle {
@@ -684,6 +688,10 @@ fn mots_cles(s: String) -> Option<TypeMotCle> {
         "INPUT" => Some(TypeMotCle::Input),
         "WHILE" => Some(TypeMotCle::While),
         "WEND" => Some(TypeMotCle::Wend),
+        "UNTIL" => Some(TypeMotCle::Until),
+        "DO" => Some(TypeMotCle::Do),
+        "LOOP" => Some(TypeMotCle::Loop),
+        "TO" => Some(TypeMotCle::To),
         _ => None,
     }
 }
