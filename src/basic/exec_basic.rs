@@ -143,7 +143,6 @@ fn print(
             if DEBUG_PRINT {
                 println!("{:?}", resultat);
             }
-            print!("{:?} ", resultat);
             sortie.ajoute(resultat.to_string(), false);
         } else {
             if DEBUG_PRINT {

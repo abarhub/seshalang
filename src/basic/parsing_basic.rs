@@ -1,7 +1,5 @@
 use crate::basic::lexer_basic::Token::TokenNombre;
-use crate::basic::lexer_basic::TypeMotCle::{
-    Do, Else, ElseIf, End, For, Goto, If, Input, Loop, Next, Step, Then, To, Until, Wend, While,
-};
+use crate::basic::lexer_basic::TypeMotCle::{Cls, Do, Else, ElseIf, End, For, Goto, If, Input, Loop, Next, Step, Then, To, Until, Wend, While};
 use crate::basic::lexer_basic::TypeNombre::{Entier, Long, Single};
 use crate::basic::lexer_basic::TypeSeparateur::{
     DEUXPOINT, DIFF, DIVE, DIVR, EQU, EXP, FOIS, INF, INFE, MOINS, PARENTF, PARENTO, PLUS,
@@ -351,6 +349,9 @@ fn parse_instruction(
             compteur,
             liste_instructions_iter,
         );
+        debut_instr
+    } else if token_iterator.est_mot_cle(Cls) {
+        // ne fait rien
         debut_instr
     } else {
         panic!("instruction inconnue {:?}", token_iterator.get());

@@ -61,6 +61,7 @@ pub enum TypeMotCle {
     Loop,
     To,
     Step,
+    Cls,
 }
 
 impl TypeMotCle {
@@ -694,6 +695,7 @@ fn mots_cles(s: String) -> Option<TypeMotCle> {
         "LOOP" => Some(TypeMotCle::Loop),
         "TO" => Some(TypeMotCle::To),
         "STEP" => Some(TypeMotCle::Step),
+        "CLS" => Some(TypeMotCle::Cls),
         _ => None,
     }
 }
