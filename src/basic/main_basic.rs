@@ -29,8 +29,8 @@ mod tests {
             .to_string();
         let sortie = exec(fichier);
         assert_eq!(sortie.len(), 2);
-        assert_eq!(sortie[0], "5");
-        assert_eq!(sortie[1], "12");
+        assert_eq!(sortie[0], " 5 ");
+        assert_eq!(sortie[1], " 12 ");
     }
 
     #[test]
@@ -38,7 +38,7 @@ mod tests {
         let fichier = "print 10".to_string();
         let sortie = exec(fichier);
         assert_eq!(sortie.len(), 1);
-        assert_eq!(sortie[0], "10");
+        assert_eq!(sortie[0], " 10 ");
     }
 
     #[test]
@@ -46,7 +46,7 @@ mod tests {
         let fichier = "print ((15))".to_string();
         let sortie = exec(fichier);
         assert_eq!(sortie.len(), 1);
-        assert_eq!(sortie[0], "15");
+        assert_eq!(sortie[0], " 15 ");
     }
 
     #[test]
@@ -54,8 +54,8 @@ mod tests {
         let fichier = "print 8, 20".to_string();
         let sortie = exec(fichier);
         assert_eq!(sortie.len(), 2);
-        assert_eq!(sortie[0], "8");
-        assert_eq!(sortie[1], "20");
+        assert_eq!(sortie[0], " 8 ");
+        assert_eq!(sortie[1], " 20 ");
     }
 
     #[test]
@@ -63,7 +63,7 @@ mod tests {
         let fichier = "print 10; 30".to_string();
         let sortie = exec(fichier);
         assert_eq!(sortie.len(), 1);
-        assert_eq!(sortie[0], "1030");
+        assert_eq!(sortie[0], " 10  30 ");
     }
 
     #[test]
@@ -101,7 +101,7 @@ mod tests {
             .to_string();
         let sortie = exec(fichier);
         assert_eq!(sortie.len(), 1);
-        assert_eq!(sortie[0], "48");
+        assert_eq!(sortie[0], " 48 ");
     }
 
     #[test]
@@ -113,10 +113,10 @@ mod tests {
             .to_string();
         let sortie = exec(fichier);
         assert_eq!(sortie.len(), 4);
-        assert_eq!(sortie[0], "2");
-        assert_eq!(sortie[1], "18");
-        assert_eq!(sortie[2], "9");
-        assert_eq!(sortie[3], "3");
+        assert_eq!(sortie[0], " 2 ");
+        assert_eq!(sortie[1], " 18 ");
+        assert_eq!(sortie[2], " 9 ");
+        assert_eq!(sortie[3], " 3 ");
     }
 
     #[test]
@@ -128,10 +128,10 @@ mod tests {
             .to_string();
         let sortie = exec(fichier);
         assert_eq!(sortie.len(), 4);
-        assert_eq!(sortie[0], "2");
-        assert_eq!(sortie[1], "18.3");
-        assert_eq!(sortie[2], "9.1");
-        assert_eq!(sortie[3], "3.1");
+        assert_eq!(sortie[0], " 2 ");
+        assert_eq!(sortie[1], " 18.3 ");
+        assert_eq!(sortie[2], " 9.1 ");
+        assert_eq!(sortie[3], " 3.1 ");
     }
 
     #[test]
@@ -150,17 +150,17 @@ mod tests {
             .to_string();
         let sortie = exec(fichier);
         assert_eq!(sortie.len(), 11);
-        assert_eq!(sortie[0], "-1");
-        assert_eq!(sortie[1], "0");
-        assert_eq!(sortie[2], "-1");
-        assert_eq!(sortie[3], "-1");
-        assert_eq!(sortie[4], "0");
-        assert_eq!(sortie[5], "-1");
-        assert_eq!(sortie[6], "0");
-        assert_eq!(sortie[7], "0");
-        assert_eq!(sortie[8], "-1");
-        assert_eq!(sortie[9], "1");
-        assert_eq!(sortie[10], "8");
+        assert_eq!(sortie[0], "-1 ");
+        assert_eq!(sortie[1], " 0 ");
+        assert_eq!(sortie[2], "-1 ");
+        assert_eq!(sortie[3], "-1 ");
+        assert_eq!(sortie[4], " 0 ");
+        assert_eq!(sortie[5], "-1 ");
+        assert_eq!(sortie[6], " 0 ");
+        assert_eq!(sortie[7], " 0 ");
+        assert_eq!(sortie[8], "-1 ");
+        assert_eq!(sortie[9], " 1 ");
+        assert_eq!(sortie[10], " 8 ");
     }
 
     #[test]
@@ -168,7 +168,7 @@ mod tests {
         let fichier = "print 7  MOD 3".to_string();
         let sortie = exec(fichier);
         assert_eq!(sortie.len(), 1);
-        assert_eq!(sortie[0], "1");
+        assert_eq!(sortie[0], " 1 ");
     }
 
     #[test]
@@ -194,24 +194,24 @@ mod tests {
             .to_string();
         let sortie = exec(fichier);
         assert_eq!(sortie.len(), 18);
-        assert_eq!(sortie[0], "0"); // AND
-        assert_eq!(sortie[1], "-1");
-        assert_eq!(sortie[2], "-1"); // OR
-        assert_eq!(sortie[3], "-1");
-        assert_eq!(sortie[4], "0");
-        assert_eq!(sortie[5], "-1"); //XOR
-        assert_eq!(sortie[6], "0");
-        assert_eq!(sortie[7], "0"); //EQ
-        assert_eq!(sortie[8], "-1");
-        assert_eq!(sortie[9], "0");
-        assert_eq!(sortie[10], "-1");
-        assert_eq!(sortie[11], "0"); //IMP
-        assert_eq!(sortie[12], "-1");
-        assert_eq!(sortie[13], "-1");
-        assert_eq!(sortie[14], "-1");
-        assert_eq!(sortie[15], "-7"); // -
-        assert_eq!(sortie[16], "7"); // +
-        assert_eq!(sortie[17], "0"); // NOT
+        assert_eq!(sortie[0], " 0 "); // AND
+        assert_eq!(sortie[1], "-1 ");
+        assert_eq!(sortie[2], "-1 "); // OR
+        assert_eq!(sortie[3], "-1 ");
+        assert_eq!(sortie[4], " 0 ");
+        assert_eq!(sortie[5], "-1 "); //XOR
+        assert_eq!(sortie[6], " 0 ");
+        assert_eq!(sortie[7], " 0 "); //EQ
+        assert_eq!(sortie[8], "-1 ");
+        assert_eq!(sortie[9], " 0 ");
+        assert_eq!(sortie[10], "-1 ");
+        assert_eq!(sortie[11], " 0 "); //IMP
+        assert_eq!(sortie[12], "-1 ");
+        assert_eq!(sortie[13], "-1 ");
+        assert_eq!(sortie[14], "-1 ");
+        assert_eq!(sortie[15], "-7 "); // -
+        assert_eq!(sortie[16], " 7 "); // +
+        assert_eq!(sortie[17], " 0 "); // NOT
     }
 
     #[test]
@@ -225,10 +225,10 @@ mod tests {
             .to_string();
         let sortie = exec(fichier);
         assert_eq!(sortie.len(), 4);
-        assert_eq!(sortie[0], "0"); //EQ
-        assert_eq!(sortie[1], "-1");
-        assert_eq!(sortie[2], "0");
-        assert_eq!(sortie[3], "-1");
+        assert_eq!(sortie[0], " 0 "); //EQ
+        assert_eq!(sortie[1], "-1 ");
+        assert_eq!(sortie[2], " 0 ");
+        assert_eq!(sortie[3], "-1 ");
     }
 
     #[test]
@@ -236,7 +236,7 @@ mod tests {
         let fichier = "print 3>2 EQV 0".to_string();
         let sortie = exec(fichier);
         assert_eq!(sortie.len(), 1);
-        assert_eq!(sortie[0], "0"); //EQ
+        assert_eq!(sortie[0], " 0 "); //EQ
     }
 
     #[test]
@@ -246,8 +246,8 @@ mod tests {
             .to_string();
         let sortie = exec(fichier);
         assert_eq!(sortie.len(), 2);
-        assert_eq!(sortie[0], "10");
-        assert_eq!(sortie[1], "15.1");
+        assert_eq!(sortie[0], " 10 ");
+        assert_eq!(sortie[1], " 15.1 ");
     }
 
     #[test]
@@ -257,7 +257,7 @@ mod tests {
             .to_string();
         let sortie = exec(fichier);
         assert_eq!(sortie.len(), 2);
-        assert_eq!(sortie[0], "65");
+        assert_eq!(sortie[0], " 65 ");
         assert_eq!(sortie[1], "B");
     }
 
@@ -274,14 +274,14 @@ mod tests {
             .to_string();
         let sortie = exec(fichier);
         assert_eq!(sortie.len(), 8);
-        assert_eq!(sortie[0], "0");
-        assert_eq!(sortie[1], "1");
-        assert_eq!(sortie[2], "0");
-        assert_eq!(sortie[3], "0");
-        assert_eq!(sortie[4], "3");
-        assert_eq!(sortie[5], "5");
-        assert_eq!(sortie[6], "4");
-        assert_eq!(sortie[7], "8");
+        assert_eq!(sortie[0], " 0 ");
+        assert_eq!(sortie[1], " 1 ");
+        assert_eq!(sortie[2], " 0 ");
+        assert_eq!(sortie[3], " 0 ");
+        assert_eq!(sortie[4], " 3 ");
+        assert_eq!(sortie[5], " 5 ");
+        assert_eq!(sortie[6], " 4 ");
+        assert_eq!(sortie[7], " 8 ");
     }
 
     #[test]
@@ -301,10 +301,10 @@ mod tests {
         assert_eq!(sortie[1], "10");
         assert_eq!(sortie[2], "15.632");
         assert_eq!(sortie[3], "20.951");
-        assert_eq!(sortie[4], "8");
-        assert_eq!(sortie[5], "10");
-        assert_eq!(sortie[6], "4.5");
-        assert_eq!(sortie[7], "8.5");
+        assert_eq!(sortie[4], " 8 ");
+        assert_eq!(sortie[5], " 10 ");
+        assert_eq!(sortie[6], " 4.5 ");
+        assert_eq!(sortie[7], " 8.5 ");
     }
 
     #[test]
@@ -322,14 +322,14 @@ mod tests {
             .to_string();
         let sortie = exec(fichier);
         assert_eq!(sortie.len(), 10);
-        assert_eq!(sortie[0], "5"); // fix
-        assert_eq!(sortie[1], "5");
-        assert_eq!(sortie[2], "6"); // int
-        assert_eq!(sortie[3], "7");
-        assert_eq!(sortie[4], "3"); // instr
-        assert_eq!(sortie[5], "7");
-        assert_eq!(sortie[6], "2");
-        assert_eq!(sortie[7], "0");
+        assert_eq!(sortie[0], " 5 "); // fix
+        assert_eq!(sortie[1], " 5 ");
+        assert_eq!(sortie[2], " 6 "); // int
+        assert_eq!(sortie[3], " 7 ");
+        assert_eq!(sortie[4], " 3 "); // instr
+        assert_eq!(sortie[5], " 7 ");
+        assert_eq!(sortie[6], " 2 ");
+        assert_eq!(sortie[7], " 0 ");
         assert_eq!(sortie[8], "14"); // hex
         assert_eq!(sortie[9], "24"); // oct
     }
@@ -343,8 +343,8 @@ mod tests {
             .to_string();
         let sortie = exec(fichier);
         assert_eq!(sortie.len(), 2);
-        assert_eq!(sortie[0], "1");
-        assert_eq!(sortie[1], "3");
+        assert_eq!(sortie[0], " 1 ");
+        assert_eq!(sortie[1], " 3 ");
     }
 
     #[test]
@@ -354,8 +354,8 @@ mod tests {
             .to_string();
         let sortie = exec(fichier);
         assert_eq!(sortie.len(), 2);
-        assert_eq!(sortie[0], "1");
-        assert_eq!(sortie[1], "2");
+        assert_eq!(sortie[0], " 1 ");
+        assert_eq!(sortie[1], " 2 ");
     }
 
     #[test]
@@ -365,7 +365,7 @@ mod tests {
             .to_string();
         let sortie = exec(fichier);
         assert_eq!(sortie.len(), 1);
-        assert_eq!(sortie[0], "2");
+        assert_eq!(sortie[0], " 2 ");
     }
 
     #[test]
@@ -377,8 +377,8 @@ mod tests {
             .to_string();
         let sortie = exec(fichier);
         assert_eq!(sortie.len(), 2);
-        assert_eq!(sortie[0], "1");
-        assert_eq!(sortie[1], "2");
+        assert_eq!(sortie[0], " 1 ");
+        assert_eq!(sortie[1], " 2 ");
     }
 
     #[test]
@@ -390,7 +390,7 @@ mod tests {
             .to_string();
         let sortie = exec(fichier);
         assert_eq!(sortie.len(), 1);
-        assert_eq!(sortie[0], "2");
+        assert_eq!(sortie[0], " 2 ");
     }
 
     #[test]
@@ -404,10 +404,10 @@ mod tests {
             .to_string();
         let sortie = exec(fichier);
         assert_eq!(sortie.len(), 4);
-        assert_eq!(sortie[0], "1");
-        assert_eq!(sortie[1], "10");
-        assert_eq!(sortie[2], "100");
-        assert_eq!(sortie[3], "2");
+        assert_eq!(sortie[0], " 1 ");
+        assert_eq!(sortie[1], " 10 ");
+        assert_eq!(sortie[2], " 100 ");
+        assert_eq!(sortie[3], " 2 ");
     }
 
     #[test]
@@ -417,8 +417,8 @@ mod tests {
             .to_string();
         let sortie = exec(fichier);
         assert_eq!(sortie.len(), 2);
-        assert_eq!(sortie[0], "1");
-        assert_eq!(sortie[1], "3");
+        assert_eq!(sortie[0], " 1 ");
+        assert_eq!(sortie[1], " 3 ");
     }
 
     #[test]
@@ -428,8 +428,8 @@ mod tests {
             .to_string();
         let sortie = exec(fichier);
         assert_eq!(sortie.len(), 2);
-        assert_eq!(sortie[0], "2");
-        assert_eq!(sortie[1], "3");
+        assert_eq!(sortie[0], " 2 ");
+        assert_eq!(sortie[1], " 3 ");
     }
 
     #[test]
@@ -443,8 +443,8 @@ mod tests {
             .to_string();
         let sortie = exec(fichier);
         assert_eq!(sortie.len(), 2);
-        assert_eq!(sortie[0], "1");
-        assert_eq!(sortie[1], "3");
+        assert_eq!(sortie[0], " 1 ");
+        assert_eq!(sortie[1], " 3 ");
     }
 
     #[test]
@@ -458,8 +458,8 @@ mod tests {
             .to_string();
         let sortie = exec(fichier);
         assert_eq!(sortie.len(), 2);
-        assert_eq!(sortie[0], "2");
-        assert_eq!(sortie[1], "3");
+        assert_eq!(sortie[0], " 2 ");
+        assert_eq!(sortie[1], " 3 ");
     }
 
     #[test]
@@ -475,8 +475,8 @@ mod tests {
             .to_string();
         let sortie = exec(fichier);
         assert_eq!(sortie.len(), 2);
-        assert_eq!(sortie[0], "1");
-        assert_eq!(sortie[1], "4");
+        assert_eq!(sortie[0], " 1 ");
+        assert_eq!(sortie[1], " 4 ");
     }
 
     #[test]
@@ -492,8 +492,8 @@ mod tests {
             .to_string();
         let sortie = exec(fichier);
         assert_eq!(sortie.len(), 2);
-        assert_eq!(sortie[0], "2");
-        assert_eq!(sortie[1], "4");
+        assert_eq!(sortie[0], " 2 ");
+        assert_eq!(sortie[1], " 4 ");
     }
 
     #[test]
@@ -509,8 +509,8 @@ mod tests {
             .to_string();
         let sortie = exec(fichier);
         assert_eq!(sortie.len(), 2);
-        assert_eq!(sortie[0], "3");
-        assert_eq!(sortie[1], "4");
+        assert_eq!(sortie[0], " 3 ");
+        assert_eq!(sortie[1], " 4 ");
     }
 
     #[test]
@@ -528,8 +528,8 @@ mod tests {
             .to_string();
         let sortie = exec(fichier);
         assert_eq!(sortie.len(), 2);
-        assert_eq!(sortie[0], "3");
-        assert_eq!(sortie[1], "5");
+        assert_eq!(sortie[0], " 3 ");
+        assert_eq!(sortie[1], " 5 ");
     }
 
     fn exec(fichier:String)->Vec<String>{

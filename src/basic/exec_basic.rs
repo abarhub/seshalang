@@ -12,10 +12,10 @@ use crate::basic::struct_basic::{
     AstExpression, AstInstruction, AstLabelEnum, AstOperateurBinaireType, AstOperateurUnaireType,
     AstProgramme,
 };
+use crate::basic::utils_basic::Sortie;
 use std::collections::HashMap;
 use std::fmt;
 use std::rc::Rc;
-use crate::basic::utils_basic::Sortie;
 
 const TRUE: i16 = -1;
 const FALSE: i16 = 0;
@@ -43,7 +43,7 @@ impl fmt::Display for Valeur {
     }
 }
 
-pub fn execute(programme: AstProgramme,mut sortie: &mut Sortie) {
+pub fn execute(programme: AstProgramme, mut sortie: &mut Sortie) {
     let mut contexte: HashMap<String, Valeur> = HashMap::new();
 
     if DEBUG_PRINT {
@@ -105,34 +105,64 @@ pub fn execute(programme: AstProgramme,mut sortie: &mut Sortie) {
     }
 }
 
-fn print(sortie: &mut Sortie, mut contexte: &mut HashMap<String, Valeur>, parametres: &Vec<AstExpression>, separateurs: &Vec<bool>) {
+fn print(
+    sortie: &mut Sortie,
+    mut contexte: &mut HashMap<String, Valeur>,
+    parametres: &Vec<AstExpression>,
+    separateurs: &Vec<bool>,
+) {
     let mut i = 0;
     for expression in parametres.iter() {
         let resultat = execute_expression(&expression, &mut contexte);
+        let resultat = calcul_affichage(resultat);
         if i < separateurs.len() && !separateurs[i] {
             if DEBUG_PRINT {
                 println!("{:?}", resultat);
             }
             print!("{:?} ", resultat);
-            sortie.ajoute(resultat.to_string(),false);
-            // if sortie.is_empty() {
-            //     sortie.push(resultat.to_string());
-            // } else {
-            //     let len = sortie.len() - 1;
-            //     let mut s = sortie[len].clone();
-            //     let s2 = resultat.to_string();
-            //     s += s2.as_str();
-            //     sortie[len] = s;
-            // }
+            sortie.ajoute(resultat.to_string(), false);
         } else {
             if DEBUG_PRINT {
                 println!("{:?}", resultat);
             }
-            // sortie.push(resultat.to_string());
-            sortie.ajoute(resultat.to_string(),true);
+            sortie.ajoute(resultat.to_string(), true);
         }
 
         i += 1;
+    }
+}
+
+fn calcul_affichage(expression: Valeur) -> String {
+    match expression {
+        NombreInteger(n) => {
+            if n >= 0 {
+                " ".to_string() + n.to_string().as_str() + " "
+            } else {
+                n.to_string() + " "
+            }
+        }
+        NombreLong(n) => {
+            if n >= 0 {
+                " ".to_string() + n.to_string().as_str() + " "
+            } else {
+                n.to_string() + " "
+            }
+        }
+        NombreSingle(n) => {
+            if n >= 0. {
+                " ".to_string() + n.to_string().as_str() + " "
+            } else {
+                n.to_string() + " "
+            }
+        }
+        NombreDouble(n) => {
+            if n >= 0. {
+                " ".to_string() + n.to_string().as_str() + " "
+            } else {
+                n.to_string() + " "
+            }
+        }
+        Chaine(s) => s.to_string(),
     }
 }
 
@@ -254,7 +284,12 @@ fn execute_expression0(
     }
 }
 
-fn operateur_binaire(table_symbole: &mut HashMap<String, Valeur>, operateur: &AstOperateurBinaireType, exp1: &Rc<AstExpression>, exp2: &Rc<AstExpression>) -> Option<Valeur> {
+fn operateur_binaire(
+    table_symbole: &mut HashMap<String, Valeur>,
+    operateur: &AstOperateurBinaireType,
+    exp1: &Rc<AstExpression>,
+    exp2: &Rc<AstExpression>,
+) -> Option<Valeur> {
     let e1 = exp1.as_ref();
     let e2 = exp2.as_ref();
     let expr1 = execute_expression(&(e1.clone()), table_symbole);
@@ -359,7 +394,11 @@ fn operateur_binaire(table_symbole: &mut HashMap<String, Valeur>, operateur: &As
     }
 }
 
-fn operateur_unaire(table_symbole: &mut HashMap<String, Valeur>, operateur: &AstOperateurUnaireType, exp1: &Rc<AstExpression>) -> Option<Valeur> {
+fn operateur_unaire(
+    table_symbole: &mut HashMap<String, Valeur>,
+    operateur: &AstOperateurUnaireType,
+    exp1: &Rc<AstExpression>,
+) -> Option<Valeur> {
     let e1 = exp1.as_ref();
     let expr1 = execute_expression(&(e1.clone()), table_symbole);
     if est_nombre(expr1.clone()) {
