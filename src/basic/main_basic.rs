@@ -636,6 +636,59 @@ mod tests {
         assert_eq!(sortie[2], " 2 ");
     }
 
+    #[test]
+    fn test_parse_execute42() {
+        let fichier = "for x=1 to 5
+                              print x
+                              next"
+            .to_string();
+        let sortie = exec(fichier);
+        assert_eq!(sortie.len(), 5);
+        assert_eq!(sortie[0], " 1 ");
+        assert_eq!(sortie[1], " 2 ");
+        assert_eq!(sortie[2], " 3 ");
+        assert_eq!(sortie[3], " 4 ");
+        assert_eq!(sortie[4], " 5 ");
+    }
+
+    #[test]
+    fn test_parse_execute43() {
+        let fichier = "for x=1 to 5 step 2
+                              print x
+                              next"
+            .to_string();
+        let sortie = exec(fichier);
+        assert_eq!(sortie.len(), 3);
+        assert_eq!(sortie[0], " 1 ");
+        assert_eq!(sortie[1], " 3 ");
+        assert_eq!(sortie[2], " 5 ");
+    }
+
+    #[test]
+    fn test_parse_execute44() {
+        let fichier = "for x=1 to 5 step -1
+                              print x
+                              next"
+            .to_string();
+        let sortie = exec(fichier);
+        assert_eq!(sortie.len(), 0);
+    }
+
+    #[test]
+    fn test_parse_execute45() {
+        let fichier = "for x=5 to 1 step -1
+                              print x
+                              next"
+            .to_string();
+        let sortie = exec(fichier);
+        assert_eq!(sortie.len(), 5);
+        assert_eq!(sortie[0], " 5 ");
+        assert_eq!(sortie[1], " 4 ");
+        assert_eq!(sortie[2], " 3 ");
+        assert_eq!(sortie[3], " 2 ");
+        assert_eq!(sortie[4], " 1 ");
+    }
+
     fn exec(fichier: String) -> Vec<String> {
         let mut sortie = Sortie::new(false);
         let programme = parse_basic(fichier).unwrap();

@@ -1,6 +1,6 @@
 use crate::basic::lexer_basic::Token::TokenNombre;
 use crate::basic::lexer_basic::TypeMotCle::{
-    Do, Else, ElseIf, End, For, Goto, If, Input, Loop, Then, Until, Wend, While,
+    Do, Else, ElseIf, End, For, Goto, If, Input, Loop, Next, Step, Then, To, Until, Wend, While,
 };
 use crate::basic::lexer_basic::TypeNombre::{Entier, Long, Single};
 use crate::basic::lexer_basic::TypeSeparateur::{
@@ -9,13 +9,16 @@ use crate::basic::lexer_basic::TypeSeparateur::{
 };
 use crate::basic::lexer_basic::{Token, TypeMotCle, TypeNombre, TypeSeparateur, lexer};
 
+use crate::basic::struct_basic::AstExpression::{
+    AstIdentifiant, AstNombreInteger, AstOperateurBinaire,
+};
 use crate::basic::struct_basic::AstInstruction::{
     AstAffectation, AstEnd, AstGoto, AstIf, AstInput, AstInstrLabel,
 };
 use crate::basic::struct_basic::AstLabelEnum::AstLabel;
 use crate::basic::struct_basic::AstOperateurBinaireType::{
     Different, DivisionEntiere, DivisionReel, Egal, Exponentiel, Inferieur, InferieurEgal, Moins,
-    Multiplication, Superieur, SuperieurEgal,
+    Multiplication, Plus, Superieur, SuperieurEgal,
 };
 use crate::basic::struct_basic::{
     AstExpression, AstInstruction, AstLabelEnum, AstNomMethode, AstOperateurBinaireType,
@@ -360,7 +363,122 @@ fn parse_for(
     compteur: &mut Compteur,
     liste_instructions_iter: &mut Iter<Vec<Token>>,
 ) {
-    todo!()
+    token_iterator.next();
+
+    let variable;
+
+    if token_iterator.est_identifiant() {
+        if let Token::TokenIdentifiant(ident, _) = token_iterator.next().unwrap() {
+            variable = ident;
+        } else {
+            panic!("token {:?} n'est pas un identifiant", token_iterator.get());
+        }
+    } else {
+        panic!("token {:?} n'est pas un identifiant", token_iterator.get());
+    }
+
+    if token_iterator.est_separateur(EQU) {
+        token_iterator.next();
+    } else {
+        panic!("token {:?} n'est pas un séparateur", token_iterator.get());
+    }
+
+    let exp1 = parsing_expression(&mut token_iterator);
+
+    if token_iterator.est_mot_cle(To) {
+        token_iterator.next();
+    } else {
+        panic!("token {:?} n'est pas to", token_iterator.get());
+    }
+
+    let exp2 = parsing_expression(&mut token_iterator);
+
+    let mut exp3 = AstNombreInteger(1);
+    if token_iterator.est_mot_cle(Step) {
+        token_iterator.next();
+
+        let exp03 = parsing_expression(&mut token_iterator);
+        exp3 = exp03.0;
+    }
+
+    let mut liste_instruction_actif: Vec<AstInstruction> = vec![];
+
+    while let Some(ligne) = liste_instructions_iter.next() {
+        let mut token_iterator2 = TokenIterator::new(ligne.clone());
+
+        if token_iterator2.est_mot_cle(Next) {
+            token_iterator2.next();
+
+            break;
+        } else {
+            // les intructions
+            let v: Vec<Vec<Token>> = vec![];
+            let mut iter = v.iter();
+
+            let mut liste_instructions2 =
+                parse_instruction(&mut token_iterator2, None, &mut iter, compteur);
+            liste_instruction_actif.append(&mut liste_instructions2);
+        }
+    }
+
+    let no = compteur.next_if();
+    let label_debut = AstLabel(format!("_for_debut{}", no).to_string());
+    let label_suite = AstLabel(format!("_for_suite{}", no).to_string());
+    let label_fin = AstLabel(format!("_for_fin{}", no).to_string());
+    let label_inf = AstLabel(format!("_for_inf{}", no).to_string());
+    let step = format!("_step{}", no);
+
+    let exp_fin_sup = AstOperateurBinaire(
+        Superieur,
+        Rc::new(AstIdentifiant(variable.clone())),
+        Rc::new(exp2.0.clone()),
+    );
+
+    let exp_fin_inf = AstOperateurBinaire(
+        Inferieur,
+        Rc::new(AstIdentifiant(variable.clone())),
+        Rc::new(exp2.0),
+    );
+
+    let incr = AstOperateurBinaire(
+        Plus,
+        Rc::new(AstIdentifiant(variable.clone())),
+        Rc::new(AstIdentifiant(step.clone())),
+    );
+
+    let exp_test_step = AstOperateurBinaire(
+        Inferieur,
+        Rc::new(AstIdentifiant(step.clone())),
+        Rc::new(AstNombreInteger(0)),
+    );
+
+    debut_instr.push(AstAffectation(variable.clone(), exp1.0));
+    debut_instr.push(AstAffectation(step.clone(), exp3.clone()));
+
+    debut_instr.push(AstInstrLabel(label_debut.clone()));
+
+    debut_instr.push(AstIf(exp_test_step, label_inf.clone()));
+
+    // test si variable > max
+    debut_instr.push(AstIf(exp_fin_sup, label_fin.clone()));
+
+    debut_instr.push(AstGoto(label_suite.clone()));
+
+    // test si variable < min
+    debut_instr.push(AstInstrLabel(label_inf));
+
+    debut_instr.push(AstIf(exp_fin_inf, label_fin.clone()));
+
+    // la boucle d'instruction
+    debut_instr.push(AstInstrLabel(label_suite));
+
+    debut_instr.append(&mut liste_instruction_actif);
+
+    debut_instr.push(AstAffectation(variable.clone(), incr));
+
+    debut_instr.push(AstGoto(label_debut));
+
+    debut_instr.push(AstInstrLabel(label_fin));
 }
 
 fn parse_do_while(
