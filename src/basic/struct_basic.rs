@@ -22,6 +22,7 @@ pub enum AstInstruction {
     AstIf(AstExpression, AstLabelEnum),
     AstGoto(AstLabelEnum),
     AstInput(Option<String>, Vec<String>, bool, bool),
+    AstEnd()
 }
 
 #[derive(Debug, Clone, PartialEq)]

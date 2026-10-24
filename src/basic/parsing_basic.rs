@@ -286,325 +286,358 @@ fn parse_instruction(
     liste_instructions_iter: &mut Iter<Vec<Token>>,
     compteur: &mut Compteur,
 ) -> Vec<AstInstruction> {
-    let mut debutInstr = vec![];
+    let mut debut_instr = vec![];
 
     if label.is_some() {
         let instruction = AstInstrLabel(label.unwrap());
-        debutInstr.push(instruction);
+        debut_instr.push(instruction);
     }
     if token_iterator.len() == 0 {
-        return debutInstr;
+        return debut_instr;
     }
     if token_iterator.est_identifiant() && token_iterator.est_separateur_pos(EQU, 1) {
         // affectation
-        if let Token::TokenIdentifiant(ident, _) = token_iterator.next().unwrap() {
-            if DEBUG_PRINT {
-                println!("affectation {}", ident);
-            }
-            token_iterator.next();
-            let exp = parsing_expression(&mut token_iterator);
-            let instruction = AstAffectation(ident.clone(), exp.0);
-            debutInstr.push(instruction);
-            debutInstr
-        } else {
-            panic!("token {:?} n'est pas un identifiant", token_iterator.get());
-        }
+        affectation(&mut token_iterator, &mut debut_instr);
+        debut_instr
     } else if token_iterator.est_identifiant() {
         // appel de méthode
-        if let Token::TokenIdentifiant(ident, _) = token_iterator.next().unwrap() {
-            if DEBUG_PRINT {
-                println!("appel {}", ident);
-            }
-            let mut liste_expressions: Vec<AstExpression> = vec![];
-            let mut separateur_virgule_liste: Vec<bool> = vec![];
-            loop {
-                let exp = parsing_expression(&mut token_iterator);
-                let tmp = exp.0.clone();
-                if DEBUG_PRINT {
-                    println!("parsing appel exp: {:?}", tmp);
-                }
-                liste_expressions.push(exp.0);
-                if token_iterator.len() > 0
-                    && separateur_parametre(&ident, token_iterator.get().unwrap())
-                {
-                    let separateur_virgule: bool;
-                    if let Some(Token::TokenSeparateur(s, _)) = token_iterator.next() {
-                        separateur_virgule = s == VIRGULE;
-                    } else {
-                        panic!(
-                            "token {:?} n'est pas un séparateur",
-                            token_iterator.get().unwrap()
-                        );
-                    };
-                    separateur_virgule_liste.push(separateur_virgule);
-                } else {
-                    break;
-                }
-            }
-
-            let instruction =
-                AstInstruction::AstAppelMethode(ident, liste_expressions, separateur_virgule_liste);
-
-            debutInstr.push(instruction);
-            debutInstr
-        } else {
-            panic!("token {:?} n'est pas un identifiant", token_iterator.get());
-        }
+        parse_appel_methode(&mut token_iterator, &mut debut_instr);
+        debut_instr
     } else if token_iterator.est_mot_cle(TypeMotCle::Print) {
-        if let Token::TokenMotReserve(_, _) = token_iterator.next().unwrap() {
-            let mut liste_expressions: Vec<AstExpression> = vec![];
-            let mut separateur_virgule_liste: Vec<bool> = vec![];
-            loop {
-                let exp = parsing_expression(&mut token_iterator);
-                if DEBUG_PRINT {
-                    let tmp = exp.0.clone();
-                    println!("parsing appel print exp: {:?}", tmp);
-                }
-                liste_expressions.push(exp.0);
-                if token_iterator.len() > 0
-                    && separateur_parametre_print(token_iterator.get().unwrap())
-                {
-                    let separateur_virgule: bool;
-                    if let Some(Token::TokenSeparateur(s, _)) = token_iterator.next() {
-                        separateur_virgule = s == VIRGULE;
-                    } else {
-                        panic!(
-                            "token {:?} n'est pas un séparateur",
-                            token_iterator.get().unwrap()
-                        );
-                    };
-                    separateur_virgule_liste.push(separateur_virgule);
-                } else {
-                    break;
-                }
-            }
-
-            let instruction = AstInstruction::AstAppelMethode(
-                "print".to_string(),
-                liste_expressions,
-                separateur_virgule_liste,
-            );
-
-            debutInstr.push(instruction);
-            debutInstr
-        } else {
-            panic!("token {:?} n'est pas un identifiant", token_iterator.get());
-        }
+        parse_print(&mut token_iterator, &mut debut_instr);
+        debut_instr
     } else if token_iterator.est_mot_cle(Goto) {
-        token_iterator.next();
-        let identifiant = token_iterator.next().unwrap();
-        if let Token::TokenIdentifiant(s, _) = identifiant {
-            let instruction = AstGoto(AstLabel(s.to_string()));
-            debutInstr.push(instruction);
-            debutInstr
-        } else {
-            panic!("token {:?} n'est pas un identifiant", identifiant);
-        }
+        parse_goto(&mut token_iterator, &mut debut_instr);
+        debut_instr
     } else if token_iterator.est_mot_cle(If) {
-        token_iterator.next();
-        let exp = parsing_expression(&mut token_iterator);
-        if token_iterator.est_mot_cle(Then) {
-            token_iterator.next();
-        } else {
-            panic!("token {:?} n'est pas un mot clé Then", token_iterator.get());
-        }
-        if token_iterator.len() == 0 {
-            let no = compteur.next_if();
-            let label_if = AstLabel(format!("_if_then{}", no).to_string());
-            let label_end = AstLabel(format!("_if_end{}", no).to_string());
-            let label_else = AstLabel(format!("_if_else{}", no).to_string());
-            let label_else_if_debut = AstLabel(format!("_if_else_if_debut{}", no).to_string());
-            let mut label_else_if_debut2 = label_else_if_debut.clone();
-            let mut liste_label_else_if: Vec<AstLabelEnum> = vec![];
-            let mut liste_instruction = vec![];
-            let mut compteur_label_else_if = 1;
-
-            let mut liste_instruction_if: Vec<AstInstruction> = vec![];
-            let mut liste_instruction_else: Vec<AstInstruction> = vec![];
-            let mut liste_instruction_else_if: Vec<Vec<AstInstruction>> = vec![];
-            let mut liste_instruction_actif: &mut Vec<AstInstruction> = &mut liste_instruction_if;
-            while let instr = liste_instructions_iter.next() {
-                if let Some(ligne) = instr {
-                    let mut token_iterator2 = TokenIterator::new(ligne.clone());
-
-                    if token_iterator2.est_mot_cle(End) && token_iterator2.est_mot_cle_pos(If, 1) {
-                        // end if
-                        break;
-                    } else if token_iterator2.est_mot_cle(ElseIf) {
-                        // else if
-                        if !liste_instruction_else.is_empty() {
-                            panic!("elseif apres un else");
-                        }
-                        token_iterator2.next();
-                        liste_instruction_else_if.push(vec![]);
-                        liste_instruction_actif = liste_instruction_else_if.last_mut().unwrap();
-                        let n = compteur_label_else_if;
-                        compteur_label_else_if += 1;
-                        let exp = parsing_expression(&mut token_iterator2);
-
-                        if token_iterator2.est_mot_cle(Then) {
-                            token_iterator2.next();
-                        } else {
-                            panic!(
-                                "token {:?} n'est pas un mot clé Then",
-                                token_iterator2.get()
-                            );
-                        }
-
-                        let label_else_if =
-                            AstLabel(format!("_if_else_if{}_{}", no, n).to_string());
-                        let label_else_if_suite =
-                            AstLabel(format!("_if_else_if_suite{}_{}", no, n).to_string());
-                        liste_instruction_actif.push(AstInstrLabel(label_else_if_debut2.clone()));
-                        liste_instruction_actif.push(AstIf(exp.0, label_else_if.clone()));
-                        liste_instruction_actif.push(AstGoto(label_else_if_suite.clone()));
-                        liste_instruction_actif.push(AstInstrLabel(label_else_if));
-                        liste_label_else_if.push(label_else_if_suite.clone());
-                        label_else_if_debut2 = label_else_if_suite;
-                    } else if token_iterator2.est_mot_cle(Else) {
-                        // else
-                        if !liste_instruction_else.is_empty() {
-                            panic!("else apres un else");
-                        }
-                        liste_instruction_actif = &mut liste_instruction_else;
-                    } else {
-                        // les intructions
-                        let v: Vec<Vec<Token>> = vec![];
-                        let mut iter = v.iter();
-
-                        let mut liste_instructions2 =
-                            parse_instruction(&mut token_iterator2, None, &mut iter, compteur);
-                        liste_instruction_actif.append(&mut liste_instructions2);
-                    }
-                } else {
-                    break;
-                }
-            }
-
-            let mut label_suite_if = &label_else;
-            if !liste_instruction_else_if.is_empty() {
-                label_suite_if = &label_else_if_debut;
-            }
-            // if
-            liste_instruction.push(AstIf(exp.0, label_if.clone()));
-            liste_instruction.push(AstGoto(label_suite_if.clone()));
-            liste_instruction.push(AstInstrLabel(label_if));
-            liste_instruction.append(&mut liste_instruction_if);
-            liste_instruction.push(AstGoto(label_end.clone()));
-
-            // else if
-            if !liste_instruction_else_if.is_empty() {
-                for mut liste_instr in liste_instruction_else_if {
-                    liste_instruction.append(&mut liste_instr);
-                    liste_instruction.push(AstGoto(label_end.clone()));
-                }
-
-                let label_fin_else_if = liste_label_else_if
-                    .get(liste_label_else_if.len() - 1)
-                    .unwrap()
-                    .clone();
-                liste_instruction.push(AstInstrLabel(label_fin_else_if));
-            }
-
-            // else
-            liste_instruction.push(AstInstrLabel(label_else));
-            liste_instruction.append(&mut liste_instruction_else);
-            liste_instruction.push(AstInstrLabel(label_end));
-
-            for tmp in liste_instruction.clone() {
-                println!("{:?}", tmp);
-            }
-
-            debutInstr.append(&mut liste_instruction);
-            debutInstr
-        } else {
-            let no = compteur.next_if();
-            let label_if = AstLabel(format!("_if_then{}", no).to_string());
-            let label_end = AstLabel(format!("_if_end{}", no).to_string());
-            let label_else = AstLabel(format!("_if_else{}", no).to_string());
-            let v: Vec<Vec<Token>> = vec![];
-            let mut iter = v.iter();
-            let mut instruction = parse_instruction(
-                &mut token_iterator,
-                Some(label_if.clone()),
-                &mut iter,
-                compteur,
-            );
-            let mut instruction_else: Vec<AstInstruction> = vec![];
-            if token_iterator.est_mot_cle(Else) {
-                token_iterator.next();
-
-                instruction_else =
-                    parse_instruction(&mut token_iterator, None, &mut iter, compteur);
-            }
-            if !instruction.is_empty() || !instruction_else.is_empty() {
-                let mut liste_instruction = vec![];
-                if instruction_else.is_empty() {
-                    liste_instruction.push(AstIf(exp.0, label_if));
-                    liste_instruction.push(AstGoto(label_end.clone()));
-                    liste_instruction.append(&mut instruction);
-                    liste_instruction.push(AstInstrLabel(label_end));
-                } else {
-                    liste_instruction.push(AstIf(exp.0, label_if));
-                    liste_instruction.push(AstGoto(label_else.clone()));
-                    liste_instruction.append(&mut instruction);
-                    liste_instruction.push(AstGoto(label_end.clone()));
-                    liste_instruction.push(AstInstrLabel(label_else));
-                    liste_instruction.append(&mut instruction_else);
-                    liste_instruction.push(AstInstrLabel(label_end));
-                }
-                debutInstr.append(&mut liste_instruction);
-                debutInstr
-            } else {
-                panic!("Erreur: pas d'instruction pour le then du if")
-            }
-        }
+        parse_if(
+            &mut token_iterator,
+            liste_instructions_iter,
+            compteur,
+            &mut debut_instr,
+        );
+        debut_instr
     } else if token_iterator.est_mot_cle(Input) {
-        token_iterator.next();
-        let retour_ligne: bool;
-        if token_iterator.est_separateur(POINTVIRGULE) {
-            token_iterator.next();
-            retour_ligne = false;
-        } else {
-            retour_ligne = true;
-        }
-        let mut prompt: Option<String> = None;
-        if token_iterator.est_chaine() {
-            if let Token::TokenChaine(chaine, _) = token_iterator.next().unwrap() {
-                prompt = Some(chaine.clone());
-            }
-        }
-        let point_interrogation: bool;
-        if token_iterator.est_separateur(POINTVIRGULE) {
-            token_iterator.next();
-            point_interrogation = true;
-        } else if token_iterator.est_separateur(VIRGULE) {
-            token_iterator.next();
-            point_interrogation = false;
-        } else {
-            point_interrogation = false;
-        }
-        let mut liste_variables: Vec<String> = Vec::new();
-        while token_iterator.est_identifiant() {
-            if let Token::TokenIdentifiant(identifiant, _) = token_iterator.next().unwrap() {
-                liste_variables.push(identifiant.clone());
-            }
-            if token_iterator.est_separateur(VIRGULE) {
-                token_iterator.next();
-            }
-        }
-        let mut liste_instruction = vec![];
-        liste_instruction.push(AstInput(
-            prompt,
-            liste_variables,
-            retour_ligne,
-            point_interrogation,
-        ));
-        debutInstr.append(&mut liste_instruction);
-        debutInstr
+        parse_input(&mut token_iterator, &mut debut_instr);
+        debut_instr
     } else {
         panic!("instruction inconnue {:?}", token_iterator.get());
     }
+}
+
+fn parse_goto(token_iterator: &mut &mut TokenIterator, debut_instr: &mut Vec<AstInstruction>) {
+    token_iterator.next();
+    let identifiant = token_iterator.next().unwrap();
+    if let Token::TokenIdentifiant(s, _) = identifiant {
+        let instruction = AstGoto(AstLabel(s.to_string()));
+        debut_instr.push(instruction);
+    } else {
+        panic!("token {:?} n'est pas un identifiant", identifiant);
+    }
+}
+
+fn parse_print(mut token_iterator: &mut &mut TokenIterator, debut_instr: &mut Vec<AstInstruction>) {
+    if let Token::TokenMotReserve(_, _) = token_iterator.next().unwrap() {
+        let mut liste_expressions: Vec<AstExpression> = vec![];
+        let mut separateur_virgule_liste: Vec<bool> = vec![];
+        loop {
+            let exp = parsing_expression(&mut token_iterator);
+            if DEBUG_PRINT {
+                let tmp = exp.0.clone();
+                println!("parsing appel print exp: {:?}", tmp);
+            }
+            liste_expressions.push(exp.0);
+            if token_iterator.len() > 0 && separateur_parametre_print(token_iterator.get().unwrap())
+            {
+                let separateur_virgule: bool;
+                if let Some(Token::TokenSeparateur(s, _)) = token_iterator.next() {
+                    separateur_virgule = s == VIRGULE;
+                } else {
+                    panic!(
+                        "token {:?} n'est pas un séparateur",
+                        token_iterator.get().unwrap()
+                    );
+                };
+                separateur_virgule_liste.push(separateur_virgule);
+            } else {
+                break;
+            }
+        }
+
+        let instruction = AstInstruction::AstAppelMethode(
+            "print".to_string(),
+            liste_expressions,
+            separateur_virgule_liste,
+        );
+
+        debut_instr.push(instruction);
+    } else {
+        panic!("token {:?} n'est pas un identifiant", token_iterator.get());
+    }
+}
+
+fn parse_appel_methode(
+    mut token_iterator: &mut &mut TokenIterator,
+    debut_instr: &mut Vec<AstInstruction>,
+) {
+    if let Token::TokenIdentifiant(ident, _) = token_iterator.next().unwrap() {
+        if DEBUG_PRINT {
+            println!("appel {}", ident);
+        }
+        let mut liste_expressions: Vec<AstExpression> = vec![];
+        let mut separateur_virgule_liste: Vec<bool> = vec![];
+        loop {
+            let exp = parsing_expression(&mut token_iterator);
+            let tmp = exp.0.clone();
+            if DEBUG_PRINT {
+                println!("parsing appel exp: {:?}", tmp);
+            }
+            liste_expressions.push(exp.0);
+            if token_iterator.len() > 0
+                && separateur_parametre(&ident, token_iterator.get().unwrap())
+            {
+                let separateur_virgule: bool;
+                if let Some(Token::TokenSeparateur(s, _)) = token_iterator.next() {
+                    separateur_virgule = s == VIRGULE;
+                } else {
+                    panic!(
+                        "token {:?} n'est pas un séparateur",
+                        token_iterator.get().unwrap()
+                    );
+                };
+                separateur_virgule_liste.push(separateur_virgule);
+            } else {
+                break;
+            }
+        }
+
+        let instruction =
+            AstInstruction::AstAppelMethode(ident, liste_expressions, separateur_virgule_liste);
+
+        debut_instr.push(instruction);
+    } else {
+        panic!("token {:?} n'est pas un identifiant", token_iterator.get());
+    }
+}
+
+fn affectation(mut token_iterator: &mut &mut TokenIterator, debut_instr: &mut Vec<AstInstruction>) {
+    if let Token::TokenIdentifiant(ident, _) = token_iterator.next().unwrap() {
+        if DEBUG_PRINT {
+            println!("affectation {}", ident);
+        }
+        token_iterator.next();
+        let exp = parsing_expression(&mut token_iterator);
+        let instruction = AstAffectation(ident.clone(), exp.0);
+        debut_instr.push(instruction);
+    } else {
+        panic!("token {:?} n'est pas un identifiant", token_iterator.get());
+    }
+}
+
+fn parse_if(
+    mut token_iterator: &mut &mut TokenIterator,
+    liste_instructions_iter: &mut Iter<Vec<Token>>,
+    compteur: &mut Compteur,
+    debut_instr: &mut Vec<AstInstruction>,
+) {
+    token_iterator.next();
+    let exp = parsing_expression(&mut token_iterator);
+    if token_iterator.est_mot_cle(Then) {
+        token_iterator.next();
+    } else {
+        panic!("token {:?} n'est pas un mot clé Then", token_iterator.get());
+    }
+    if token_iterator.len() == 0 {
+        let no = compteur.next_if();
+        let label_if = AstLabel(format!("_if_then{}", no).to_string());
+        let label_end = AstLabel(format!("_if_end{}", no).to_string());
+        let label_else = AstLabel(format!("_if_else{}", no).to_string());
+        let label_else_if_debut = AstLabel(format!("_if_else_if_debut{}", no).to_string());
+        let mut label_else_if_debut2 = label_else_if_debut.clone();
+        let mut liste_label_else_if: Vec<AstLabelEnum> = vec![];
+        let mut liste_instruction = vec![];
+        let mut compteur_label_else_if = 1;
+
+        let mut liste_instruction_if: Vec<AstInstruction> = vec![];
+        let mut liste_instruction_else: Vec<AstInstruction> = vec![];
+        let mut liste_instruction_else_if: Vec<Vec<AstInstruction>> = vec![];
+        let mut liste_instruction_actif: &mut Vec<AstInstruction> = &mut liste_instruction_if;
+        while let instr = liste_instructions_iter.next() {
+            if let Some(ligne) = instr {
+                let mut token_iterator2 = TokenIterator::new(ligne.clone());
+
+                if token_iterator2.est_mot_cle(End) && token_iterator2.est_mot_cle_pos(If, 1) {
+                    // end if
+                    break;
+                } else if token_iterator2.est_mot_cle(ElseIf) {
+                    // else if
+                    if !liste_instruction_else.is_empty() {
+                        panic!("elseif apres un else");
+                    }
+                    token_iterator2.next();
+                    liste_instruction_else_if.push(vec![]);
+                    liste_instruction_actif = liste_instruction_else_if.last_mut().unwrap();
+                    let n = compteur_label_else_if;
+                    compteur_label_else_if += 1;
+                    let exp = parsing_expression(&mut token_iterator2);
+
+                    if token_iterator2.est_mot_cle(Then) {
+                        token_iterator2.next();
+                    } else {
+                        panic!(
+                            "token {:?} n'est pas un mot clé Then",
+                            token_iterator2.get()
+                        );
+                    }
+
+                    let label_else_if = AstLabel(format!("_if_else_if{}_{}", no, n).to_string());
+                    let label_else_if_suite =
+                        AstLabel(format!("_if_else_if_suite{}_{}", no, n).to_string());
+                    liste_instruction_actif.push(AstInstrLabel(label_else_if_debut2.clone()));
+                    liste_instruction_actif.push(AstIf(exp.0, label_else_if.clone()));
+                    liste_instruction_actif.push(AstGoto(label_else_if_suite.clone()));
+                    liste_instruction_actif.push(AstInstrLabel(label_else_if));
+                    liste_label_else_if.push(label_else_if_suite.clone());
+                    label_else_if_debut2 = label_else_if_suite;
+                } else if token_iterator2.est_mot_cle(Else) {
+                    // else
+                    if !liste_instruction_else.is_empty() {
+                        panic!("else apres un else");
+                    }
+                    liste_instruction_actif = &mut liste_instruction_else;
+                } else {
+                    // les intructions
+                    let v: Vec<Vec<Token>> = vec![];
+                    let mut iter = v.iter();
+
+                    let mut liste_instructions2 =
+                        parse_instruction(&mut token_iterator2, None, &mut iter, compteur);
+                    liste_instruction_actif.append(&mut liste_instructions2);
+                }
+            } else {
+                break;
+            }
+        }
+
+        let mut label_suite_if = &label_else;
+        if !liste_instruction_else_if.is_empty() {
+            label_suite_if = &label_else_if_debut;
+        }
+        // if
+        liste_instruction.push(AstIf(exp.0, label_if.clone()));
+        liste_instruction.push(AstGoto(label_suite_if.clone()));
+        liste_instruction.push(AstInstrLabel(label_if));
+        liste_instruction.append(&mut liste_instruction_if);
+        liste_instruction.push(AstGoto(label_end.clone()));
+
+        // else if
+        if !liste_instruction_else_if.is_empty() {
+            for mut liste_instr in liste_instruction_else_if {
+                liste_instruction.append(&mut liste_instr);
+                liste_instruction.push(AstGoto(label_end.clone()));
+            }
+
+            let label_fin_else_if = liste_label_else_if
+                .get(liste_label_else_if.len() - 1)
+                .unwrap()
+                .clone();
+            liste_instruction.push(AstInstrLabel(label_fin_else_if));
+        }
+
+        // else
+        liste_instruction.push(AstInstrLabel(label_else));
+        liste_instruction.append(&mut liste_instruction_else);
+        liste_instruction.push(AstInstrLabel(label_end));
+
+        for tmp in liste_instruction.clone() {
+            println!("{:?}", tmp);
+        }
+
+        debut_instr.append(&mut liste_instruction);
+    } else {
+        let no = compteur.next_if();
+        let label_if = AstLabel(format!("_if_then{}", no).to_string());
+        let label_end = AstLabel(format!("_if_end{}", no).to_string());
+        let label_else = AstLabel(format!("_if_else{}", no).to_string());
+        let v: Vec<Vec<Token>> = vec![];
+        let mut iter = v.iter();
+        let mut instruction = parse_instruction(
+            &mut token_iterator,
+            Some(label_if.clone()),
+            &mut iter,
+            compteur,
+        );
+        let mut instruction_else: Vec<AstInstruction> = vec![];
+        if token_iterator.est_mot_cle(Else) {
+            token_iterator.next();
+
+            instruction_else = parse_instruction(&mut token_iterator, None, &mut iter, compteur);
+        }
+        if !instruction.is_empty() || !instruction_else.is_empty() {
+            let mut liste_instruction = vec![];
+            if instruction_else.is_empty() {
+                liste_instruction.push(AstIf(exp.0, label_if));
+                liste_instruction.push(AstGoto(label_end.clone()));
+                liste_instruction.append(&mut instruction);
+                liste_instruction.push(AstInstrLabel(label_end));
+            } else {
+                liste_instruction.push(AstIf(exp.0, label_if));
+                liste_instruction.push(AstGoto(label_else.clone()));
+                liste_instruction.append(&mut instruction);
+                liste_instruction.push(AstGoto(label_end.clone()));
+                liste_instruction.push(AstInstrLabel(label_else));
+                liste_instruction.append(&mut instruction_else);
+                liste_instruction.push(AstInstrLabel(label_end));
+            }
+            debut_instr.append(&mut liste_instruction);
+        } else {
+            panic!("Erreur: pas d'instruction pour le then du if")
+        }
+    }
+}
+
+fn parse_input(token_iterator: &mut &mut TokenIterator, debutInstr: &mut Vec<AstInstruction>) {
+    token_iterator.next();
+    let retour_ligne: bool;
+    if token_iterator.est_separateur(POINTVIRGULE) {
+        token_iterator.next();
+        retour_ligne = false;
+    } else {
+        retour_ligne = true;
+    }
+    let mut prompt: Option<String> = None;
+    if token_iterator.est_chaine() {
+        if let Token::TokenChaine(chaine, _) = token_iterator.next().unwrap() {
+            prompt = Some(chaine.clone());
+        }
+    }
+    let point_interrogation: bool;
+    if token_iterator.est_separateur(POINTVIRGULE) {
+        token_iterator.next();
+        point_interrogation = true;
+    } else if token_iterator.est_separateur(VIRGULE) {
+        token_iterator.next();
+        point_interrogation = false;
+    } else {
+        point_interrogation = false;
+    }
+    let mut liste_variables: Vec<String> = Vec::new();
+    while token_iterator.est_identifiant() {
+        if let Token::TokenIdentifiant(identifiant, _) = token_iterator.next().unwrap() {
+            liste_variables.push(identifiant.clone());
+        }
+        if token_iterator.est_separateur(VIRGULE) {
+            token_iterator.next();
+        }
+    }
+    let mut liste_instruction = vec![];
+    liste_instruction.push(AstInput(
+        prompt,
+        liste_variables,
+        retour_ligne,
+        point_interrogation,
+    ));
+    debutInstr.append(&mut liste_instruction);
 }
 
 fn separateur_parametre(nom_methode: &String, mot: Token) -> bool {
