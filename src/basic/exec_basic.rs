@@ -43,8 +43,29 @@ impl fmt::Display for Valeur {
     }
 }
 
+#[derive(Debug)]
+pub struct TableSymbole {
+    variables: HashMap<String, Valeur>,
+}
+
+impl TableSymbole {
+    pub(crate) fn new() -> TableSymbole {
+        TableSymbole {
+            variables: HashMap::new(),
+        }
+    }
+
+    pub fn set_variable(&mut self, nom: String, valeur: Valeur) {
+        self.variables.insert(nom, valeur);
+    }
+
+    pub fn get_variable(&self, nom: &str) -> Option<&Valeur> {
+        self.variables.get(nom)
+    }
+}
+
 pub fn execute(programme: AstProgramme, mut sortie: &mut Sortie) {
-    let mut contexte: HashMap<String, Valeur> = HashMap::new();
+    let mut contexte = TableSymbole::new();
 
     if DEBUG_PRINT {
         println!("programme a executer: {:?}", programme);
@@ -60,7 +81,7 @@ pub fn execute(programme: AstProgramme, mut sortie: &mut Sortie) {
         if let AstAffectation(ident, expression, _) = instruction {
             let resultat = execute_expression(&expression, &mut contexte);
             let tmp = resultat.clone();
-            contexte.insert(ident.clone(), resultat);
+            contexte.set_variable(ident.clone(), resultat);
             if DEBUG_PRINT {
                 println!("affect {:?} := {:?}", ident.clone(), tmp);
             }
@@ -107,7 +128,7 @@ pub fn execute(programme: AstProgramme, mut sortie: &mut Sortie) {
 
 fn print(
     sortie: &mut Sortie,
-    mut contexte: &mut HashMap<String, Valeur>,
+    mut contexte: &mut TableSymbole,
     parametres: &Vec<AstExpression>,
     separateurs: &Vec<bool>,
 ) {
@@ -171,7 +192,7 @@ fn input(
     liste_variables: &Vec<String>,
     retour_ligne: &bool,
     question: &bool,
-    contexte: &mut HashMap<String, Valeur>,
+    contexte: &mut TableSymbole,
 ) {
     if let Some(message) = message {
         if *question {
@@ -191,13 +212,13 @@ fn input(
                 valeur = valeur.trim().to_string();
                 if valeur.is_empty() {
                     let valeur = NombreInteger(0);
-                    contexte.insert(nom_var.clone(), valeur);
+                    contexte.set_variable(nom_var.clone(), valeur);
                     break;
                 }
                 let nombre_opt = valeur.parse::<i32>();
                 if nombre_opt.is_ok() {
                     let valeur = NombreLong(nombre_opt.unwrap());
-                    contexte.insert(nom_var.clone(), valeur.clone());
+                    contexte.set_variable(nom_var.clone(), valeur.clone());
                     break;
                 } else {
                     println!("Redo from start");
@@ -227,10 +248,7 @@ fn trouve_label(label: &AstLabelEnum, liste_instructions: &Vec<AstInstruction>) 
     }
 }
 
-pub fn execute_expression(
-    expression: &AstExpression,
-    table_symbole: &mut HashMap<String, Valeur>,
-) -> Valeur {
+pub fn execute_expression(expression: &AstExpression, table_symbole: &mut TableSymbole) -> Valeur {
     let tmp = execute_expression0(expression, table_symbole);
     if DEBUG_PRINT {
         println!("res => {:?}", tmp);
@@ -238,10 +256,7 @@ pub fn execute_expression(
     tmp
 }
 
-fn execute_expression0(
-    expression: &AstExpression,
-    table_symbole: &mut HashMap<String, Valeur>,
-) -> Valeur {
+fn execute_expression0(expression: &AstExpression, table_symbole: &mut TableSymbole) -> Valeur {
     if DEBUG_PRINT {
         println!("exp={:?}", expression);
     }
@@ -254,8 +269,8 @@ fn execute_expression0(
     } else if let AstExpression::AstNombreDouble(nombre) = expression {
         NombreDouble(*nombre)
     } else if let AstExpression::AstIdentifiant(ident) = expression {
-        if table_symbole.contains_key(ident) {
-            return table_symbole.get(ident).unwrap().clone();
+        if let Some(v) = table_symbole.get_variable(ident) {
+            return v.clone();
         } else {
             panic!("Identifiant {} non déclaré", ident);
         }
@@ -285,7 +300,7 @@ fn execute_expression0(
 }
 
 fn operateur_binaire(
-    table_symbole: &mut HashMap<String, Valeur>,
+    table_symbole: &mut TableSymbole,
     operateur: &AstOperateurBinaireType,
     exp1: &Rc<AstExpression>,
     exp2: &Rc<AstExpression>,
@@ -395,7 +410,7 @@ fn operateur_binaire(
 }
 
 fn operateur_unaire(
-    table_symbole: &mut HashMap<String, Valeur>,
+    table_symbole: &mut TableSymbole,
     operateur: &AstOperateurUnaireType,
     exp1: &Rc<AstExpression>,
 ) -> Option<Valeur> {

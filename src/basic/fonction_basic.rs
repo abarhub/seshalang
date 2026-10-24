@@ -1,19 +1,18 @@
 use crate::basic::exec_basic;
-use crate::basic::exec_basic::Valeur;
 use crate::basic::exec_basic::Valeur::{
     Chaine, NombreDouble, NombreInteger, NombreLong, NombreSingle,
 };
+use crate::basic::exec_basic::{TableSymbole, Valeur};
 use crate::basic::lexer_basic::TypeMotCle;
 
-use chrono::Local;
-use std::collections::HashMap;
-use crate::basic::struct_basic::{AstExpression, AstNomMethode};
 use crate::basic::struct_basic::AstNomMethode::AstNomReserve;
+use crate::basic::struct_basic::{AstExpression, AstNomMethode};
+use chrono::Local;
 
 pub fn execute_fonction(
     nom_methode: AstNomMethode,
     liste_expressions: Vec<AstExpression>,
-    table_symbole: &mut HashMap<String, Valeur>,
+    table_symbole: &mut TableSymbole,
 ) -> Valeur {
     match nom_methode {
         AstNomReserve(mot_reserve) => match mot_reserve {
@@ -251,7 +250,7 @@ pub fn execute_fonction(
 fn verification_un_parametre(
     nom: String,
     liste_expressions: Vec<AstExpression>,
-    table_symbole: &mut HashMap<String, Valeur>,
+    table_symbole: &mut TableSymbole,
 ) -> Valeur {
     if liste_expressions.len() != 1 {
         panic!("La fonction {} attend exactement un argument", nom);
@@ -263,7 +262,7 @@ fn verification_un_parametre(
 fn appliquer_double<F: Fn(f64) -> f64>(
     f: F,
     liste_expressions: Vec<AstExpression>,
-    table_symbole: &mut HashMap<String, Valeur>,
+    table_symbole: &mut TableSymbole,
     nom: String,
 ) -> Valeur {
     match verification_un_parametre(nom.clone(), liste_expressions, table_symbole) {
@@ -275,10 +274,7 @@ fn appliquer_double<F: Fn(f64) -> f64>(
     }
 }
 
-fn calcul_instr(
-    liste_expressions: Vec<AstExpression>,
-    table_symbole: &mut HashMap<String, Valeur>,
-) -> Valeur {
+fn calcul_instr(liste_expressions: Vec<AstExpression>, table_symbole: &mut TableSymbole) -> Valeur {
     if liste_expressions.len() != 2 && liste_expressions.len() != 3 {
         panic!(
             "La fonction instr attend 2 ou 3 arguments (nb arguments: {})",
