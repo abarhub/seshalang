@@ -1,5 +1,5 @@
 use crate::basic::lexer_basic::Token::TokenNombre;
-use crate::basic::lexer_basic::TypeMotCle::{Else, End, Goto, If, Input, Then};
+use crate::basic::lexer_basic::TypeMotCle::{Else, ElseIf, End, Goto, If, Input, Then};
 use crate::basic::lexer_basic::TypeNombre::{Entier, Long, Single};
 use crate::basic::lexer_basic::TypeSeparateur::{
     DEUXPOINT, DIFF, DIVE, DIVR, EQU, EXP, FOIS, INF, INFE, MOINS, PARENTF, PARENTO, PLUS,
@@ -429,14 +429,12 @@ fn parse_instruction(
                     if token_iterator2.est_mot_cle(End) && token_iterator2.est_mot_cle_pos(If, 1) {
                         // end if
                         break;
-                    } else if token_iterator2.est_mot_cle(Else)
-                        && token_iterator2.est_mot_cle_pos(If, 1)
+                    } else if token_iterator2.est_mot_cle(ElseIf)
                     {
                         // else if
                         if !liste_instruction_else.is_empty() {
-                            panic!("else if apres un else");
+                            panic!("elseif apres un else");
                         }
-                        token_iterator2.next();
                         token_iterator2.next();
                         liste_instruction_else_if.push(vec![]);
                         liste_instruction_actif = liste_instruction_else_if.last_mut().unwrap();

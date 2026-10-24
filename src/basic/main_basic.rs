@@ -466,7 +466,7 @@ mod tests {
     fn test_parse_execute32() {
         let fichier = "if 5>3 then
                               print 1
-                              else if 5>3 then
+                              elseif 5>3 then
                               print 2
                               else
                               print 3
@@ -483,7 +483,7 @@ mod tests {
     fn test_parse_execute33() {
         let fichier = "if 5>10 then
                               print 1
-                              else if 5>3 then
+                              elseif 5>3 then
                               print 2
                               else
                               print 3
@@ -500,7 +500,7 @@ mod tests {
     fn test_parse_execute34() {
         let fichier = "if 5>10 then
                               print 1
-                              else if 5>8 then
+                              elseif 5>8 then
                               print 2
                               else
                               print 3
@@ -517,9 +517,9 @@ mod tests {
     fn test_parse_execute35() {
         let fichier = "if 5>10 then
                               print 1
-                              else if 5>7 then
+                              elseif 5>7 then
                               print 2
-                              else if 5>2 then
+                              elseif 5>2 then
                               print 3
                               else
                               print 4
