@@ -14,6 +14,8 @@ use crate::basic::struct_basic::{
 };
 use std::collections::HashMap;
 use std::fmt;
+use std::rc::Rc;
+use crate::basic::utils_basic::Sortie;
 
 const TRUE: i16 = -1;
 const FALSE: i16 = 0;
@@ -41,8 +43,7 @@ impl fmt::Display for Valeur {
     }
 }
 
-pub fn execute(programme: AstProgramme) -> Vec<String> {
-    let mut sortie: Vec<String> = Vec::new();
+pub fn execute(programme: AstProgramme,mut sortie: &mut Sortie) {
     let mut contexte: HashMap<String, Valeur> = HashMap::new();
 
     if DEBUG_PRINT {
@@ -102,11 +103,9 @@ pub fn execute(programme: AstProgramme) -> Vec<String> {
             pos_instruction += 1;
         }
     }
-
-    sortie
 }
 
-fn print(sortie: &mut Vec<String>, mut contexte: &mut HashMap<String, Valeur>, parametres: &Vec<AstExpression>, separateurs: &Vec<bool>) {
+fn print(sortie: &mut Sortie, mut contexte: &mut HashMap<String, Valeur>, parametres: &Vec<AstExpression>, separateurs: &Vec<bool>) {
     let mut i = 0;
     for expression in parametres.iter() {
         let resultat = execute_expression(&expression, &mut contexte);
@@ -115,20 +114,22 @@ fn print(sortie: &mut Vec<String>, mut contexte: &mut HashMap<String, Valeur>, p
                 println!("{:?}", resultat);
             }
             print!("{:?} ", resultat);
-            if sortie.is_empty() {
-                sortie.push(resultat.to_string());
-            } else {
-                let len = sortie.len() - 1;
-                let mut s = sortie[len].clone();
-                let s2 = resultat.to_string();
-                s += s2.as_str();
-                sortie[len] = s;
-            }
+            sortie.ajoute(resultat.to_string(),false);
+            // if sortie.is_empty() {
+            //     sortie.push(resultat.to_string());
+            // } else {
+            //     let len = sortie.len() - 1;
+            //     let mut s = sortie[len].clone();
+            //     let s2 = resultat.to_string();
+            //     s += s2.as_str();
+            //     sortie[len] = s;
+            // }
         } else {
             if DEBUG_PRINT {
                 println!("{:?}", resultat);
             }
-            sortie.push(resultat.to_string());
+            // sortie.push(resultat.to_string());
+            sortie.ajoute(resultat.to_string(),true);
         }
 
         i += 1;
@@ -229,141 +230,18 @@ fn execute_expression0(
             panic!("Identifiant {} non déclaré", ident);
         }
     } else if let AstExpression::AstOperateurBinaire(operateur, exp1, exp2) = expression {
-        let e1 = exp1.as_ref();
-        let e2 = exp2.as_ref();
-        let expr1 = execute_expression(&(e1.clone()), table_symbole);
-        let expr2 = execute_expression(&(e2.clone()), table_symbole);
-        if DEBUG_PRINT {
-            println!("op={:?}", operateur);
-        }
-        if est_nombre(expr1.clone()) {
-            let (expr1, expr2) = normalise(expr1, expr2);
-            return match (expr1, expr2) {
-                (NombreInteger(n1), NombreInteger(n2)) => match operateur {
-                    AstOperateurBinaireType::Plus => NombreInteger(n1 + n2),
-                    AstOperateurBinaireType::Moins => NombreInteger(n1 - n2),
-                    AstOperateurBinaireType::Multiplication => NombreInteger(n1 * n2),
-                    AstOperateurBinaireType::DivisionEntiere => NombreInteger(n1 / n2),
-                    AstOperateurBinaireType::DivisionReel => NombreSingle(n1 as f32 / n2 as f32),
-                    AstOperateurBinaireType::Mod => NombreInteger(n1.checked_rem(n2).unwrap_or(0)),
-                    AstOperateurBinaireType::Exponentiel => {
-                        NombreInteger(n1.checked_pow(n2 as u32).unwrap_or(0))
-                    }
-                    AstOperateurBinaireType::Egal => test(n1 == n2),
-                    AstOperateurBinaireType::Different => test(n1 != n2),
-                    AstOperateurBinaireType::Superieur => test(n1 > n2),
-                    AstOperateurBinaireType::SuperieurEgal => test(n1 >= n2),
-                    AstOperateurBinaireType::Inferieur => test(n1 < n2),
-                    AstOperateurBinaireType::InferieurEgal => test(n1 <= n2),
-                    AstOperateurBinaireType::And => NombreInteger(n1 & n2),
-                    AstOperateurBinaireType::Or => NombreInteger(n1 | n2),
-                    AstOperateurBinaireType::Xor => NombreInteger(n1 ^ n2),
-                    AstOperateurBinaireType::Imp => NombreInteger(!n1 | n2),
-                    AstOperateurBinaireType::Eqv => NombreInteger(!(n1 ^ n2)),
-                    _ => panic!("Opérateur inconnu: {:?}", operateur),
-                },
-                (NombreLong(n1), NombreLong(n2)) => match operateur {
-                    AstOperateurBinaireType::Plus => NombreLong(n1 + n2),
-                    AstOperateurBinaireType::Moins => NombreLong(n1 - n2),
-                    AstOperateurBinaireType::Multiplication => NombreLong(n1 * n2),
-                    AstOperateurBinaireType::DivisionEntiere => NombreLong(n1 / n2),
-                    AstOperateurBinaireType::DivisionReel => NombreSingle(n1 as f32 / n2 as f32),
-                    AstOperateurBinaireType::Mod => NombreLong(n1.checked_rem(n2).unwrap_or(0)),
-                    AstOperateurBinaireType::Exponentiel => {
-                        NombreLong(n1.checked_pow(n2 as u32).unwrap_or(0))
-                    }
-                    AstOperateurBinaireType::Egal => test(n1 == n2),
-                    AstOperateurBinaireType::Different => test(n1 != n2),
-                    AstOperateurBinaireType::Superieur => test(n1 > n2),
-                    AstOperateurBinaireType::SuperieurEgal => test(n1 >= n2),
-                    AstOperateurBinaireType::Inferieur => test(n1 < n2),
-                    AstOperateurBinaireType::InferieurEgal => test(n1 <= n2),
-                    AstOperateurBinaireType::And => NombreLong(n1 & n2),
-                    AstOperateurBinaireType::Or => NombreLong(n1 | n2),
-                    AstOperateurBinaireType::Xor => NombreLong(n1 ^ n2),
-                    AstOperateurBinaireType::Imp => NombreLong(!n1 | n2),
-                    AstOperateurBinaireType::Eqv => NombreLong(!(n1 ^ n2)),
-                    _ => panic!("Opérateur inconnu: {:?}", operateur),
-                },
-                (NombreSingle(n1), NombreSingle(n2)) => match operateur {
-                    AstOperateurBinaireType::Plus => NombreSingle(n1 + n2),
-                    AstOperateurBinaireType::Moins => NombreSingle(n1 - n2),
-                    AstOperateurBinaireType::Multiplication => NombreSingle(n1 * n2),
-                    AstOperateurBinaireType::DivisionEntiere => NombreLong((n1 / n2) as i32),
-                    AstOperateurBinaireType::DivisionReel => NombreSingle(n1 / n2),
-                    AstOperateurBinaireType::Exponentiel => NombreSingle(n1.powf(n2)),
-                    AstOperateurBinaireType::Egal => test(n1 == n2),
-                    AstOperateurBinaireType::Different => test(n1 != n2),
-                    AstOperateurBinaireType::Superieur => test(n1 > n2),
-                    AstOperateurBinaireType::SuperieurEgal => test(n1 >= n2),
-                    AstOperateurBinaireType::Inferieur => test(n1 < n2),
-                    AstOperateurBinaireType::InferieurEgal => test(n1 <= n2),
-                    _ => panic!("Opérateur inconnu: {:?}", operateur),
-                },
-                (NombreDouble(n1), NombreDouble(n2)) => match operateur {
-                    AstOperateurBinaireType::Plus => NombreDouble(n1 + n2),
-                    AstOperateurBinaireType::Moins => NombreDouble(n1 - n2),
-                    AstOperateurBinaireType::Multiplication => NombreDouble(n1 * n2),
-                    AstOperateurBinaireType::DivisionEntiere => NombreDouble(n1 / n2),
-                    AstOperateurBinaireType::DivisionReel => NombreDouble(n1 / n2),
-                    AstOperateurBinaireType::Exponentiel => NombreDouble(n1.powf(n2)),
-                    AstOperateurBinaireType::Egal => test(n1 == n2),
-                    AstOperateurBinaireType::Different => test(n1 != n2),
-                    AstOperateurBinaireType::Superieur => test(n1 > n2),
-                    AstOperateurBinaireType::SuperieurEgal => test(n1 >= n2),
-                    AstOperateurBinaireType::Inferieur => test(n1 < n2),
-                    AstOperateurBinaireType::InferieurEgal => test(n1 <= n2),
-                    _ => panic!("Opérateur inconnu: {:?}", operateur),
-                },
-                _ => panic!("Opérateur inconnu: {:?}", operateur),
-            };
-        } else if let Valeur::Chaine(s1) = expr1 {
-            let s2: String;
-            if let Valeur::Chaine(s02) = expr2 {
-                s2 = s02;
-            } else {
-                panic!("Expression non numérique: {:?}", expr2);
-            }
-            return match operateur {
-                AstOperateurBinaireType::Plus => Chaine(s1 + s2.as_str()),
-                _ => panic!("Opérateur inconnu: {:?}", operateur),
-            };
+        if let Some(value) = operateur_binaire(table_symbole, operateur, exp1, exp2) {
+            return value;
         } else {
-            panic!("Expression invalide: {:?}", expr1);
+            panic!("Opérateur binaire inconnu: {:?}", operateur);
         }
     } else if let AstExpression::AstChaine(chaine) = expression {
         return Chaine(chaine.clone());
     } else if let AstOperateurUnnaire(operateur, exp1) = expression {
-        let e1 = exp1.as_ref();
-        let expr1 = execute_expression(&(e1.clone()), table_symbole);
-        if est_nombre(expr1.clone()) {
-            return match expr1 {
-                NombreInteger(n) => match operateur {
-                    AstOperateurUnaireType::Plus => expr1,
-                    AstOperateurUnaireType::Moins => NombreInteger(-n),
-                    AstOperateurUnaireType::Not => NombreInteger(!n),
-                    _ => panic!("Opérateur inconnu: {:?}", operateur),
-                },
-                NombreLong(n) => match operateur {
-                    AstOperateurUnaireType::Plus => expr1,
-                    AstOperateurUnaireType::Moins => NombreLong(-n),
-                    AstOperateurUnaireType::Not => NombreLong(!n),
-                    _ => panic!("Opérateur inconnu: {:?}", operateur),
-                },
-                NombreSingle(n) => match operateur {
-                    AstOperateurUnaireType::Plus => expr1,
-                    AstOperateurUnaireType::Moins => NombreSingle(-n),
-                    _ => panic!("Opérateur inconnu: {:?}", operateur),
-                },
-                NombreDouble(n) => match operateur {
-                    AstOperateurUnaireType::Plus => expr1,
-                    AstOperateurUnaireType::Moins => NombreDouble(-n),
-                    _ => panic!("Opérateur inconnu: {:?}", operateur),
-                },
-                _ => panic!("Opérateur inconnu: {:?}", operateur),
-            };
+        if let Some(value) = operateur_unaire(table_symbole, operateur, exp1) {
+            return value;
         } else {
-            panic!("Expression invalide: {:?}", expr1);
+            panic!("Opérateur unaire inconnu: {:?}", operateur);
         }
     } else if let AstFonction(nom_methode, liste_expressions) = expression {
         return fonction_basic::execute_fonction(
@@ -373,6 +251,145 @@ fn execute_expression0(
         );
     } else {
         panic!("Expression inconnue: {:?}", expression);
+    }
+}
+
+fn operateur_binaire(table_symbole: &mut HashMap<String, Valeur>, operateur: &AstOperateurBinaireType, exp1: &Rc<AstExpression>, exp2: &Rc<AstExpression>) -> Option<Valeur> {
+    let e1 = exp1.as_ref();
+    let e2 = exp2.as_ref();
+    let expr1 = execute_expression(&(e1.clone()), table_symbole);
+    let expr2 = execute_expression(&(e2.clone()), table_symbole);
+    if DEBUG_PRINT {
+        println!("op={:?}", operateur);
+    }
+    if est_nombre(expr1.clone()) {
+        let (expr1, expr2) = normalise(expr1, expr2);
+        Some(match (expr1, expr2) {
+            (NombreInteger(n1), NombreInteger(n2)) => match operateur {
+                AstOperateurBinaireType::Plus => NombreInteger(n1 + n2),
+                AstOperateurBinaireType::Moins => NombreInteger(n1 - n2),
+                AstOperateurBinaireType::Multiplication => NombreInteger(n1 * n2),
+                AstOperateurBinaireType::DivisionEntiere => NombreInteger(n1 / n2),
+                AstOperateurBinaireType::DivisionReel => NombreSingle(n1 as f32 / n2 as f32),
+                AstOperateurBinaireType::Mod => NombreInteger(n1.checked_rem(n2).unwrap_or(0)),
+                AstOperateurBinaireType::Exponentiel => {
+                    NombreInteger(n1.checked_pow(n2 as u32).unwrap_or(0))
+                }
+                AstOperateurBinaireType::Egal => test(n1 == n2),
+                AstOperateurBinaireType::Different => test(n1 != n2),
+                AstOperateurBinaireType::Superieur => test(n1 > n2),
+                AstOperateurBinaireType::SuperieurEgal => test(n1 >= n2),
+                AstOperateurBinaireType::Inferieur => test(n1 < n2),
+                AstOperateurBinaireType::InferieurEgal => test(n1 <= n2),
+                AstOperateurBinaireType::And => NombreInteger(n1 & n2),
+                AstOperateurBinaireType::Or => NombreInteger(n1 | n2),
+                AstOperateurBinaireType::Xor => NombreInteger(n1 ^ n2),
+                AstOperateurBinaireType::Imp => NombreInteger(!n1 | n2),
+                AstOperateurBinaireType::Eqv => NombreInteger(!(n1 ^ n2)),
+                _ => panic!("Opérateur inconnu: {:?}", operateur),
+            },
+            (NombreLong(n1), NombreLong(n2)) => match operateur {
+                AstOperateurBinaireType::Plus => NombreLong(n1 + n2),
+                AstOperateurBinaireType::Moins => NombreLong(n1 - n2),
+                AstOperateurBinaireType::Multiplication => NombreLong(n1 * n2),
+                AstOperateurBinaireType::DivisionEntiere => NombreLong(n1 / n2),
+                AstOperateurBinaireType::DivisionReel => NombreSingle(n1 as f32 / n2 as f32),
+                AstOperateurBinaireType::Mod => NombreLong(n1.checked_rem(n2).unwrap_or(0)),
+                AstOperateurBinaireType::Exponentiel => {
+                    NombreLong(n1.checked_pow(n2 as u32).unwrap_or(0))
+                }
+                AstOperateurBinaireType::Egal => test(n1 == n2),
+                AstOperateurBinaireType::Different => test(n1 != n2),
+                AstOperateurBinaireType::Superieur => test(n1 > n2),
+                AstOperateurBinaireType::SuperieurEgal => test(n1 >= n2),
+                AstOperateurBinaireType::Inferieur => test(n1 < n2),
+                AstOperateurBinaireType::InferieurEgal => test(n1 <= n2),
+                AstOperateurBinaireType::And => NombreLong(n1 & n2),
+                AstOperateurBinaireType::Or => NombreLong(n1 | n2),
+                AstOperateurBinaireType::Xor => NombreLong(n1 ^ n2),
+                AstOperateurBinaireType::Imp => NombreLong(!n1 | n2),
+                AstOperateurBinaireType::Eqv => NombreLong(!(n1 ^ n2)),
+                _ => panic!("Opérateur inconnu: {:?}", operateur),
+            },
+            (NombreSingle(n1), NombreSingle(n2)) => match operateur {
+                AstOperateurBinaireType::Plus => NombreSingle(n1 + n2),
+                AstOperateurBinaireType::Moins => NombreSingle(n1 - n2),
+                AstOperateurBinaireType::Multiplication => NombreSingle(n1 * n2),
+                AstOperateurBinaireType::DivisionEntiere => NombreLong((n1 / n2) as i32),
+                AstOperateurBinaireType::DivisionReel => NombreSingle(n1 / n2),
+                AstOperateurBinaireType::Exponentiel => NombreSingle(n1.powf(n2)),
+                AstOperateurBinaireType::Egal => test(n1 == n2),
+                AstOperateurBinaireType::Different => test(n1 != n2),
+                AstOperateurBinaireType::Superieur => test(n1 > n2),
+                AstOperateurBinaireType::SuperieurEgal => test(n1 >= n2),
+                AstOperateurBinaireType::Inferieur => test(n1 < n2),
+                AstOperateurBinaireType::InferieurEgal => test(n1 <= n2),
+                _ => panic!("Opérateur inconnu: {:?}", operateur),
+            },
+            (NombreDouble(n1), NombreDouble(n2)) => match operateur {
+                AstOperateurBinaireType::Plus => NombreDouble(n1 + n2),
+                AstOperateurBinaireType::Moins => NombreDouble(n1 - n2),
+                AstOperateurBinaireType::Multiplication => NombreDouble(n1 * n2),
+                AstOperateurBinaireType::DivisionEntiere => NombreDouble(n1 / n2),
+                AstOperateurBinaireType::DivisionReel => NombreDouble(n1 / n2),
+                AstOperateurBinaireType::Exponentiel => NombreDouble(n1.powf(n2)),
+                AstOperateurBinaireType::Egal => test(n1 == n2),
+                AstOperateurBinaireType::Different => test(n1 != n2),
+                AstOperateurBinaireType::Superieur => test(n1 > n2),
+                AstOperateurBinaireType::SuperieurEgal => test(n1 >= n2),
+                AstOperateurBinaireType::Inferieur => test(n1 < n2),
+                AstOperateurBinaireType::InferieurEgal => test(n1 <= n2),
+                _ => panic!("Opérateur inconnu: {:?}", operateur),
+            },
+            _ => panic!("Opérateur inconnu: {:?}", operateur),
+        })
+    } else if let Chaine(s1) = expr1 {
+        let s2: String;
+        if let Chaine(s02) = expr2 {
+            s2 = s02;
+        } else {
+            panic!("Expression non numérique: {:?}", expr2);
+        }
+        return Some(match operateur {
+            AstOperateurBinaireType::Plus => Chaine(s1 + s2.as_str()),
+            _ => panic!("Opérateur inconnu: {:?}", operateur),
+        });
+    } else {
+        panic!("Expression invalide: {:?}", expr1);
+    }
+}
+
+fn operateur_unaire(table_symbole: &mut HashMap<String, Valeur>, operateur: &AstOperateurUnaireType, exp1: &Rc<AstExpression>) -> Option<Valeur> {
+    let e1 = exp1.as_ref();
+    let expr1 = execute_expression(&(e1.clone()), table_symbole);
+    if est_nombre(expr1.clone()) {
+        Some(match expr1 {
+            NombreInteger(n) => match operateur {
+                AstOperateurUnaireType::Plus => expr1,
+                AstOperateurUnaireType::Moins => NombreInteger(-n),
+                AstOperateurUnaireType::Not => NombreInteger(!n),
+                _ => panic!("Opérateur inconnu: {:?}", operateur),
+            },
+            NombreLong(n) => match operateur {
+                AstOperateurUnaireType::Plus => expr1,
+                AstOperateurUnaireType::Moins => NombreLong(-n),
+                AstOperateurUnaireType::Not => NombreLong(!n),
+                _ => panic!("Opérateur inconnu: {:?}", operateur),
+            },
+            NombreSingle(n) => match operateur {
+                AstOperateurUnaireType::Plus => expr1,
+                AstOperateurUnaireType::Moins => NombreSingle(-n),
+                _ => panic!("Opérateur inconnu: {:?}", operateur),
+            },
+            NombreDouble(n) => match operateur {
+                AstOperateurUnaireType::Plus => expr1,
+                AstOperateurUnaireType::Moins => NombreDouble(-n),
+                _ => panic!("Opérateur inconnu: {:?}", operateur),
+            },
+            _ => panic!("Opérateur inconnu: {:?}", operateur),
+        })
+    } else {
+        panic!("Expression invalide: {:?}", expr1);
     }
 }
 

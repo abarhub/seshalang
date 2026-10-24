@@ -1,5 +1,6 @@
 use crate::basic::exec_basic::execute;
 use crate::basic::parsing_basic::parse_basic;
+use crate::basic::utils_basic::Sortie;
 use std::fs;
 
 pub fn parse_basic_file(fichier: String) -> std::io::Result<()> {
@@ -7,7 +8,9 @@ pub fn parse_basic_file(fichier: String) -> std::io::Result<()> {
 
     let programme = parse_basic(contenu)?;
 
-    execute(programme);
+    let mut sortie = Sortie::new(true);
+
+    execute(programme, &mut sortie);
     Ok(())
 }
 
@@ -15,6 +18,7 @@ pub fn parse_basic_file(fichier: String) -> std::io::Result<()> {
 mod tests {
     use crate::basic::exec_basic::execute;
     use crate::basic::parsing_basic::parse_basic;
+    use crate::basic::utils_basic::Sortie;
 
     #[test]
     fn test_parse_execute() {
@@ -23,8 +27,7 @@ mod tests {
                                 print(x)
                                 print(y)"
             .to_string();
-        let programme = parse_basic(fichier).unwrap();
-        let sortie = execute(programme);
+        let sortie = exec(fichier);
         assert_eq!(sortie.len(), 2);
         assert_eq!(sortie[0], "5");
         assert_eq!(sortie[1], "12");
@@ -33,8 +36,7 @@ mod tests {
     #[test]
     fn test_parse_execute2() {
         let fichier = "print 10".to_string();
-        let programme = parse_basic(fichier).unwrap();
-        let sortie = execute(programme);
+        let sortie = exec(fichier);
         assert_eq!(sortie.len(), 1);
         assert_eq!(sortie[0], "10");
     }
@@ -42,8 +44,7 @@ mod tests {
     #[test]
     fn test_parse_execute3() {
         let fichier = "print ((15))".to_string();
-        let programme = parse_basic(fichier).unwrap();
-        let sortie = execute(programme);
+        let sortie = exec(fichier);
         assert_eq!(sortie.len(), 1);
         assert_eq!(sortie[0], "15");
     }
@@ -51,8 +52,7 @@ mod tests {
     #[test]
     fn test_parse_execute4() {
         let fichier = "print 8, 20".to_string();
-        let programme = parse_basic(fichier).unwrap();
-        let sortie = execute(programme);
+        let sortie = exec(fichier);
         assert_eq!(sortie.len(), 2);
         assert_eq!(sortie[0], "8");
         assert_eq!(sortie[1], "20");
@@ -61,18 +61,15 @@ mod tests {
     #[test]
     fn test_parse_execute5() {
         let fichier = "print 10; 30".to_string();
-        let programme = parse_basic(fichier).unwrap();
-        let sortie = execute(programme);
-        assert_eq!(sortie.len(), 2);
-        assert_eq!(sortie[0], "10");
-        assert_eq!(sortie[1], "30");
+        let sortie = exec(fichier);
+        assert_eq!(sortie.len(), 1);
+        assert_eq!(sortie[0], "1030");
     }
 
     #[test]
     fn test_parse_execute6() {
         let fichier = "print \"abc\"".to_string();
-        let programme = parse_basic(fichier).unwrap();
-        let sortie = execute(programme);
+        let sortie = exec(fichier);
         assert_eq!(sortie.len(), 1);
         assert_eq!(sortie[0], "abc");
     }
@@ -82,8 +79,7 @@ mod tests {
         let fichier = "x=\"XYZ t1\"
                                 print x"
             .to_string();
-        let programme = parse_basic(fichier).unwrap();
-        let sortie = execute(programme);
+        let sortie = exec(fichier);
         assert_eq!(sortie.len(), 1);
         assert_eq!(sortie[0], "XYZ t1");
     }
@@ -93,8 +89,7 @@ mod tests {
         let fichier = "x=\"ABC\" + \"DEF\"
                                 print x"
             .to_string();
-        let programme = parse_basic(fichier).unwrap();
-        let sortie = execute(programme);
+        let sortie = exec(fichier);
         assert_eq!(sortie.len(), 1);
         assert_eq!(sortie[0], "ABCDEF");
     }
@@ -104,8 +99,7 @@ mod tests {
         let fichier = "x=2*3+6*7
                                 print x"
             .to_string();
-        let programme = parse_basic(fichier).unwrap();
-        let sortie = execute(programme);
+        let sortie = exec(fichier);
         assert_eq!(sortie.len(), 1);
         assert_eq!(sortie[0], "48");
     }
@@ -117,8 +111,7 @@ mod tests {
                               print 6+3
                               print 6-3"
             .to_string();
-        let programme = parse_basic(fichier).unwrap();
-        let sortie = execute(programme);
+        let sortie = exec(fichier);
         assert_eq!(sortie.len(), 4);
         assert_eq!(sortie[0], "2");
         assert_eq!(sortie[1], "18");
@@ -133,8 +126,7 @@ mod tests {
                               print 6.1+3
                               print 6.1-3"
             .to_string();
-        let programme = parse_basic(fichier).unwrap();
-        let sortie = execute(programme);
+        let sortie = exec(fichier);
         assert_eq!(sortie.len(), 4);
         assert_eq!(sortie[0], "2");
         assert_eq!(sortie[1], "18.3");
@@ -156,8 +148,7 @@ mod tests {
                               print 7 MOD 3
                               print 2^3"
             .to_string();
-        let programme = parse_basic(fichier).unwrap();
-        let sortie = execute(programme);
+        let sortie = exec(fichier);
         assert_eq!(sortie.len(), 11);
         assert_eq!(sortie[0], "-1");
         assert_eq!(sortie[1], "0");
@@ -175,8 +166,7 @@ mod tests {
     #[test]
     fn test_parse_execute13() {
         let fichier = "print 7  MOD 3".to_string();
-        let programme = parse_basic(fichier).unwrap();
-        let sortie = execute(programme);
+        let sortie = exec(fichier);
         assert_eq!(sortie.len(), 1);
         assert_eq!(sortie[0], "1");
     }
@@ -202,8 +192,7 @@ mod tests {
                               print +7
                               print NOT (5>3)"
             .to_string();
-        let programme = parse_basic(fichier).unwrap();
-        let sortie = execute(programme);
+        let sortie = exec(fichier);
         assert_eq!(sortie.len(), 18);
         assert_eq!(sortie[0], "0"); // AND
         assert_eq!(sortie[1], "-1");
@@ -234,8 +223,7 @@ mod tests {
                               print f EQV t
                               print f EQV f"
             .to_string();
-        let programme = parse_basic(fichier).unwrap();
-        let sortie = execute(programme);
+        let sortie = exec(fichier);
         assert_eq!(sortie.len(), 4);
         assert_eq!(sortie[0], "0"); //EQ
         assert_eq!(sortie[1], "-1");
@@ -246,8 +234,7 @@ mod tests {
     #[test]
     fn test_parse_execute16() {
         let fichier = "print 3>2 EQV 0".to_string();
-        let programme = parse_basic(fichier).unwrap();
-        let sortie = execute(programme);
+        let sortie = exec(fichier);
         assert_eq!(sortie.len(), 1);
         assert_eq!(sortie[0], "0"); //EQ
     }
@@ -257,8 +244,7 @@ mod tests {
         let fichier = "print abs(-10)
                               print abs(-15.10)"
             .to_string();
-        let programme = parse_basic(fichier).unwrap();
-        let sortie = execute(programme);
+        let sortie = exec(fichier);
         assert_eq!(sortie.len(), 2);
         assert_eq!(sortie[0], "10");
         assert_eq!(sortie[1], "15.1");
@@ -269,8 +255,7 @@ mod tests {
         let fichier = "print asc(\"A\")
                               print chr$(66)"
             .to_string();
-        let programme = parse_basic(fichier).unwrap();
-        let sortie = execute(programme);
+        let sortie = exec(fichier);
         assert_eq!(sortie.len(), 2);
         assert_eq!(sortie[0], "65");
         assert_eq!(sortie[1], "B");
@@ -287,8 +272,7 @@ mod tests {
                               print cint(4.5)
                               print clng(8.5)"
             .to_string();
-        let programme = parse_basic(fichier).unwrap();
-        let sortie = execute(programme);
+        let sortie = exec(fichier);
         assert_eq!(sortie.len(), 8);
         assert_eq!(sortie[0], "0");
         assert_eq!(sortie[1], "1");
@@ -311,8 +295,7 @@ mod tests {
                               print cvs(\"4.5\")
                               print cvd(\"8.5\")"
             .to_string();
-        let programme = parse_basic(fichier).unwrap();
-        let sortie = execute(programme);
+        let sortie = exec(fichier);
         assert_eq!(sortie.len(), 8);
         assert_eq!(sortie[0], "5");
         assert_eq!(sortie[1], "10");
@@ -337,8 +320,7 @@ mod tests {
                               print hex$(20)
                               print oct$(20)"
             .to_string();
-        let programme = parse_basic(fichier).unwrap();
-        let sortie = execute(programme);
+        let sortie = exec(fichier);
         assert_eq!(sortie.len(), 10);
         assert_eq!(sortie[0], "5"); // fix
         assert_eq!(sortie[1], "5");
@@ -359,8 +341,7 @@ mod tests {
                               print 2
                               label1: print 3"
             .to_string();
-        let programme = parse_basic(fichier).unwrap();
-        let sortie = execute(programme);
+        let sortie = exec(fichier);
         assert_eq!(sortie.len(), 2);
         assert_eq!(sortie[0], "1");
         assert_eq!(sortie[1], "3");
@@ -371,8 +352,7 @@ mod tests {
         let fichier = "if 5>3 then print 1
                               print 2"
             .to_string();
-        let programme = parse_basic(fichier).unwrap();
-        let sortie = execute(programme);
+        let sortie = exec(fichier);
         assert_eq!(sortie.len(), 2);
         assert_eq!(sortie[0], "1");
         assert_eq!(sortie[1], "2");
@@ -383,8 +363,7 @@ mod tests {
         let fichier = "if 5>8 then print 1
                               print 2"
             .to_string();
-        let programme = parse_basic(fichier).unwrap();
-        let sortie = execute(programme);
+        let sortie = exec(fichier);
         assert_eq!(sortie.len(), 1);
         assert_eq!(sortie[0], "2");
     }
@@ -396,8 +375,7 @@ mod tests {
                               end if
                               print 2"
             .to_string();
-        let programme = parse_basic(fichier).unwrap();
-        let sortie = execute(programme);
+        let sortie = exec(fichier);
         assert_eq!(sortie.len(), 2);
         assert_eq!(sortie[0], "1");
         assert_eq!(sortie[1], "2");
@@ -410,8 +388,7 @@ mod tests {
                               end if
                               print 2"
             .to_string();
-        let programme = parse_basic(fichier).unwrap();
-        let sortie = execute(programme);
+        let sortie = exec(fichier);
         assert_eq!(sortie.len(), 1);
         assert_eq!(sortie[0], "2");
     }
@@ -425,8 +402,7 @@ mod tests {
                               end if
                               print 2"
             .to_string();
-        let programme = parse_basic(fichier).unwrap();
-        let sortie = execute(programme);
+        let sortie = exec(fichier);
         assert_eq!(sortie.len(), 4);
         assert_eq!(sortie[0], "1");
         assert_eq!(sortie[1], "10");
@@ -439,8 +415,7 @@ mod tests {
         let fichier = "if 5>3 then print 1 else print 2
                               print 3"
             .to_string();
-        let programme = parse_basic(fichier).unwrap();
-        let sortie = execute(programme);
+        let sortie = exec(fichier);
         assert_eq!(sortie.len(), 2);
         assert_eq!(sortie[0], "1");
         assert_eq!(sortie[1], "3");
@@ -451,8 +426,7 @@ mod tests {
         let fichier = "if 5>8 then print 1 else print 2
                               print 3"
             .to_string();
-        let programme = parse_basic(fichier).unwrap();
-        let sortie = execute(programme);
+        let sortie = exec(fichier);
         assert_eq!(sortie.len(), 2);
         assert_eq!(sortie[0], "2");
         assert_eq!(sortie[1], "3");
@@ -467,8 +441,7 @@ mod tests {
                               end if
                               print 3"
             .to_string();
-        let programme = parse_basic(fichier).unwrap();
-        let sortie = execute(programme);
+        let sortie = exec(fichier);
         assert_eq!(sortie.len(), 2);
         assert_eq!(sortie[0], "1");
         assert_eq!(sortie[1], "3");
@@ -483,8 +456,7 @@ mod tests {
                               end if
                               print 3"
             .to_string();
-        let programme = parse_basic(fichier).unwrap();
-        let sortie = execute(programme);
+        let sortie = exec(fichier);
         assert_eq!(sortie.len(), 2);
         assert_eq!(sortie[0], "2");
         assert_eq!(sortie[1], "3");
@@ -501,8 +473,7 @@ mod tests {
                               end if
                               print 4"
             .to_string();
-        let programme = parse_basic(fichier).unwrap();
-        let sortie = execute(programme);
+        let sortie = exec(fichier);
         assert_eq!(sortie.len(), 2);
         assert_eq!(sortie[0], "1");
         assert_eq!(sortie[1], "4");
@@ -519,8 +490,7 @@ mod tests {
                               end if
                               print 4"
             .to_string();
-        let programme = parse_basic(fichier).unwrap();
-        let sortie = execute(programme);
+        let sortie = exec(fichier);
         assert_eq!(sortie.len(), 2);
         assert_eq!(sortie[0], "2");
         assert_eq!(sortie[1], "4");
@@ -537,8 +507,7 @@ mod tests {
                               end if
                               print 4"
             .to_string();
-        let programme = parse_basic(fichier).unwrap();
-        let sortie = execute(programme);
+        let sortie = exec(fichier);
         assert_eq!(sortie.len(), 2);
         assert_eq!(sortie[0], "3");
         assert_eq!(sortie[1], "4");
@@ -557,10 +526,16 @@ mod tests {
                               end if
                               print 5"
             .to_string();
-        let programme = parse_basic(fichier).unwrap();
-        let sortie = execute(programme);
+        let sortie = exec(fichier);
         assert_eq!(sortie.len(), 2);
         assert_eq!(sortie[0], "3");
         assert_eq!(sortie[1], "5");
+    }
+
+    fn exec(fichier:String)->Vec<String>{
+        let mut sortie = Sortie::new(false);
+        let programme = parse_basic(fichier).unwrap();
+        execute(programme, &mut sortie);
+        sortie.sortie()
     }
 }
