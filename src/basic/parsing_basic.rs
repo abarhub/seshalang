@@ -286,14 +286,16 @@ fn parse_instruction(
     liste_instructions_iter: &mut Iter<Vec<Token>>,
     compteur: &mut Compteur,
 ) -> Vec<AstInstruction> {
+    let mut debutInstr = vec![];
+
+    if label.is_some() {
+        let instruction = AstInstrLabel(label.unwrap());
+        debutInstr.push(instruction);
+    }
     if token_iterator.len() == 0 {
-        if label.is_some() {
-            let instruction = AstInstrLabel(label);
-            vec![instruction]
-        } else {
-            vec![]
-        }
-    } else if token_iterator.est_identifiant() && token_iterator.est_separateur_pos(EQU, 1) {
+        return debutInstr;
+    }
+    if token_iterator.est_identifiant() && token_iterator.est_separateur_pos(EQU, 1) {
         // affectation
         if let Token::TokenIdentifiant(ident, _) = token_iterator.next().unwrap() {
             if DEBUG_PRINT {
@@ -301,8 +303,9 @@ fn parse_instruction(
             }
             token_iterator.next();
             let exp = parsing_expression(&mut token_iterator);
-            let instruction = AstAffectation(ident.clone(), exp.0, label);
-            vec![instruction]
+            let instruction = AstAffectation(ident.clone(), exp.0);
+            debutInstr.push(instruction);
+            debutInstr
         } else {
             panic!("token {:?} n'est pas un identifiant", token_iterator.get());
         }
@@ -339,14 +342,11 @@ fn parse_instruction(
                 }
             }
 
-            let instruction = AstInstruction::AstAppelMethode(
-                ident,
-                liste_expressions,
-                separateur_virgule_liste,
-                label,
-            );
+            let instruction =
+                AstInstruction::AstAppelMethode(ident, liste_expressions, separateur_virgule_liste);
 
-            vec![instruction]
+            debutInstr.push(instruction);
+            debutInstr
         } else {
             panic!("token {:?} n'est pas un identifiant", token_iterator.get());
         }
@@ -383,10 +383,10 @@ fn parse_instruction(
                 "print".to_string(),
                 liste_expressions,
                 separateur_virgule_liste,
-                label,
             );
 
-            vec![instruction]
+            debutInstr.push(instruction);
+            debutInstr
         } else {
             panic!("token {:?} n'est pas un identifiant", token_iterator.get());
         }
@@ -394,8 +394,9 @@ fn parse_instruction(
         token_iterator.next();
         let identifiant = token_iterator.next().unwrap();
         if let Token::TokenIdentifiant(s, _) = identifiant {
-            let instruction = AstGoto(label, AstLabel(s.to_string()));
-            vec![instruction]
+            let instruction = AstGoto(AstLabel(s.to_string()));
+            debutInstr.push(instruction);
+            debutInstr
         } else {
             panic!("token {:?} n'est pas un identifiant", identifiant);
         }
@@ -429,8 +430,7 @@ fn parse_instruction(
                     if token_iterator2.est_mot_cle(End) && token_iterator2.est_mot_cle_pos(If, 1) {
                         // end if
                         break;
-                    } else if token_iterator2.est_mot_cle(ElseIf)
-                    {
+                    } else if token_iterator2.est_mot_cle(ElseIf) {
                         // else if
                         if !liste_instruction_else.is_empty() {
                             panic!("elseif apres un else");
@@ -455,11 +455,10 @@ fn parse_instruction(
                             AstLabel(format!("_if_else_if{}_{}", no, n).to_string());
                         let label_else_if_suite =
                             AstLabel(format!("_if_else_if_suite{}_{}", no, n).to_string());
-                        liste_instruction_actif
-                            .push(AstInstrLabel(Some(label_else_if_debut2.clone())));
-                        liste_instruction_actif.push(AstIf(exp.0, None, label_else_if.clone()));
-                        liste_instruction_actif.push(AstGoto(None, label_else_if_suite.clone()));
-                        liste_instruction_actif.push(AstInstrLabel(Some(label_else_if)));
+                        liste_instruction_actif.push(AstInstrLabel(label_else_if_debut2.clone()));
+                        liste_instruction_actif.push(AstIf(exp.0, label_else_if.clone()));
+                        liste_instruction_actif.push(AstGoto(label_else_if_suite.clone()));
+                        liste_instruction_actif.push(AstInstrLabel(label_else_if));
                         liste_label_else_if.push(label_else_if_suite.clone());
                         label_else_if_debut2 = label_else_if_suite;
                     } else if token_iterator2.est_mot_cle(Else) {
@@ -487,36 +486,37 @@ fn parse_instruction(
                 label_suite_if = &label_else_if_debut;
             }
             // if
-            liste_instruction.push(AstIf(exp.0, label, label_if.clone()));
-            liste_instruction.push(AstGoto(None, label_suite_if.clone()));
-            liste_instruction.push(AstInstrLabel(Some(label_if)));
+            liste_instruction.push(AstIf(exp.0, label_if.clone()));
+            liste_instruction.push(AstGoto(label_suite_if.clone()));
+            liste_instruction.push(AstInstrLabel(label_if));
             liste_instruction.append(&mut liste_instruction_if);
-            liste_instruction.push(AstGoto(None, label_end.clone()));
+            liste_instruction.push(AstGoto(label_end.clone()));
 
             // else if
             if !liste_instruction_else_if.is_empty() {
                 for mut liste_instr in liste_instruction_else_if {
                     liste_instruction.append(&mut liste_instr);
-                    liste_instruction.push(AstGoto(None, label_end.clone()));
+                    liste_instruction.push(AstGoto(label_end.clone()));
                 }
 
                 let label_fin_else_if = liste_label_else_if
                     .get(liste_label_else_if.len() - 1)
                     .unwrap()
                     .clone();
-                liste_instruction.push(AstInstrLabel(Some(label_fin_else_if)));
+                liste_instruction.push(AstInstrLabel(label_fin_else_if));
             }
 
             // else
-            liste_instruction.push(AstInstrLabel(Some(label_else)));
+            liste_instruction.push(AstInstrLabel(label_else));
             liste_instruction.append(&mut liste_instruction_else);
-            liste_instruction.push(AstInstrLabel(Some(label_end)));
+            liste_instruction.push(AstInstrLabel(label_end));
 
             for tmp in liste_instruction.clone() {
                 println!("{:?}", tmp);
             }
 
-            liste_instruction
+            debutInstr.append(&mut liste_instruction);
+            debutInstr
         } else {
             let no = compteur.next_if();
             let label_if = AstLabel(format!("_if_then{}", no).to_string());
@@ -540,20 +540,21 @@ fn parse_instruction(
             if !instruction.is_empty() || !instruction_else.is_empty() {
                 let mut liste_instruction = vec![];
                 if instruction_else.is_empty() {
-                    liste_instruction.push(AstIf(exp.0, label, label_if));
-                    liste_instruction.push(AstGoto(None, label_end.clone()));
+                    liste_instruction.push(AstIf(exp.0, label_if));
+                    liste_instruction.push(AstGoto(label_end.clone()));
                     liste_instruction.append(&mut instruction);
-                    liste_instruction.push(AstInstrLabel(Some(label_end)));
+                    liste_instruction.push(AstInstrLabel(label_end));
                 } else {
-                    liste_instruction.push(AstIf(exp.0, label, label_if));
-                    liste_instruction.push(AstGoto(None, label_else.clone()));
+                    liste_instruction.push(AstIf(exp.0, label_if));
+                    liste_instruction.push(AstGoto(label_else.clone()));
                     liste_instruction.append(&mut instruction);
-                    liste_instruction.push(AstGoto(None, label_end.clone()));
-                    liste_instruction.push(AstInstrLabel(Some(label_else)));
+                    liste_instruction.push(AstGoto(label_end.clone()));
+                    liste_instruction.push(AstInstrLabel(label_else));
                     liste_instruction.append(&mut instruction_else);
-                    liste_instruction.push(AstInstrLabel(Some(label_end)));
+                    liste_instruction.push(AstInstrLabel(label_end));
                 }
-                liste_instruction
+                debutInstr.append(&mut liste_instruction);
+                debutInstr
             } else {
                 panic!("Erreur: pas d'instruction pour le then du if")
             }
@@ -594,13 +595,13 @@ fn parse_instruction(
         }
         let mut liste_instruction = vec![];
         liste_instruction.push(AstInput(
-            label,
             prompt,
             liste_variables,
             retour_ligne,
             point_interrogation,
         ));
-        liste_instruction
+        debutInstr.append(&mut liste_instruction);
+        debutInstr
     } else {
         panic!("instruction inconnue {:?}", token_iterator.get());
     }
@@ -1002,9 +1003,9 @@ fn calcul_type_operation_binaire(type_operation: TypeSeparateur) -> AstOperateur
 
 #[cfg(test)]
 mod tests {
-    use crate::basic::struct_basic::AstInstruction::AstAppelMethode;
     // Note this useful idiom: importing names from outer (for mod tests) scope.
     use super::*;
+    use crate::basic::struct_basic::AstInstruction::AstAppelMethode;
 
     #[test]
     fn test_parser1() {
@@ -1017,7 +1018,6 @@ mod tests {
             vec![AstAffectation(
                 "x".to_string(),
                 AstExpression::AstNombreInteger(1),
-                None,
             )]
         );
     }
@@ -1037,7 +1037,6 @@ mod tests {
                     Rc::new(AstExpression::AstNombreInteger(1)),
                     Rc::new(AstExpression::AstNombreInteger(2))
                 ),
-                None,
             )]
         );
     }
@@ -1054,7 +1053,6 @@ mod tests {
                 "print".to_string(),
                 vec![AstExpression::AstNombreInteger(1)],
                 vec![],
-                None,
             )]
         );
     }
@@ -1075,7 +1073,6 @@ mod tests {
                     Rc::new(AstExpression::AstNombreInteger(2))
                 )],
                 vec![],
-                None,
             )]
         );
     }
@@ -1100,7 +1097,6 @@ mod tests {
                     Rc::new(AstExpression::AstNombreInteger(0))
                 )],
                 vec![],
-                None,
             )]
         );
     }
@@ -1113,12 +1109,14 @@ mod tests {
 
         assert_eq!(
             ast.liste_instructions,
-            vec![AstAppelMethode(
-                "print".to_string(),
-                vec![AstExpression::AstNombreInteger(1)],
-                vec![],
-                Some(AstLabel("label1".to_string())),
-            )]
+            vec![
+                AstInstrLabel(AstLabel("label1".to_string())),
+                AstAppelMethode(
+                    "print".to_string(),
+                    vec![AstExpression::AstNombreInteger(1)],
+                    vec![],
+                )
+            ]
         );
     }
 
@@ -1130,12 +1128,14 @@ mod tests {
 
         assert_eq!(
             ast.liste_instructions,
-            vec![AstAppelMethode(
-                "print".to_string(),
-                vec![AstExpression::AstNombreInteger(1)],
-                vec![],
-                Some(AstLabel("123".to_string())),
-            )]
+            vec![
+                AstInstrLabel(AstLabel("123".to_string())),
+                AstAppelMethode(
+                    "print".to_string(),
+                    vec![AstExpression::AstNombreInteger(1)],
+                    vec![],
+                )
+            ]
         );
     }
 
@@ -1147,7 +1147,7 @@ mod tests {
 
         assert_eq!(
             ast.liste_instructions,
-            vec![AstInstrLabel(Some(AstLabel("label5".to_string())),)]
+            vec![AstInstrLabel(AstLabel("label5".to_string()),)]
         );
     }
 
@@ -1159,7 +1159,7 @@ mod tests {
 
         assert_eq!(
             ast.liste_instructions,
-            vec![AstInstrLabel(Some(AstLabel("4".to_string())),)]
+            vec![AstInstrLabel(AstLabel("4".to_string()),)]
         );
     }
 
@@ -1171,7 +1171,7 @@ mod tests {
 
         assert_eq!(
             ast.liste_instructions,
-            vec![AstInput(None, None, vec!["abc".to_string()], true, false)]
+            vec![AstInput(None, vec!["abc".to_string()], true, false)]
         );
     }
 
@@ -1184,7 +1184,6 @@ mod tests {
         assert_eq!(
             ast.liste_instructions,
             vec![AstInput(
-                None,
                 Some("aaa".to_string()),
                 vec!["xxx".to_string()],
                 true,
@@ -1202,7 +1201,6 @@ mod tests {
         assert_eq!(
             ast.liste_instructions,
             vec![AstInput(
-                None,
                 Some("gg".to_string()),
                 vec!["t".to_string()],
                 false,
@@ -1220,7 +1218,6 @@ mod tests {
         assert_eq!(
             ast.liste_instructions,
             vec![AstInput(
-                None,
                 Some("f".to_string()),
                 vec!["a".to_string(), "b".to_string(), "c".to_string()],
                 true,

@@ -16,31 +16,12 @@ pub enum AstLabelEnum {
 
 #[derive(Debug, PartialEq, Clone)]
 pub enum AstInstruction {
-    AstAffectation(String, AstExpression, Option<AstLabelEnum>),
-    AstAppelMethode(String, Vec<AstExpression>, Vec<bool>, Option<AstLabelEnum>),
-    AstInstrLabel(Option<AstLabelEnum>),
-    AstIf(AstExpression, Option<AstLabelEnum>, AstLabelEnum),
-    AstGoto(Option<AstLabelEnum>, AstLabelEnum),
-    AstInput(
-        Option<AstLabelEnum>,
-        Option<String>,
-        Vec<String>,
-        bool,
-        bool,
-    ),
-}
-
-impl AstInstruction {
-    pub(crate) fn getLabel(&self) -> Option<AstLabelEnum> {
-        match self {
-            AstInstruction::AstInstrLabel(label) => label.clone(),
-            AstAffectation(_, _, label) => label.clone(),
-            AstAppelMethode(_, _, _, label) => label.clone(),
-            AstIf(_, label, _) => label.clone(),
-            AstGoto(label, _) => label.clone(),
-            AstInput(label, _, _, _, _) => label.clone(),
-        }
-    }
+    AstAffectation(String, AstExpression),
+    AstAppelMethode(String, Vec<AstExpression>, Vec<bool>),
+    AstInstrLabel(AstLabelEnum),
+    AstIf(AstExpression, AstLabelEnum),
+    AstGoto(AstLabelEnum),
+    AstInput(Option<String>, Vec<String>, bool, bool),
 }
 
 #[derive(Debug, Clone, PartialEq)]

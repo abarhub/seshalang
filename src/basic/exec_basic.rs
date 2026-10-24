@@ -2,6 +2,7 @@ use crate::basic::exec_basic::Valeur::{
     Chaine, NombreDouble, NombreInteger, NombreLong, NombreSingle,
 };
 use crate::basic::fonction_basic;
+use std::cmp::PartialEq;
 
 use crate::basic::struct_basic::AstExpression::{AstFonction, AstOperateurUnnaire};
 use crate::basic::struct_basic::AstInstruction::{
@@ -78,24 +79,24 @@ pub fn execute(programme: AstProgramme, mut sortie: &mut Sortie) {
 
         let mut pos_change = false;
 
-        if let AstAffectation(ident, expression, _) = instruction {
+        if let AstAffectation(ident, expression) = instruction {
             let resultat = execute_expression(&expression, &mut contexte);
             let tmp = resultat.clone();
             contexte.set_variable(ident.clone(), resultat);
             if DEBUG_PRINT {
                 println!("affect {:?} := {:?}", ident.clone(), tmp);
             }
-        } else if let AstAppelMethode(nom, parametres, separateurs, _) = instruction {
+        } else if let AstAppelMethode(nom, parametres, separateurs) = instruction {
             if nom.to_lowercase() == "print" {
                 print(&mut sortie, &mut contexte, parametres, separateurs);
             } else {
                 panic!("appel de méthode {} inconnue: {:?}", nom, instruction);
             }
-        } else if let AstGoto(_, label2) = instruction {
+        } else if let AstGoto(label2) = instruction {
             let pos = trouve_label(label2, &programme.liste_instructions);
             pos_instruction = pos;
             pos_change = true;
-        } else if let AstIf(expr, _, label) = instruction {
+        } else if let AstIf(expr, label) = instruction {
             let resultat = execute_expression(&expr, &mut contexte);
             let valeur_true = match resultat {
                 NombreInteger(n) => n != 0,
@@ -109,7 +110,7 @@ pub fn execute(programme: AstProgramme, mut sortie: &mut Sortie) {
             }
         } else if let AstInstrLabel(_) = instruction {
             // on ne fait rien
-        } else if let AstInput(_, message, liste_variable, retour_ligne, question) = instruction {
+        } else if let AstInput(message, liste_variable, retour_ligne, question) = instruction {
             input(
                 message,
                 liste_variable,
@@ -235,8 +236,8 @@ fn trouve_label(label: &AstLabelEnum, liste_instructions: &Vec<AstInstruction>) 
     if let AstLabel(nom_label) = label {
         let mut pos = 0;
         for instr in liste_instructions {
-            if let Some(AstLabel(label2)) = instr.getLabel() {
-                if *nom_label == label2 {
+            if let AstInstrLabel(AstLabel(label2)) = instr {
+                if *nom_label == *label2 {
                     return pos;
                 }
             }
