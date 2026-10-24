@@ -1,5 +1,7 @@
 use crate::basic::lexer_basic::Token::TokenNombre;
-use crate::basic::lexer_basic::TypeMotCle::{Else, ElseIf, End, Goto, If, Input, Then};
+use crate::basic::lexer_basic::TypeMotCle::{
+    Else, ElseIf, End, Goto, If, Input, Then, Wend, While,
+};
 use crate::basic::lexer_basic::TypeNombre::{Entier, Long, Single};
 use crate::basic::lexer_basic::TypeSeparateur::{
     DEUXPOINT, DIFF, DIVE, DIVR, EQU, EXP, FOIS, INF, INFE, MOINS, PARENTF, PARENTO, PLUS,
@@ -323,9 +325,64 @@ fn parse_instruction(
     } else if token_iterator.est_mot_cle(End) {
         parse_end(&mut token_iterator, &mut debut_instr);
         debut_instr
+    } else if token_iterator.est_mot_cle(While) {
+        parse_while(
+            &mut token_iterator,
+            &mut debut_instr,
+            compteur,
+            liste_instructions_iter,
+        );
+        debut_instr
     } else {
         panic!("instruction inconnue {:?}", token_iterator.get());
     }
+}
+
+fn parse_while(
+    mut token_iterator: &mut TokenIterator,
+    debut_instr: &mut Vec<AstInstruction>,
+    compteur: &mut Compteur,
+    liste_instructions_iter: &mut Iter<Vec<Token>>,
+) {
+    token_iterator.next();
+    let exp = parsing_expression(&mut token_iterator);
+
+    let no = compteur.next_if();
+    let label_debut = AstLabel(format!("_while_debut{}", no).to_string());
+    let label_suite = AstLabel(format!("_while_suite{}", no).to_string());
+    let label_fin = AstLabel(format!("_while_fin{}", no).to_string());
+
+    let mut liste_instruction_actif: Vec<AstInstruction> = vec![];
+
+    while let Some(ligne) = liste_instructions_iter.next() {
+        let mut token_iterator2 = TokenIterator::new(ligne.clone());
+
+        if token_iterator2.est_mot_cle(Wend) {
+            break;
+        } else {
+            // les intructions
+            let v: Vec<Vec<Token>> = vec![];
+            let mut iter = v.iter();
+
+            let mut liste_instructions2 =
+                parse_instruction(&mut token_iterator2, None, &mut iter, compteur);
+            liste_instruction_actif.append(&mut liste_instructions2);
+        }
+    }
+
+    let instruction = AstInstrLabel(label_debut.clone());
+    debut_instr.push(instruction);
+    let instruction = AstIf(exp.0, label_suite.clone());
+    debut_instr.push(instruction);
+    let instruction = AstGoto(label_fin.clone());
+    debut_instr.push(instruction);
+    let instruction = AstInstrLabel(label_suite);
+    debut_instr.push(instruction);
+    debut_instr.append(&mut liste_instruction_actif);
+    let instruction = AstGoto(label_debut);
+    debut_instr.push(instruction);
+    let instruction = AstInstrLabel(label_fin);
+    debut_instr.push(instruction);
 }
 
 fn parse_end(token_iterator: &mut &mut TokenIterator, debut_instr: &mut Vec<AstInstruction>) {
