@@ -23,7 +23,7 @@ pub enum TypeMotCle {
     Dim,
     As,
     Integer,
-    String,
+    StringMC,
     Long,
     Single,
     Double,
@@ -67,6 +67,7 @@ pub enum TypeMotCle {
     Defsng,
     Defdbl,
     Defstr,
+    Shared,
 }
 
 impl TypeMotCle {
@@ -105,7 +106,6 @@ impl TypeMotCle {
 
 #[derive(Debug, Eq, PartialEq, Clone)]
 enum EtatLexer {
-    Autre,
     Nombre,
     Mot,
     Separateur,
@@ -661,7 +661,7 @@ fn mots_cles(s: String) -> Option<TypeMotCle> {
         "DIM" => Some(TypeMotCle::Dim),
         "AS" => Some(TypeMotCle::As),
         "INTEGER" => Some(TypeMotCle::Integer),
-        "STRING" => Some(TypeMotCle::String),
+        "STRING" => Some(TypeMotCle::StringMC),
         "LONG" => Some(TypeMotCle::Long),
         "SINGLE" => Some(TypeMotCle::Single),
         "DOUBLE" => Some(TypeMotCle::Double),
@@ -705,6 +705,7 @@ fn mots_cles(s: String) -> Option<TypeMotCle> {
         "DEFSNG" => Some(TypeMotCle::Defsng),
         "DEFDBL" => Some(TypeMotCle::Defdbl),
         "DEFSTR" => Some(TypeMotCle::Defstr),
+        "SHARED" => Some(TypeMotCle::Shared),
         _ => None,
     }
 }

@@ -11,7 +11,6 @@ pub enum AstLabelEnum {
     AstLabel(String),
 }
 
-
 #[derive(Debug, Clone, PartialEq)]
 pub enum TypeVariable {
     Integer,
@@ -19,6 +18,13 @@ pub enum TypeVariable {
     Single,
     Double,
     String,
+}
+
+#[derive(Debug, PartialEq, Clone)]
+pub struct AstDeclarationVariable {
+    pub nom_variable: String,
+    pub type_variable: Option<TypeVariable>,
+    pub liste_dimensions: Vec<AstExpression>,
 }
 
 #[derive(Debug, PartialEq, Clone)]
@@ -30,7 +36,8 @@ pub enum AstInstruction {
     AstGoto(AstLabelEnum),
     AstInput(Option<String>, Vec<String>, bool, bool),
     AstEnd(),
-    AstDecl(TypeVariable,Vec<Vec<String>>),
+    AstDecl(TypeVariable, Vec<Vec<String>>),
+    AstDeclVariable(Vec<AstDeclarationVariable>),
 }
 
 #[derive(Debug, Clone, PartialEq)]

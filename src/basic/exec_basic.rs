@@ -5,12 +5,13 @@ use crate::basic::fonction_basic;
 
 use crate::basic::struct_basic::AstExpression::{AstFonction, AstOperateurUnnaire};
 use crate::basic::struct_basic::AstInstruction::{
-    AstAffectation, AstAppelMethode, AstDecl, AstEnd, AstGoto, AstIf, AstInput, AstInstrLabel,
+    AstAffectation, AstAppelMethode, AstDecl, AstDeclVariable, AstEnd, AstGoto, AstIf, AstInput,
+    AstInstrLabel,
 };
 use crate::basic::struct_basic::AstLabelEnum::AstLabel;
 use crate::basic::struct_basic::{
-    AstExpression, AstInstruction, AstLabelEnum, AstOperateurBinaireType, AstOperateurUnaireType,
-    AstProgramme, TypeVariable,
+    AstDeclarationVariable, AstExpression, AstInstruction, AstLabelEnum, AstOperateurBinaireType,
+    AstOperateurUnaireType, AstProgramme, TypeVariable,
 };
 use crate::basic::utils_basic::Sortie;
 use std::collections::HashMap;
@@ -53,6 +54,16 @@ impl Valeur {
             Chaine(_) => TypeVariable::String,
         }
     }
+
+    fn get_integer(&self) -> i16 {
+        match self {
+            NombreInteger(n) => *n,
+            NombreLong(n) => i16::try_from(*n).unwrap(),
+            NombreSingle(n) => *n as i16,
+            NombreDouble(n) => *n as i16,
+            _ => panic!("Impossible de convertir la valeur en entier"),
+        }
+    }
 }
 
 #[derive(Debug, Clone)]
@@ -62,11 +73,18 @@ struct Variable {
 }
 
 #[derive(Debug)]
+pub struct Tableau {
+    type_variable: TypeVariable,
+    taille_tableau: Vec<(u16, u16)>,
+    contenu: Vec<Valeur>,
+}
+
+#[derive(Debug)]
 pub struct TableSymbole {
     declaration_defaut: HashMap<char, TypeVariable>,
     declaration_variable: HashMap<String, TypeVariable>,
     variables: HashMap<String, Variable>,
-    tableau: HashMap<String, Vec<Variable>>,
+    tableau: HashMap<String, Tableau>,
 }
 
 impl TableSymbole {
@@ -170,6 +188,80 @@ impl TableSymbole {
         let c = nom_variable.to_lowercase().chars().next().unwrap();
         self.declaration_defaut.insert(c, type_variable);
     }
+
+    fn set_declaration_variable(
+        &mut self,
+        nom_variable: String,
+        type_variable_opt: Option<TypeVariable>,
+    ) {
+        let nom_variable_minuscule = nom_variable.to_lowercase();
+        let type_variable =
+            if let Some(type_var) = self.get_type(nom_variable.clone(), type_variable_opt) {
+                type_var
+            } else {
+                panic!("Type variable not found for variable: {}", nom_variable);
+            };
+        self.declaration_variable
+            .insert(nom_variable_minuscule, type_variable);
+    }
+
+    fn get_type(
+        &mut self,
+        nom_variable: String,
+        type_variable_opt: Option<TypeVariable>,
+    ) -> Option<TypeVariable> {
+        let nom_variable_minuscule = nom_variable.to_lowercase();
+        if nom_variable_minuscule.ends_with("%") {
+            Some(TypeVariable::Integer)
+        } else if nom_variable.ends_with("$") {
+            Some(TypeVariable::String)
+        } else if nom_variable.ends_with("&") {
+            Some(TypeVariable::Long)
+        } else if nom_variable.ends_with("!") {
+            Some(TypeVariable::Single)
+        } else if nom_variable.ends_with("#") {
+            Some(TypeVariable::Double)
+        } else if type_variable_opt.is_some() {
+            type_variable_opt
+        } else {
+            let c = nom_variable_minuscule.chars().next().unwrap();
+            Some(self.declaration_defaut[&c].clone())
+        }
+    }
+
+    fn set_declaration_tableau(
+        &mut self,
+        nom_variable: String,
+        type_variable_opt: Option<TypeVariable>,
+        taille_tableau: Vec<i16>,
+    ) {
+        let nom_variable_minuscule = nom_variable.to_lowercase();
+        let type_variable =
+            if let Some(type_var) = self.get_type(nom_variable.clone(), type_variable_opt) {
+                type_var
+            } else {
+                panic!("Type variable not found for variable: {}", nom_variable);
+            };
+        let taille: Vec<(u16, u16)> = taille_tableau
+            .iter()
+            .copied()
+            .map(|x| (0u16, x as u16))
+            .collect();
+        let taille_totale: u32 = taille_tableau.iter().map(|x| *x as u32).product();
+        let contenu = match type_variable {
+            TypeVariable::Integer => vec![NombreInteger(0i16); taille_totale as usize],
+            TypeVariable::Long => vec![NombreLong(0i32); taille_totale as usize],
+            TypeVariable::Single => vec![NombreSingle(0.0f32); taille_totale as usize],
+            TypeVariable::Double => vec![NombreDouble(0.0f64); taille_totale as usize],
+            TypeVariable::String => vec![Chaine("".to_string()); taille_totale as usize],
+        };
+        let tableau = Tableau {
+            type_variable,
+            taille_tableau: taille,
+            contenu,
+        };
+        self.tableau.insert(nom_variable_minuscule, tableau);
+    }
 }
 
 pub fn execute(programme: AstProgramme, mut sortie: &mut Sortie) {
@@ -229,11 +321,38 @@ pub fn execute(programme: AstProgramme, mut sortie: &mut Sortie) {
             break;
         } else if let AstDecl(type_variable, nom_variables) = instruction {
             declaration_defaut(&mut contexte, nom_variables, type_variable);
+        } else if let AstDeclVariable(liste_variables) = instruction {
+            declaration_variable(&mut contexte, liste_variables);
         } else {
             panic!("instruction inconnue: {:?}", instruction);
         }
         if !pos_change {
             pos_instruction += 1;
+        }
+    }
+}
+
+fn declaration_variable(
+    table_symbole: &mut TableSymbole,
+    liste_variables: &Vec<AstDeclarationVariable>,
+) {
+    for variable in liste_variables.iter() {
+        if variable.liste_dimensions.is_empty() {
+            table_symbole.set_declaration_variable(
+                variable.nom_variable.clone(),
+                variable.type_variable.clone(),
+            );
+        } else {
+            let mut liste_expr = vec![];
+            for expr in variable.liste_dimensions.iter() {
+                let expr_evalue = execute_expression(expr, table_symbole);
+                liste_expr.push(expr_evalue.get_integer());
+            }
+            table_symbole.set_declaration_tableau(
+                variable.nom_variable.clone(),
+                variable.type_variable.clone(),
+                liste_expr,
+            );
         }
     }
 }
