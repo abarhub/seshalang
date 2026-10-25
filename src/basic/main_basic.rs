@@ -690,6 +690,36 @@ mod tests {
         assert_eq!(sortie[4], " 1 ");
     }
 
+    #[test]
+    fn test_parse_execute46() {
+        let fichier = "dim t(5) as integer
+                              t(2) = 10
+                              print t(2)"
+            .to_string();
+        let sortie = exec(fichier);
+        assert_eq!(sortie.len(), 1);
+        assert_eq!(sortie[0], " 10 ");
+    }
+
+    #[test]
+    fn test_parse_execute47() {
+        let fichier = "dim t(5) as integer
+                              for i=0 to 4
+                              t(i) = i
+                              next
+                              for i=0 to 4
+                              print t(i)
+                              next"
+            .to_string();
+        let sortie = exec(fichier);
+        assert_eq!(sortie.len(), 5);
+        assert_eq!(sortie[0], " 0 ");
+        assert_eq!(sortie[1], " 1 ");
+        assert_eq!(sortie[2], " 2 ");
+        assert_eq!(sortie[3], " 3 ");
+        assert_eq!(sortie[4], " 4 ");
+    }
+
     fn exec(fichier: String) -> Vec<String> {
         let mut sortie = Sortie::new(false);
         let programme = parse_basic(fichier).unwrap();

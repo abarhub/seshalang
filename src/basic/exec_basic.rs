@@ -5,8 +5,8 @@ use crate::basic::fonction_basic;
 
 use crate::basic::struct_basic::AstExpression::{AstFonction, AstOperateurUnnaire};
 use crate::basic::struct_basic::AstInstruction::{
-    AstAffectation, AstAppelMethode, AstDecl, AstDeclVariable, AstEnd, AstGoto, AstIf, AstInput,
-    AstInstrLabel,
+    AstAffectation, AstAffectationTableau, AstAppelMethode, AstDecl, AstDeclVariable, AstEnd,
+    AstGoto, AstIf, AstInput, AstInstrLabel,
 };
 use crate::basic::struct_basic::AstLabelEnum::AstLabel;
 use crate::basic::struct_basic::{
@@ -262,6 +262,39 @@ impl TableSymbole {
         };
         self.tableau.insert(nom_variable_minuscule, tableau);
     }
+
+    fn set_variable_tableau(&mut self, nom: String, pos: Valeur, valeur: Valeur) {
+        let pos_int = pos.get_integer();
+        let nom_minuscule = nom.to_lowercase();
+
+        if !self.tableau.contains_key(&nom_minuscule) {
+            // le tableau n'existe pas, on le crée
+            let taille = 10;
+            self.tableau.insert(
+                nom_minuscule.clone(),
+                Tableau {
+                    type_variable: TypeVariable::Single,
+                    taille_tableau: vec![(0, 1)],
+                    contenu: vec![NombreSingle(0.0f32); taille],
+                },
+            );
+        }
+
+        if let Some(tableau) = self.tableau.get_mut(&nom_minuscule) {
+            tableau.contenu[pos_int as usize] = valeur;
+        } else {
+            panic!("Tableau {} n'existe pas", nom);
+        }
+    }
+
+    pub fn get_variable_tableau(&self, nom: String, pos: Valeur) -> Option<Valeur> {
+        let nom_minuscule = nom.to_lowercase();
+        if let Some(tableau) = self.tableau.get(&nom_minuscule) {
+            Some(tableau.contenu[pos.get_integer() as usize].clone())
+        } else {
+            panic!("Tableau {} n'existe pas", nom);
+        }
+    }
 }
 
 pub fn execute(programme: AstProgramme, mut sortie: &mut Sortie) {
@@ -323,12 +356,37 @@ pub fn execute(programme: AstProgramme, mut sortie: &mut Sortie) {
             declaration_defaut(&mut contexte, nom_variables, type_variable);
         } else if let AstDeclVariable(liste_variables) = instruction {
             declaration_variable(&mut contexte, liste_variables);
+        } else if let AstAffectationTableau(nom_variable, liste_dimensions, valeur) = instruction {
+            affectation_tableau(&mut contexte, nom_variable, liste_dimensions, valeur);
         } else {
             panic!("instruction inconnue: {:?}", instruction);
         }
         if !pos_change {
             pos_instruction += 1;
         }
+    }
+}
+
+fn affectation_tableau(
+    table_symbole: &mut TableSymbole,
+    nom_variable: &String,
+    liste_parametres: &Vec<AstExpression>,
+    valeur: &AstExpression,
+) {
+    if liste_parametres.len() != 1 {
+        panic!("affectation_tableau: liste_parametres.len()!=1");
+    }
+    let resultat = execute_expression(&liste_parametres[0], table_symbole);
+    let parametre = resultat.clone();
+    let resultat2 = execute_expression(valeur, table_symbole);
+    table_symbole.set_variable_tableau(nom_variable.clone(),parametre.clone(), resultat2.clone());
+    if DEBUG_PRINT {
+        println!(
+            "affect tableau {:?} ({:?}) := {:?}",
+            nom_variable.clone(),
+            parametre,
+            resultat2
+        );
     }
 }
 

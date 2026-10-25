@@ -35,7 +35,7 @@ pub fn execute_fonction(
                     liste_expressions,
                     table_symbole,
                 ) {
-                    Valeur::Chaine(s) => NombreInteger(s.chars().next().unwrap() as i16),
+                    Chaine(s) => NombreInteger(s.chars().next().unwrap() as i16),
                     _ => panic!("La fonction asc() attend une chaine en argument"),
                 }
             }
@@ -243,6 +243,20 @@ pub fn execute_fonction(
             }
             _ => panic!("La fonction {:?} n'existe pas", mot_reserve),
         },
+        AstNomMethode::AstNomFonction(nom) => {
+            if liste_expressions.len() == 1 {
+                let e1 = liste_expressions.get(0).unwrap();
+                let valeur = exec_basic::execute_expression(&(e1.clone()), table_symbole);
+
+                if let Some(val) = table_symbole.get_variable_tableau(nom.clone(), valeur.clone()) {
+                    val
+                } else {
+                    panic!("La variable tableau {} n'existe pas", nom);
+                }
+            } else {
+                panic!("La fonction {} attend exactement un argument", nom);
+            }
+        }
         _ => panic!("Méthode inconnue: {:?}", nom_methode),
     }
 }

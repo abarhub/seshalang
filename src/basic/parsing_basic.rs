@@ -11,12 +11,14 @@ use crate::basic::lexer_basic::TypeSeparateur::{
 use crate::basic::lexer_basic::{Token, TypeMotCle, TypeNombre, TypeSeparateur, lexer};
 
 use crate::basic::struct_basic::AstExpression::{
-    AstIdentifiant, AstNombreInteger, AstOperateurBinaire,
+    AstFonction, AstIdentifiant, AstNombreInteger, AstOperateurBinaire,
 };
 use crate::basic::struct_basic::AstInstruction::{
-    AstAffectation, AstDecl, AstDeclVariable, AstEnd, AstGoto, AstIf, AstInput, AstInstrLabel,
+    AstAffectation, AstAffectationTableau, AstDecl, AstDeclVariable, AstEnd, AstGoto, AstIf,
+    AstInput, AstInstrLabel,
 };
 use crate::basic::struct_basic::AstLabelEnum::AstLabel;
+use crate::basic::struct_basic::AstNomMethode::AstNomFonction;
 use crate::basic::struct_basic::AstOperateurBinaireType::{
     Different, DivisionEntiere, DivisionReel, Egal, Exponentiel, Inferieur, InferieurEgal, Moins,
     Multiplication, Plus, Superieur, SuperieurEgal,
@@ -170,6 +172,34 @@ impl TokenIterator {
             max(self.liste_tokens.len() - (self.index + 1) as usize, 0)
         }
     }
+
+    fn est_affectation_tableau(&self) -> bool {
+        println!(
+            "est_affectation_tableau: {:?}, {:?}, {:?}, {:?}; {:?}",
+            self.get_pos(0),
+            self.len(),
+            self.index,
+            self.get_pos(1),
+            self.liste_tokens
+        );
+        if let Some(Token::TokenSeparateur(PARENTO, _)) = self.get_pos(1) {
+            let mut i = 1;
+            while !self.est_separateur_pos(PARENTF, i) && (i as usize) < self.len() {
+                i += 1;
+            }
+            if self.est_separateur_pos(PARENTF, i) {
+                if self.est_separateur_pos(EQU, i + 1) {
+                    true
+                } else {
+                    false
+                }
+            } else {
+                false
+            }
+        } else {
+            false
+        }
+    }
 }
 
 impl Iterator for TokenIterator {
@@ -293,9 +323,12 @@ fn parse_instruction(
     if token_iterator.len() == 0 {
         return debut_instr;
     }
-    if token_iterator.est_identifiant() && token_iterator.est_separateur_pos(EQU, 1) {
+    if token_iterator.est_identifiant()
+        && (token_iterator.est_separateur_pos(EQU, 1) || token_iterator.est_affectation_tableau())
+    {
         // affectation
-        affectation(&mut token_iterator, &mut debut_instr);
+        let affectation_tab = token_iterator.est_affectation_tableau();
+        affectation(&mut token_iterator, &mut debut_instr, affectation_tab);
         debut_instr
     } else if token_iterator.est_identifiant() {
         // appel de méthode
@@ -896,15 +929,42 @@ fn parse_appel_methode(
     }
 }
 
-fn affectation(mut token_iterator: &mut &mut TokenIterator, debut_instr: &mut Vec<AstInstruction>) {
+fn affectation(
+    mut token_iterator: &mut &mut TokenIterator,
+    debut_instr: &mut Vec<AstInstruction>,
+    affectation_tableau: bool,
+) {
     if let Token::TokenIdentifiant(ident, _) = token_iterator.next().unwrap() {
         if DEBUG_PRINT {
             println!("affectation {}", ident);
         }
-        token_iterator.next();
-        let exp = parsing_expression(&mut token_iterator);
-        let instruction = AstAffectation(ident.clone(), exp.0);
-        debut_instr.push(instruction);
+        if affectation_tableau {
+            if token_iterator.est_separateur(PARENTO) {
+                token_iterator.next();
+            } else {
+                panic!("il manque le séparateur '(': {:?}", token_iterator.get())
+            }
+            let exp = parsing_expression(&mut token_iterator);
+            if token_iterator.est_separateur(PARENTF) {
+                token_iterator.next();
+            } else {
+                panic!("il manque le séparateur ')'")
+            }
+            if token_iterator.est_separateur(EQU) {
+                token_iterator.next();
+            } else {
+                panic!("il manque le séparateur '='")
+            }
+            let exp2 = parsing_expression(&mut token_iterator);
+            let instruction = AstAffectationTableau(ident.clone(), vec![exp.0], exp2.0);
+            debut_instr.push(instruction);
+        } else {
+            token_iterator.next();
+
+            let exp = parsing_expression(&mut token_iterator);
+            let instruction = AstAffectation(ident.clone(), exp.0);
+            debut_instr.push(instruction);
+        }
     } else {
         panic!("token {:?} n'est pas un identifiant", token_iterator.get());
     }
@@ -1388,7 +1448,19 @@ fn expr_literaux(liste_tokens: &mut TokenIterator) -> (AstExpression, u32) {
         }
     } else if liste_tokens.est_identifiant() {
         if let Token::TokenIdentifiant(ident, _) = liste_tokens.next().unwrap() {
-            return (AstExpression::AstIdentifiant(ident.clone()), 1);
+            let mut nb_token: u32 = 1;
+            let mut liste_expressions: Vec<AstExpression> = Vec::new();
+
+            nb_token += analyse_parenthese(liste_tokens, &mut liste_expressions);
+
+            if liste_expressions.is_empty() {
+                return (AstIdentifiant(ident.clone()), 1);
+            } else {
+                return (
+                    AstFonction(AstNomFonction(ident.clone()), liste_expressions),
+                    nb_token,
+                );
+            }
         } else {
             panic!("identifiant inconnu");
         }
@@ -1397,7 +1469,7 @@ fn expr_literaux(liste_tokens: &mut TokenIterator) -> (AstExpression, u32) {
             liste_tokens.next().unwrap()
         {
             match type_nombre {
-                Entier => (AstExpression::AstNombreInteger(nombrei16), 1),
+                Entier => (AstNombreInteger(nombrei16), 1),
                 Long => (AstExpression::AstNombreLong(nombrei32), 1),
                 Single => (AstExpression::AstNombreSingle(nombref32), 1),
                 TypeNombre::Double => (AstExpression::AstNombreDouble(nombref64), 1),
@@ -1416,27 +1488,7 @@ fn expr_literaux(liste_tokens: &mut TokenIterator) -> (AstExpression, u32) {
             let mut nb_token: u32 = 1;
             let mut liste_expressions: Vec<AstExpression> = Vec::new();
 
-            if liste_tokens.est_separateur(PARENTO) {
-                nb_token += 1;
-                liste_tokens.next();
-                loop {
-                    let res = parsing_expression(liste_tokens);
-                    nb_token += res.1;
-                    liste_expressions.push(res.0);
-                    if liste_tokens.est_separateur(VIRGULE) {
-                        nb_token += 1;
-                        liste_tokens.next();
-                    } else {
-                        break;
-                    }
-                }
-                if liste_tokens.est_separateur(PARENTF) {
-                    nb_token += 1;
-                } else {
-                    panic!("parenthèse fermante attendue");
-                }
-            } else {
-            }
+            nb_token += analyse_parenthese(liste_tokens, &mut liste_expressions);
             return (
                 AstExpression::AstFonction(AstNomMethode::AstNomReserve(ident), liste_expressions),
                 nb_token,
@@ -1447,6 +1499,34 @@ fn expr_literaux(liste_tokens: &mut TokenIterator) -> (AstExpression, u32) {
     } else {
         panic!("expression inconnue: {:?}", liste_tokens);
     }
+}
+
+fn analyse_parenthese(
+    liste_tokens: &mut TokenIterator,
+    liste_expressions: &mut Vec<AstExpression>,
+) -> u32 {
+    let mut nb_token: u32 = 0;
+    if liste_tokens.est_separateur(PARENTO) {
+        nb_token += 1;
+        liste_tokens.next();
+        loop {
+            let res = parsing_expression(liste_tokens);
+            nb_token += res.1;
+            liste_expressions.push(res.0);
+            if liste_tokens.est_separateur(VIRGULE) {
+                nb_token += 1;
+                liste_tokens.next();
+            } else {
+                break;
+            }
+        }
+        if liste_tokens.est_separateur(PARENTF) {
+            nb_token += 1u32;
+        } else {
+            panic!("parenthèse fermante attendue");
+        }
+    }
+    nb_token
 }
 
 fn calcul_type_operation_binaire(type_operation: TypeSeparateur) -> AstOperateurBinaireType {

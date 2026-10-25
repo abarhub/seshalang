@@ -38,6 +38,7 @@ pub enum AstInstruction {
     AstEnd(),
     AstDecl(TypeVariable, Vec<Vec<String>>),
     AstDeclVariable(Vec<AstDeclarationVariable>),
+    AstAffectationTableau(String, Vec<AstExpression>, AstExpression),
 }
 
 #[derive(Debug, Clone, PartialEq)]
