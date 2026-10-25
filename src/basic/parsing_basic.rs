@@ -824,7 +824,7 @@ fn parse_if(
         let mut liste_instruction_else: Vec<AstInstruction> = vec![];
         let mut liste_instruction_else_if: Vec<Vec<AstInstruction>> = vec![];
         let mut liste_instruction_actif: &mut Vec<AstInstruction> = &mut liste_instruction_if;
-        while let Some(ligne) = liste_instructions_iter.next() {            
+        while let Some(ligne) = liste_instructions_iter.next() {
             let mut token_iterator2 = TokenIterator::new(ligne.clone());
 
             if token_iterator2.est_mot_cle(End) && token_iterator2.est_mot_cle_pos(If, 1) {
@@ -1029,7 +1029,7 @@ fn expr_imp(liste_tokens: &mut TokenIterator) -> (AstExpression, u32) {
         liste_tokens.next().unwrap();
         let op2 = expr_eqv(liste_tokens);
         op1 = (
-            AstExpression::AstOperateurBinaire(
+            AstOperateurBinaire(
                 AstOperateurBinaireType::Imp,
                 Rc::new(op1.0),
                 Rc::new(op2.0),
@@ -1047,7 +1047,7 @@ fn expr_eqv(liste_tokens: &mut TokenIterator) -> (AstExpression, u32) {
         liste_tokens.next().unwrap();
         let op2 = expr_or(liste_tokens);
         op1 = (
-            AstExpression::AstOperateurBinaire(
+            AstOperateurBinaire(
                 AstOperateurBinaireType::Eqv,
                 Rc::new(op1.0),
                 Rc::new(op2.0),
@@ -1070,7 +1070,7 @@ fn expr_or(liste_tokens: &mut TokenIterator) -> (AstExpression, u32) {
         liste_tokens.next().unwrap();
         let op2 = expr_and(liste_tokens);
         op1 = (
-            AstExpression::AstOperateurBinaire(operateur, Rc::new(op1.0), Rc::new(op2.0)),
+            AstOperateurBinaire(operateur, Rc::new(op1.0), Rc::new(op2.0)),
             op1.1 + op2.1 + 1,
         )
     }
@@ -1085,7 +1085,7 @@ fn expr_and(liste_tokens: &mut TokenIterator) -> (AstExpression, u32) {
         liste_tokens.next().unwrap();
         let op2 = expr_not(liste_tokens);
         op1 = (
-            AstExpression::AstOperateurBinaire(
+            AstOperateurBinaire(
                 AstOperateurBinaireType::And,
                 Rc::new(op1.0),
                 Rc::new(op2.0),
@@ -1099,7 +1099,7 @@ fn expr_and(liste_tokens: &mut TokenIterator) -> (AstExpression, u32) {
 // expression NOT X
 fn expr_not(liste_tokens: &mut TokenIterator) -> (AstExpression, u32) {
     if liste_tokens.est_mot_cle(TypeMotCle::Not) {
-        let mut op1: (AstExpression, u32) = (AstExpression::AstNombreInteger(0), 0);
+        let mut op1: (AstExpression, u32) = (AstNombreInteger(0), 0);
         while liste_tokens.est_mot_cle(TypeMotCle::Not) {
             liste_tokens.next().unwrap();
             op1 = expr_comparaison(liste_tokens);
@@ -1129,7 +1129,7 @@ fn expr_comparaison(liste_tokens: &mut TokenIterator) -> (AstExpression, u32) {
         let op2 = expr_plus(liste_tokens);
         if let Token::TokenSeparateur(separateur, _) = token1 {
             op1 = (
-                AstExpression::AstOperateurBinaire(
+                AstOperateurBinaire(
                     calcul_type_operation_binaire(separateur),
                     Rc::new(op1.0),
                     Rc::new(op2.0),
@@ -1152,7 +1152,7 @@ fn expr_plus(liste_tokens: &mut TokenIterator) -> (AstExpression, u32) {
         let op2 = expr_mod(liste_tokens);
         if let Token::TokenSeparateur(separateur, _) = token1 {
             op1 = (
-                AstExpression::AstOperateurBinaire(
+                AstOperateurBinaire(
                     calcul_type_operation_binaire(separateur),
                     Rc::new(op1.0),
                     Rc::new(op2.0),
@@ -1174,7 +1174,7 @@ fn expr_mod(liste_tokens: &mut TokenIterator) -> (AstExpression, u32) {
         liste_tokens.next().unwrap();
         let op2 = expr_dive(liste_tokens);
         op1 = (
-            AstExpression::AstOperateurBinaire(
+            AstOperateurBinaire(
                 AstOperateurBinaireType::Mod,
                 Rc::new(op1.0),
                 Rc::new(op2.0),
@@ -1193,7 +1193,7 @@ fn expr_dive(liste_tokens: &mut TokenIterator) -> (AstExpression, u32) {
         liste_tokens.next().unwrap();
         let op2 = expr_mult(liste_tokens);
         op1 = (
-            AstExpression::AstOperateurBinaire(DivisionEntiere, Rc::new(op1.0), Rc::new(op2.0)),
+            AstOperateurBinaire(DivisionEntiere, Rc::new(op1.0), Rc::new(op2.0)),
             op1.1 + op2.1 + 1,
         )
     }
@@ -1209,7 +1209,7 @@ fn expr_mult(liste_tokens: &mut TokenIterator) -> (AstExpression, u32) {
         let op2 = expr_neg(liste_tokens);
         if let Token::TokenSeparateur(separateur, _) = token1 {
             op1 = (
-                AstExpression::AstOperateurBinaire(
+                AstOperateurBinaire(
                     calcul_type_operation_binaire(separateur),
                     Rc::new(op1.0),
                     Rc::new(op2.0),
@@ -1226,7 +1226,7 @@ fn expr_mult(liste_tokens: &mut TokenIterator) -> (AstExpression, u32) {
 // expression -X
 fn expr_neg(liste_tokens: &mut TokenIterator) -> (AstExpression, u32) {
     if liste_tokens.est_separateur_pos(MOINS, 0) || liste_tokens.est_separateur_pos(PLUS, 0) {
-        let mut op1: (AstExpression, u32) = (AstExpression::AstNombreInteger(0), 0);
+        let mut op1: (AstExpression, u32) = (AstNombreInteger(0), 0);
         while liste_tokens.est_separateur_pos(MOINS, 0) || liste_tokens.est_separateur_pos(PLUS, 0)
         {
             let token1 = liste_tokens.next().unwrap();
@@ -1261,7 +1261,7 @@ fn expr_xor(liste_tokens: &mut TokenIterator) -> (AstExpression, u32) {
         let op2 = expr_literaux(liste_tokens);
         if let Token::TokenSeparateur(separateur, _) = token1 {
             op1 = (
-                AstExpression::AstOperateurBinaire(
+                AstOperateurBinaire(
                     calcul_type_operation_binaire(separateur),
                     Rc::new(op1.0),
                     Rc::new(op2.0),
@@ -1295,7 +1295,7 @@ fn expr_literaux(liste_tokens: &mut TokenIterator) -> (AstExpression, u32) {
             panic!("identifiant inconnu");
         }
     } else if liste_tokens.est_nombre() {
-        if let Token::TokenNombre(nombrei16, nombrei32, nombref32, nombref64, type_nombre, _) =
+        if let TokenNombre(nombrei16, nombrei32, nombref32, nombref64, type_nombre, _) =
             liste_tokens.next().unwrap()
         {
             match type_nombre {
@@ -1352,7 +1352,7 @@ fn expr_literaux(liste_tokens: &mut TokenIterator) -> (AstExpression, u32) {
 
 fn calcul_type_operation_binaire(type_operation: TypeSeparateur) -> AstOperateurBinaireType {
     match type_operation {
-        PLUS => AstOperateurBinaireType::Plus,
+        PLUS => Plus,
         MOINS => Moins,
         FOIS => Multiplication,
         DIVR => DivisionReel,
@@ -1386,7 +1386,7 @@ mod tests {
             ast.liste_instructions,
             vec![AstAffectation(
                 "x".to_string(),
-                AstExpression::AstNombreInteger(1),
+                AstNombreInteger(1),
             )]
         );
     }
@@ -1401,10 +1401,10 @@ mod tests {
             ast.liste_instructions,
             vec![AstAffectation(
                 "x".to_string(),
-                AstExpression::AstOperateurBinaire(
+                AstOperateurBinaire(
                     AstOperateurBinaireType::Eqv,
-                    Rc::new(AstExpression::AstNombreInteger(1)),
-                    Rc::new(AstExpression::AstNombreInteger(2))
+                    Rc::new(AstNombreInteger(1)),
+                    Rc::new(AstNombreInteger(2))
                 ),
             )]
         );
@@ -1420,7 +1420,7 @@ mod tests {
             ast.liste_instructions,
             vec![AstAppelMethode(
                 "print".to_string(),
-                vec![AstExpression::AstNombreInteger(1)],
+                vec![AstNombreInteger(1)],
                 vec![],
             )]
         );
@@ -1436,10 +1436,10 @@ mod tests {
             ast.liste_instructions,
             vec![AstAppelMethode(
                 "print".to_string(),
-                vec![AstExpression::AstOperateurBinaire(
+                vec![AstOperateurBinaire(
                     AstOperateurBinaireType::Eqv,
-                    Rc::new(AstExpression::AstNombreInteger(1)),
-                    Rc::new(AstExpression::AstNombreInteger(2))
+                    Rc::new(AstNombreInteger(1)),
+                    Rc::new(AstNombreInteger(2))
                 )],
                 vec![],
             )]
@@ -1456,14 +1456,14 @@ mod tests {
             ast.liste_instructions,
             vec![AstAppelMethode(
                 "print".to_string(),
-                vec![AstExpression::AstOperateurBinaire(
+                vec![AstOperateurBinaire(
                     AstOperateurBinaireType::Eqv,
-                    Rc::new(AstExpression::AstOperateurBinaire(
+                    Rc::new(AstOperateurBinaire(
                         Superieur,
-                        Rc::new(AstExpression::AstNombreInteger(3)),
-                        Rc::new(AstExpression::AstNombreInteger(2))
+                        Rc::new(AstNombreInteger(3)),
+                        Rc::new(AstNombreInteger(2))
                     )),
-                    Rc::new(AstExpression::AstNombreInteger(0))
+                    Rc::new(AstNombreInteger(0))
                 )],
                 vec![],
             )]
@@ -1482,7 +1482,7 @@ mod tests {
                 AstInstrLabel(AstLabel("label1".to_string())),
                 AstAppelMethode(
                     "print".to_string(),
-                    vec![AstExpression::AstNombreInteger(1)],
+                    vec![AstNombreInteger(1)],
                     vec![],
                 )
             ]
@@ -1501,7 +1501,7 @@ mod tests {
                 AstInstrLabel(AstLabel("123".to_string())),
                 AstAppelMethode(
                     "print".to_string(),
-                    vec![AstExpression::AstNombreInteger(1)],
+                    vec![AstNombreInteger(1)],
                     vec![],
                 )
             ]
