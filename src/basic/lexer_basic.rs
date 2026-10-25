@@ -97,8 +97,7 @@ impl TypeMotCle {
             | TypeMotCle::Time
             | TypeMotCle::Instr
             | TypeMotCle::Hex
-            | TypeMotCle::Oct
-            => true,
+            | TypeMotCle::Oct => true,
             _ => false,
         }
     }
@@ -131,7 +130,7 @@ pub enum TypeSeparateur {
     PARENTF,
     VIRGULE,
     POINTVIRGULE,
-    DEUXPOINT
+    DEUXPOINT,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -469,10 +468,10 @@ fn creation_token_nombre(s: String, pos: PositionToken) -> Token {
         decimal = true;
         decimal_double = iter.next_is_ident(1, '#');
         iter.next().unwrap();
-    } else if iter.next_is_ident(1, '&'){
+    } else if iter.next_is_ident(1, '&') {
         est_long = true;
         iter.next().unwrap();
-    } else if iter.next_is_ident(1, '%'){
+    } else if iter.next_is_ident(1, '%') {
         est_integer = true;
         iter.next().unwrap();
     }
@@ -482,16 +481,16 @@ fn creation_token_nombre(s: String, pos: PositionToken) -> Token {
     // vérification
     if est_integer && est_long {
         panic!("Nombre invalide {}", s);
-    } else if (est_integer||est_long)&&(decimal||exposant) {
+    } else if (est_integer || est_long) && (decimal || exposant) {
         panic!("Nombre invalide {}", s);
-    } else if est_integer &&nombre_entier>32767 {
+    } else if est_integer && nombre_entier > 32767 {
         panic!("Nombre invalide {}", s);
-    } else if est_long &&nombre_entier>2147483647 {
+    } else if est_long && nombre_entier > 2147483647 {
         panic!("Nombre invalide {}", s);
     }
     // construction du token
     if !decimal && !exposant {
-        if nombre_entier <= 32768&&!est_long {
+        if nombre_entier <= 32768 && !est_long {
             Token::TokenNombre(
                 i16::try_from(nombre_entier).unwrap(),
                 0,
@@ -722,9 +721,9 @@ fn f64_to_f32(x: f64) -> f32 {
 
 #[cfg(test)]
 mod tests {
-    use crate::basic::lexer_basic::TypeMotCle::{Cdbl, Chr, Integer, Mod};
     // Note this useful idiom: importing names from outer (for mod tests) scope.
     use super::*;
+    use crate::basic::lexer_basic::TypeMotCle::{Cdbl, Chr, Mod};
     use crate::basic::lexer_basic::TypeNombre::{Double, Entier, Long, Single};
     use crate::basic::lexer_basic::TypeSeparateur::{
         DIFF, DIVE, DIVR, EQU, EXP, FOIS, INF, INFE, MOINS, PARENTF, PARENTO, PLUS, SUP, SUPE,

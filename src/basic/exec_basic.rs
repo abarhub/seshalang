@@ -2,7 +2,6 @@ use crate::basic::exec_basic::Valeur::{
     Chaine, NombreDouble, NombreInteger, NombreLong, NombreSingle,
 };
 use crate::basic::fonction_basic;
-use std::cmp::PartialEq;
 
 use crate::basic::struct_basic::AstExpression::{AstFonction, AstOperateurUnnaire};
 use crate::basic::struct_basic::AstInstruction::{
@@ -492,7 +491,6 @@ fn operateur_binaire(
                 AstOperateurBinaireType::Xor => NombreLong(n1 ^ n2),
                 AstOperateurBinaireType::Imp => NombreLong(!n1 | n2),
                 AstOperateurBinaireType::Eqv => NombreLong(!(n1 ^ n2)),
-                _ => panic!("Opérateur inconnu: {:?}", operateur),
             },
             (NombreSingle(n1), NombreSingle(n2)) => match operateur {
                 AstOperateurBinaireType::Plus => NombreSingle(n1 + n2),
@@ -555,13 +553,11 @@ fn operateur_unaire(
                 AstOperateurUnaireType::Plus => expr1,
                 AstOperateurUnaireType::Moins => NombreInteger(-n),
                 AstOperateurUnaireType::Not => NombreInteger(!n),
-                _ => panic!("Opérateur inconnu: {:?}", operateur),
             },
             NombreLong(n) => match operateur {
                 AstOperateurUnaireType::Plus => expr1,
                 AstOperateurUnaireType::Moins => NombreLong(-n),
                 AstOperateurUnaireType::Not => NombreLong(!n),
-                _ => panic!("Opérateur inconnu: {:?}", operateur),
             },
             NombreSingle(n) => match operateur {
                 AstOperateurUnaireType::Plus => expr1,
