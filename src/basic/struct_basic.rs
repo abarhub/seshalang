@@ -1,7 +1,4 @@
 use crate::basic::lexer_basic::TypeMotCle;
-use crate::basic::struct_basic::AstInstruction::{
-    AstAffectation, AstAppelMethode, AstGoto, AstIf, AstInput,
-};
 use std::rc::Rc;
 
 #[derive(Debug)]

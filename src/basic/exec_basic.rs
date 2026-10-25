@@ -44,25 +44,73 @@ impl fmt::Display for Valeur {
     }
 }
 
+#[derive(Debug, Clone)]
+enum TypeVariable {
+    Integer,
+    Long,
+    Single,
+    Double,
+    String,
+}
+
+#[derive(Debug, Clone)]
+struct Variable {
+    valeur: Valeur,
+    type_variable: TypeVariable,
+}
+
 #[derive(Debug)]
 pub struct TableSymbole {
-    variables: HashMap<String, Valeur>,
+    declaration_defaut: HashMap<String, TypeVariable>,
+    declaration_variable: HashMap<String, TypeVariable>,
+    variables: HashMap<String, Variable>,
+    tableau: HashMap<String, Vec<Variable>>,
 }
 
 impl TableSymbole {
     pub(crate) fn new() -> TableSymbole {
+        let mut defaut = HashMap::new();
+        for c in 'a'..'z' {
+            defaut.insert(c.to_string(), TypeVariable::Single);
+        }
         TableSymbole {
+            declaration_defaut: defaut,
+            declaration_variable: HashMap::new(),
             variables: HashMap::new(),
+            tableau: HashMap::new(),
         }
     }
 
     pub fn set_variable(&mut self, nom: String, valeur: Valeur) {
-        self.variables.insert(nom, valeur);
+        if let Some(variable) = self.variables.get(&nom) {
+            self.verifie_compatibilite(&variable.type_variable, &valeur);
+            self.variables.insert(
+                nom,
+                Variable {
+                    valeur,
+                    type_variable: variable.type_variable.clone(),
+                },
+            );
+        } else {
+            self.variables.insert(
+                nom,
+                Variable {
+                    valeur,
+                    type_variable: TypeVariable::String,
+                },
+            );
+        }
     }
 
     pub fn get_variable(&self, nom: &str) -> Option<&Valeur> {
-        self.variables.get(nom)
+        if let Some(variable) = self.variables.get(nom) {
+            Some(&variable.valeur)
+        } else {
+            None
+        }
     }
+
+    fn verifie_compatibilite(&self, type_variable: &TypeVariable, valeur: &Valeur) {}
 }
 
 pub fn execute(programme: AstProgramme, mut sortie: &mut Sortie) {
