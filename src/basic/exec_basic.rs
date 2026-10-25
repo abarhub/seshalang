@@ -6,12 +6,12 @@ use std::cmp::PartialEq;
 
 use crate::basic::struct_basic::AstExpression::{AstFonction, AstOperateurUnnaire};
 use crate::basic::struct_basic::AstInstruction::{
-    AstAffectation, AstAppelMethode, AstEnd, AstGoto, AstIf, AstInput, AstInstrLabel,
+    AstAffectation, AstAppelMethode, AstDecl, AstEnd, AstGoto, AstIf, AstInput, AstInstrLabel,
 };
 use crate::basic::struct_basic::AstLabelEnum::AstLabel;
 use crate::basic::struct_basic::{
     AstExpression, AstInstruction, AstLabelEnum, AstOperateurBinaireType, AstOperateurUnaireType,
-    AstProgramme,
+    AstProgramme, TypeVariable,
 };
 use crate::basic::utils_basic::Sortie;
 use std::collections::HashMap;
@@ -44,13 +44,16 @@ impl fmt::Display for Valeur {
     }
 }
 
-#[derive(Debug, Clone)]
-enum TypeVariable {
-    Integer,
-    Long,
-    Single,
-    Double,
-    String,
+impl Valeur {
+    fn calcul_type(&self) -> TypeVariable {
+        match self {
+            NombreInteger(_) => TypeVariable::Integer,
+            NombreLong(_) => TypeVariable::Long,
+            NombreSingle(_) => TypeVariable::Single,
+            NombreDouble(_) => TypeVariable::Double,
+            Chaine(_) => TypeVariable::String,
+        }
+    }
 }
 
 #[derive(Debug, Clone)]
@@ -61,7 +64,7 @@ struct Variable {
 
 #[derive(Debug)]
 pub struct TableSymbole {
-    declaration_defaut: HashMap<String, TypeVariable>,
+    declaration_defaut: HashMap<char, TypeVariable>,
     declaration_variable: HashMap<String, TypeVariable>,
     variables: HashMap<String, Variable>,
     tableau: HashMap<String, Vec<Variable>>,
@@ -71,7 +74,7 @@ impl TableSymbole {
     pub(crate) fn new() -> TableSymbole {
         let mut defaut = HashMap::new();
         for c in 'a'..'z' {
-            defaut.insert(c.to_string(), TypeVariable::Single);
+            defaut.insert(c, TypeVariable::Single);
         }
         TableSymbole {
             declaration_defaut: defaut,
@@ -83,7 +86,7 @@ impl TableSymbole {
 
     pub fn set_variable(&mut self, nom: String, valeur: Valeur) {
         if let Some(variable) = self.variables.get(&nom) {
-            self.verifie_compatibilite(&variable.type_variable, &valeur);
+            let valeur = self.convertie(&variable.type_variable, &valeur);
             self.variables.insert(
                 nom,
                 Variable {
@@ -92,11 +95,13 @@ impl TableSymbole {
                 },
             );
         } else {
+            let type_variable = self.calcul_type(nom.clone());
+            let valeur = self.convertie(&type_variable, &valeur);
             self.variables.insert(
                 nom,
                 Variable {
                     valeur,
-                    type_variable: TypeVariable::String,
+                    type_variable,
                 },
             );
         }
@@ -110,7 +115,62 @@ impl TableSymbole {
         }
     }
 
-    fn verifie_compatibilite(&self, type_variable: &TypeVariable, valeur: &Valeur) {}
+    fn convertie(&self, type_variable: &TypeVariable, valeur: &Valeur) -> Valeur {
+        match (type_variable, valeur.clone()) {
+            (TypeVariable::Integer, NombreInteger(_)) => valeur.clone(),
+            (TypeVariable::Integer, NombreLong(n)) => NombreInteger(i16::try_from(n).unwrap()),
+            (TypeVariable::Integer, NombreSingle(n)) => NombreInteger(n.round() as i16),
+            (TypeVariable::Integer, NombreDouble(n)) => NombreInteger(n.round() as i16),
+            (TypeVariable::Long, NombreLong(_)) => valeur.clone(),
+            (TypeVariable::Long, NombreInteger(n)) => NombreLong(i32::try_from(n).unwrap()),
+            (TypeVariable::Long, NombreSingle(n)) => NombreLong(n.round() as i32),
+            (TypeVariable::Long, NombreDouble(n)) => NombreLong(n.round() as i32),
+            (TypeVariable::Single, NombreSingle(_)) => valeur.clone(),
+            (TypeVariable::Single, NombreInteger(n)) => NombreSingle(n as f32),
+            (TypeVariable::Single, NombreLong(n)) => NombreSingle(n as f32),
+            (TypeVariable::Single, NombreDouble(n)) => NombreSingle(n as f32),
+            (TypeVariable::Double, NombreDouble(_)) => valeur.clone(),
+            (TypeVariable::Double, NombreInteger(n)) => NombreDouble(n as f64),
+            (TypeVariable::Double, NombreLong(n)) => NombreDouble(n as f64),
+            (TypeVariable::Double, NombreSingle(n)) => NombreDouble(n as f64),
+            (TypeVariable::String, Chaine(_)) => valeur.clone(),
+            _ => panic!(
+                "Conversion impossible de {:?} vers {:?}",
+                valeur, type_variable,
+            ),
+        }
+    }
+    fn calcul_type(&self, nom_variable: String) -> TypeVariable {
+        let nom_variable_minuscule = nom_variable.to_lowercase();
+        if nom_variable_minuscule.ends_with("%") {
+            TypeVariable::Integer
+        } else if nom_variable.ends_with("$") {
+            TypeVariable::String
+        } else if nom_variable.ends_with("&") {
+            TypeVariable::Long
+        } else if nom_variable.ends_with("!") {
+            TypeVariable::Single
+        } else if nom_variable.ends_with("#") {
+            TypeVariable::Double
+        } else if self
+            .declaration_variable
+            .contains_key(&nom_variable_minuscule)
+        {
+            self.declaration_variable[&nom_variable_minuscule].clone()
+        } else {
+            if nom_variable_minuscule.starts_with("_") {
+                TypeVariable::Integer
+            } else {
+                let c = nom_variable_minuscule.chars().next().unwrap();
+                self.declaration_defaut[&c].clone()
+            }
+        }
+    }
+
+    fn set_declaration_defaut(&mut self, nom_variable: String, type_variable: TypeVariable) {
+        let c = nom_variable.to_lowercase().chars().next().unwrap();
+        self.declaration_defaut.insert(c, type_variable);
+    }
 }
 
 pub fn execute(programme: AstProgramme, mut sortie: &mut Sortie) {
@@ -168,11 +228,34 @@ pub fn execute(programme: AstProgramme, mut sortie: &mut Sortie) {
             );
         } else if let AstEnd() = instruction {
             break;
+        } else if let AstDecl(type_variable, nom_variables) = instruction {
+            declaration_defaut(&mut contexte, nom_variables, type_variable);
         } else {
             panic!("instruction inconnue: {:?}", instruction);
         }
         if !pos_change {
             pos_instruction += 1;
+        }
+    }
+}
+
+fn declaration_defaut(
+    contexte: &mut TableSymbole,
+    nom_variables: &Vec<Vec<String>>,
+    type_variable: &TypeVariable,
+) {
+    for nom_variable in nom_variables.iter() {
+        if nom_variable.len() == 1 {
+            let c = nom_variable[0].to_lowercase().chars().next().unwrap();
+            contexte.set_declaration_defaut(c.to_string(), type_variable.clone());
+        } else if nom_variable.len() == 2 {
+            let debut = nom_variable[0].to_lowercase().chars().next().unwrap();
+            let fin = nom_variable[1].to_lowercase().chars().next().unwrap();
+            for c in debut..fin {
+                contexte.set_declaration_defaut(c.to_string(), type_variable.clone());
+            }
+        } else {
+            panic!("erreur dans le nombre de variables");
         }
     }
 }

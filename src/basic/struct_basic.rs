@@ -11,6 +11,16 @@ pub enum AstLabelEnum {
     AstLabel(String),
 }
 
+
+#[derive(Debug, Clone, PartialEq)]
+pub enum TypeVariable {
+    Integer,
+    Long,
+    Single,
+    Double,
+    String,
+}
+
 #[derive(Debug, PartialEq, Clone)]
 pub enum AstInstruction {
     AstAffectation(String, AstExpression),
@@ -19,7 +29,8 @@ pub enum AstInstruction {
     AstIf(AstExpression, AstLabelEnum),
     AstGoto(AstLabelEnum),
     AstInput(Option<String>, Vec<String>, bool, bool),
-    AstEnd()
+    AstEnd(),
+    AstDecl(TypeVariable,Vec<Vec<String>>),
 }
 
 #[derive(Debug, Clone, PartialEq)]

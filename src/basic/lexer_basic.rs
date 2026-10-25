@@ -62,6 +62,11 @@ pub enum TypeMotCle {
     To,
     Step,
     Cls,
+    Defint,
+    Deflng,
+    Defsng,
+    Defdbl,
+    Defstr,
 }
 
 impl TypeMotCle {
@@ -696,6 +701,11 @@ fn mots_cles(s: String) -> Option<TypeMotCle> {
         "TO" => Some(TypeMotCle::To),
         "STEP" => Some(TypeMotCle::Step),
         "CLS" => Some(TypeMotCle::Cls),
+        "DEFINT" => Some(TypeMotCle::Defint),
+        "DEFLNG" => Some(TypeMotCle::Deflng),
+        "DEFSNG" => Some(TypeMotCle::Defsng),
+        "DEFDBL" => Some(TypeMotCle::Defdbl),
+        "DEFSTR" => Some(TypeMotCle::Defstr),
         _ => None,
     }
 }

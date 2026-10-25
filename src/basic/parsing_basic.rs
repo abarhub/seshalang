@@ -1,5 +1,5 @@
 use crate::basic::lexer_basic::Token::TokenNombre;
-use crate::basic::lexer_basic::TypeMotCle::{Cls, Do, Else, ElseIf, End, For, Goto, If, Input, Loop, Next, Step, Then, To, Until, Wend, While};
+use crate::basic::lexer_basic::TypeMotCle::{Cls, Defdbl, Defint, Deflng, Defsng, Defstr, Do, Else, ElseIf, End, For, Goto, If, Input, Loop, Next, Step, Then, To, Until, Wend, While};
 use crate::basic::lexer_basic::TypeNombre::{Entier, Long, Single};
 use crate::basic::lexer_basic::TypeSeparateur::{
     DEUXPOINT, DIFF, DIVE, DIVR, EQU, EXP, FOIS, INF, INFE, MOINS, PARENTF, PARENTO, PLUS,
@@ -10,18 +10,13 @@ use crate::basic::lexer_basic::{Token, TypeMotCle, TypeNombre, TypeSeparateur, l
 use crate::basic::struct_basic::AstExpression::{
     AstIdentifiant, AstNombreInteger, AstOperateurBinaire,
 };
-use crate::basic::struct_basic::AstInstruction::{
-    AstAffectation, AstEnd, AstGoto, AstIf, AstInput, AstInstrLabel,
-};
+use crate::basic::struct_basic::AstInstruction::{AstAffectation, AstDecl, AstEnd, AstGoto, AstIf, AstInput, AstInstrLabel};
 use crate::basic::struct_basic::AstLabelEnum::AstLabel;
 use crate::basic::struct_basic::AstOperateurBinaireType::{
     Different, DivisionEntiere, DivisionReel, Egal, Exponentiel, Inferieur, InferieurEgal, Moins,
     Multiplication, Plus, Superieur, SuperieurEgal,
 };
-use crate::basic::struct_basic::{
-    AstExpression, AstInstruction, AstLabelEnum, AstNomMethode, AstOperateurBinaireType,
-    AstOperateurUnaireType, AstProgramme,
-};
+use crate::basic::struct_basic::{AstExpression, AstInstruction, AstLabelEnum, AstNomMethode, AstOperateurBinaireType, AstOperateurUnaireType, AstProgramme, TypeVariable};
 use std::cmp::max;
 use std::rc::Rc;
 use std::slice::Iter;
@@ -263,8 +258,7 @@ fn parsing_programme(liste_tokens: Vec<Vec<Token>>) -> AstProgramme {
             if let Token::TokenIdentifiant(ident, _) = label_ident {
                 label = Some(AstLabel(ident));
                 let deux_point = token_iterator.next().unwrap();
-                if let Token::TokenSeparateur(DEUXPOINT, _) = deux_point {
-                } else {
+                if let Token::TokenSeparateur(DEUXPOINT, _) = deux_point {} else {
                     panic!("token {:?} n'est pas un deux point", deux_point);
                 }
             } else {
@@ -353,9 +347,75 @@ fn parse_instruction(
     } else if token_iterator.est_mot_cle(Cls) {
         // ne fait rien
         debut_instr
+    } else if token_iterator.est_mot_cle(Defint) || token_iterator.est_mot_cle(Deflng) || token_iterator.est_mot_cle(Defsng) || token_iterator.est_mot_cle(Defdbl) || token_iterator.est_mot_cle(Defstr) {
+        parse_declaration_defaut(
+            &mut token_iterator,
+            &mut debut_instr,
+        );
+        debut_instr
     } else {
         panic!("instruction inconnue {:?}", token_iterator.get());
     }
+}
+
+fn parse_declaration_defaut(token_iterator: &mut &mut TokenIterator, debut_instr: &mut Vec<AstInstruction>) {
+    let type_variables;
+
+    if let Some(Token::TokenMotReserve(mot_reserve, _)) = token_iterator.next() {
+        if mot_reserve == Defint {
+            type_variables = TypeVariable::Integer;
+        } else if mot_reserve == Deflng {
+            type_variables = TypeVariable::Long;
+        } else if mot_reserve == Defsng {
+            type_variables = TypeVariable::Single;
+        } else if mot_reserve == Defdbl {
+            type_variables = TypeVariable::Double;
+        } else if mot_reserve == Defstr {
+            type_variables = TypeVariable::String;
+        } else {
+            panic!("token {:?} n'est pas un mot clé de déclaration", token_iterator.get());
+        }
+    } else {
+        panic!("token {:?} n'est pas un mot clé de déclaration", token_iterator.get());
+    }
+
+    let mut liste_variables = Vec::new();
+
+    loop {
+        let variable;
+
+        if token_iterator.est_identifiant() {
+            if let Token::TokenIdentifiant(ident, _) = token_iterator.next().unwrap() {
+                variable = ident;
+            } else {
+                panic!("token {:?} n'est pas un identifiant", token_iterator.get());
+            }
+        } else {
+            panic!("token {:?} n'est pas un identifiant", token_iterator.get());
+        }
+
+        if token_iterator.est_separateur(MOINS) {
+            token_iterator.next();
+            let variable2;
+            if let Token::TokenIdentifiant(ident, _) = token_iterator.next().unwrap() {
+                variable2 = ident;
+                let tmp = vec![variable, variable2];
+                liste_variables.push(tmp);
+            } else {
+                panic!("token {:?} n'est pas un identifiant", token_iterator.get());
+            }
+        } else {
+            let tmp = vec![variable];
+            liste_variables.push(tmp);
+        }
+        if token_iterator.est_separateur(VIRGULE) {
+            token_iterator.next();
+        } else {
+            break;
+        }
+    }
+
+    debut_instr.push(AstDecl(type_variables, liste_variables));
 }
 
 fn parse_for(
@@ -1310,8 +1370,7 @@ fn expr_literaux(liste_tokens: &mut TokenIterator) -> (AstExpression, u32) {
                 } else {
                     panic!("parenthèse fermante attendue");
                 }
-            } else {
-            }
+            } else {}
             return (
                 AstExpression::AstFonction(AstNomMethode::AstNomReserve(ident), liste_expressions),
                 nb_token,
@@ -1490,7 +1549,7 @@ mod tests {
 
         assert_eq!(
             ast.liste_instructions,
-            vec![AstInstrLabel(AstLabel("label5".to_string()),)]
+            vec![AstInstrLabel(AstLabel("label5".to_string()), )]
         );
     }
 
@@ -1502,7 +1561,7 @@ mod tests {
 
         assert_eq!(
             ast.liste_instructions,
-            vec![AstInstrLabel(AstLabel("4".to_string()),)]
+            vec![AstInstrLabel(AstLabel("4".to_string()), )]
         );
     }
 

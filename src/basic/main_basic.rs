@@ -76,8 +76,8 @@ mod tests {
 
     #[test]
     fn test_parse_execute7() {
-        let fichier = "x=\"XYZ t1\"
-                                print x"
+        let fichier = "x$=\"XYZ t1\"
+                                print x$"
             .to_string();
         let sortie = exec(fichier);
         assert_eq!(sortie.len(), 1);
@@ -86,8 +86,8 @@ mod tests {
 
     #[test]
     fn test_parse_execute8() {
-        let fichier = "x=\"ABC\" + \"DEF\"
-                                print x"
+        let fichier = "x$=\"ABC\" + \"DEF\"
+                                print x$"
             .to_string();
         let sortie = exec(fichier);
         assert_eq!(sortie.len(), 1);
@@ -216,7 +216,8 @@ mod tests {
 
     #[test]
     fn test_parse_execute15() {
-        let fichier = "t=5>3
+        let fichier = "defint a-z
+                              t=5>3
                               f=5<3
                               print t EQV f
                               print t EQV t
