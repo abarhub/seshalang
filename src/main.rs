@@ -11,7 +11,7 @@ fn main() {
         let nom_fichier=args[1].clone();
         println!("Premier argument : {}", nom_fichier);
 
-        if nom_fichier.ends_with(".bas") {
+        if nom_fichier.to_lowercase().ends_with(".bas") {
             basic::main_basic(nom_fichier);
         }
     } else {

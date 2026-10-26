@@ -850,6 +850,9 @@ fn parse_print(mut token_iterator: &mut &mut TokenIterator, debut_instr: &mut Ve
         let mut liste_expressions: Vec<AstExpression> = vec![];
         let mut separateur_virgule_liste: Vec<bool> = vec![];
         loop {
+            if token_iterator.len() == 0 {
+                break;
+            }
             let exp = parsing_expression(&mut token_iterator);
             if DEBUG_PRINT {
                 let tmp = exp.0.clone();
@@ -1490,14 +1493,14 @@ fn expr_literaux(liste_tokens: &mut TokenIterator) -> (AstExpression, u32) {
 
             nb_token += analyse_parenthese(liste_tokens, &mut liste_expressions);
             return (
-                AstExpression::AstFonction(AstNomMethode::AstNomReserve(ident), liste_expressions),
+                AstFonction(AstNomMethode::AstNomReserve(ident), liste_expressions),
                 nb_token,
             );
         } else {
             panic!("identifiant inconnu");
         }
     } else {
-        panic!("expression inconnue: {:?}", liste_tokens);
+        panic!("expression inconnue: {:?} (ligne={:?})", liste_tokens.get(),liste_tokens);
     }
 }
 
