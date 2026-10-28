@@ -157,7 +157,7 @@ impl TableSymbole {
             ),
         }
     }
-    fn calcul_type(&self, nom_variable: String) -> TypeVariable {
+    pub fn calcul_type(&self, nom_variable: String) -> TypeVariable {
         let nom_variable_minuscule = nom_variable.to_lowercase();
         if nom_variable_minuscule.ends_with("%") {
             TypeVariable::Integer
@@ -379,7 +379,7 @@ fn affectation_tableau(
     let resultat = execute_expression(&liste_parametres[0], table_symbole);
     let parametre = resultat.clone();
     let resultat2 = execute_expression(valeur, table_symbole);
-    table_symbole.set_variable_tableau(nom_variable.clone(),parametre.clone(), resultat2.clone());
+    table_symbole.set_variable_tableau(nom_variable.clone(), parametre.clone(), resultat2.clone());
     if DEBUG_PRINT {
         println!(
             "affect tableau {:?} ({:?}) := {:?}",
@@ -519,18 +519,74 @@ fn input(
                 std::io::stdin().read_line(&mut valeur).unwrap();
                 valeur.pop();
                 valeur = valeur.trim().to_string();
-                if valeur.is_empty() {
-                    let valeur = NombreInteger(0);
-                    contexte.set_variable(nom_var.clone(), valeur);
-                    break;
-                }
-                let nombre_opt = valeur.parse::<i32>();
-                if nombre_opt.is_ok() {
-                    let valeur = NombreLong(nombre_opt.unwrap());
+                let type_variable = contexte.calcul_type(nom_var.clone());
+                if type_variable == TypeVariable::Integer {
+                    if valeur.is_empty() {
+                        let valeur = NombreInteger(0);
+                        contexte.set_variable(nom_var.clone(), valeur);
+                        break;
+                    }
+                    let nombre_opt = valeur.parse::<i16>();
+                    if nombre_opt.is_ok() {
+                        let valeur = NombreInteger(nombre_opt.unwrap());
+                        contexte.set_variable(nom_var.clone(), valeur.clone());
+                        break;
+                    } else {
+                        println!("Redo from start");
+                    }
+                } else if type_variable == TypeVariable::String {
+                    if valeur.is_empty() {
+                        let valeur = Chaine("".to_string());
+                        contexte.set_variable(nom_var.clone(), valeur);
+                        break;
+                    }
+                    let valeur = Chaine(valeur.to_string());
                     contexte.set_variable(nom_var.clone(), valeur.clone());
                     break;
+                } else if type_variable == TypeVariable::Long {
+                    if valeur.is_empty() {
+                        let valeur = NombreLong(0);
+                        contexte.set_variable(nom_var.clone(), valeur);
+                        break;
+                    }
+                    let nombre_opt = valeur.parse::<i32>();
+                    if nombre_opt.is_ok() {
+                        let valeur = NombreLong(nombre_opt.unwrap());
+                        contexte.set_variable(nom_var.clone(), valeur.clone());
+                        break;
+                    } else {
+                        println!("Redo from start");
+                    }
+                } else if type_variable == TypeVariable::Single {
+                    if valeur.is_empty() {
+                        let valeur = NombreSingle(0.0f32);
+                        contexte.set_variable(nom_var.clone(), valeur);
+                        break;
+                    }
+                    let nombre_opt = valeur.parse::<f32>();
+                    if nombre_opt.is_ok() {
+                        let valeur = NombreSingle(nombre_opt.unwrap());
+                        contexte.set_variable(nom_var.clone(), valeur.clone());
+                        break;
+                    } else {
+                        println!("Redo from start");
+                    }
+                } else if type_variable == TypeVariable::Double {
+                    if valeur.is_empty() {
+                        let valeur = NombreDouble(0.0f64);
+                        contexte.set_variable(nom_var.clone(), valeur);
+                        break;
+                    }
+                    let nombre_opt = valeur.parse::<f64>();
+                    if nombre_opt.is_ok() {
+                        let valeur = NombreDouble(nombre_opt.unwrap());
+                        contexte.set_variable(nom_var.clone(), valeur.clone());
+                        break;
+                    } else {
+                        println!("Redo from start");
+                    }
                 } else {
-                    println!("Redo from start");
+                    panic!("Type variable non reconnu {:?}", type_variable);
                 }
             }
         }
@@ -581,7 +637,25 @@ fn execute_expression0(expression: &AstExpression, table_symbole: &mut TableSymb
         if let Some(v) = table_symbole.get_variable(ident) {
             return v.clone();
         } else {
-            panic!("Identifiant {} non déclaré", ident);
+            let type_var = table_symbole.calcul_type(ident.clone());
+            if type_var == TypeVariable::Integer {
+                table_symbole.set_variable(ident.clone(), NombreInteger(0));
+                return NombreInteger(0);
+            } else if type_var == TypeVariable::Long {
+                table_symbole.set_variable(ident.clone(), NombreLong(0));
+                return NombreLong(0);
+            } else if type_var == TypeVariable::Single {
+                table_symbole.set_variable(ident.clone(), NombreSingle(0.0));
+                return NombreSingle(0.0);
+            } else if type_var == TypeVariable::Double {
+                table_symbole.set_variable(ident.clone(), NombreDouble(0.0));
+                return NombreDouble(0.0);
+            } else if type_var == TypeVariable::String {
+                table_symbole.set_variable(ident.clone(), Chaine(String::new()));
+                return Chaine(String::new());
+            } else {
+                panic!("Identifiant {} non déclaré", ident);
+            }
         }
     } else if let AstExpression::AstOperateurBinaire(operateur, exp1, exp2) = expression {
         if let Some(value) = operateur_binaire(table_symbole, operateur, exp1, exp2) {
@@ -682,6 +756,11 @@ fn operateur_binaire(
                 AstOperateurBinaireType::SuperieurEgal => test(n1 >= n2),
                 AstOperateurBinaireType::Inferieur => test(n1 < n2),
                 AstOperateurBinaireType::InferieurEgal => test(n1 <= n2),
+                AstOperateurBinaireType::Mod => NombreInteger(
+                    (n1.round() as i16)
+                        .checked_rem(n2.round() as i16)
+                        .unwrap_or(0),
+                ),
                 _ => panic!("Opérateur inconnu: {:?}", operateur),
             },
             (NombreDouble(n1), NombreDouble(n2)) => match operateur {
@@ -710,6 +789,7 @@ fn operateur_binaire(
         }
         return Some(match operateur {
             AstOperateurBinaireType::Plus => Chaine(s1 + s2.as_str()),
+            AstOperateurBinaireType::Egal => NombreInteger(if s1 == s2 { TRUE } else { FALSE }),
             _ => panic!("Opérateur inconnu: {:?}", operateur),
         });
     } else {
