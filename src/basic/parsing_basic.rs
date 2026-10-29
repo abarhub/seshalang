@@ -1529,6 +1529,7 @@ fn analyse_parenthese(
         }
         if liste_tokens.est_separateur(PARENTF) {
             nb_token += 1u32;
+            liste_tokens.next();
         } else {
             panic!("parenthèse fermante attendue");
         }
@@ -1697,6 +1698,25 @@ mod tests {
                 "print".to_string(),
                 vec![AstNombreInteger(1), AstNombreInteger(2)],
                 vec![false, false],
+            )]
+        );
+    }
+
+    #[test]
+    fn test_parser_print7() {
+        let fichier = "print T(1);".to_string();
+        let liste_tokens = lexer(fichier);
+        let ast = parsing_programme(liste_tokens);
+
+        assert_eq!(
+            ast.liste_instructions,
+            vec![AstAppelMethode(
+                "print".to_string(),
+                vec![AstFonction(
+                    AstNomFonction("T".to_string()),
+                    vec![AstNombreInteger(1)]
+                )],
+                vec![false],
             )]
         );
     }

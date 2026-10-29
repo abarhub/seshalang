@@ -1,3 +1,6 @@
+use std::io;
+use std::io::Write;
+
 #[derive(Debug)]
 pub struct Sortie {
     liste_sortie: Vec<String>,
@@ -20,6 +23,7 @@ impl Sortie {
                 println!("{}", s);
             } else {
                 print!("{}", s);
+                io::stdout().flush().unwrap();
             }
         } else {
             if !self.dernier_retour_ligne && self.liste_sortie.len() > 0 {

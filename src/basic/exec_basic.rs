@@ -15,7 +15,8 @@ use crate::basic::struct_basic::{
 };
 use crate::basic::utils_basic::Sortie;
 use std::collections::HashMap;
-use std::fmt;
+use std::{fmt, io};
+use std::io::Write;
 use std::rc::Rc;
 
 const TRUE: i16 = -1;
@@ -512,11 +513,12 @@ fn input(
     } else if *question {
         print!("? ");
     }
+    io::stdout().flush().unwrap();
     if !liste_variables.is_empty() {
         for nom_var in liste_variables {
             loop {
                 let mut valeur = String::new();
-                std::io::stdin().read_line(&mut valeur).unwrap();
+                io::stdin().read_line(&mut valeur).unwrap();
                 valeur.pop();
                 valeur = valeur.trim().to_string();
                 let type_variable = contexte.calcul_type(nom_var.clone());
