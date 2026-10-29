@@ -720,6 +720,25 @@ mod tests {
         assert_eq!(sortie[4], " 4 ");
     }
 
+    #[test]
+    fn test_parse_execute48() {
+        let fichier = "print 1;2"
+            .to_string();
+        let sortie = exec(fichier);
+        assert_eq!(sortie.len(), 1);
+        assert_eq!(sortie[0], " 1  2 ");
+    }
+
+    #[test]
+    fn test_parse_execute49() {
+        let fichier = "print 1;2;
+                              print 3"
+            .to_string();
+        let sortie = exec(fichier);
+        assert_eq!(sortie.len(), 1);
+        assert_eq!(sortie[0], " 1  2  3 ");
+    }
+
     fn exec(fichier: String) -> Vec<String> {
         let mut sortie = Sortie::new(false);
         let programme = parse_basic(fichier).unwrap();

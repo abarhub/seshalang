@@ -1500,7 +1500,11 @@ fn expr_literaux(liste_tokens: &mut TokenIterator) -> (AstExpression, u32) {
             panic!("identifiant inconnu");
         }
     } else {
-        panic!("expression inconnue: {:?} (ligne={:?})", liste_tokens.get(),liste_tokens);
+        panic!(
+            "expression inconnue: {:?} (ligne={:?})",
+            liste_tokens.get(),
+            liste_tokens
+        );
     }
 }
 
@@ -1645,6 +1649,54 @@ mod tests {
                     Rc::new(AstNombreInteger(0))
                 )],
                 vec![],
+            )]
+        );
+    }
+
+    #[test]
+    fn test_parser_print4() {
+        let fichier = "print 1;2".to_string();
+        let liste_tokens = lexer(fichier);
+        let ast = parsing_programme(liste_tokens);
+
+        assert_eq!(
+            ast.liste_instructions,
+            vec![AstAppelMethode(
+                "print".to_string(),
+                vec![AstNombreInteger(1), AstNombreInteger(2)],
+                vec![false],
+            )]
+        );
+    }
+
+    #[test]
+    fn test_parser_print5() {
+        let fichier = "print 1,2".to_string();
+        let liste_tokens = lexer(fichier);
+        let ast = parsing_programme(liste_tokens);
+
+        assert_eq!(
+            ast.liste_instructions,
+            vec![AstAppelMethode(
+                "print".to_string(),
+                vec![AstNombreInteger(1), AstNombreInteger(2)],
+                vec![true],
+            )]
+        );
+    }
+
+    #[test]
+    fn test_parser_print6() {
+        let fichier = "print 1;2;".to_string();
+        let liste_tokens = lexer(fichier);
+        let ast = parsing_programme(liste_tokens);
+
+        assert_eq!(
+            ast.liste_instructions,
+            vec![AstAppelMethode(
+                "print".to_string(),
+                vec![AstNombreInteger(1), AstNombreInteger(2)],
+                vec![false, false],
             )]
         );
     }
