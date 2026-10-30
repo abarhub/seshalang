@@ -173,15 +173,7 @@ impl TokenIterator {
         }
     }
 
-    fn est_affectation_tableau(&self) -> bool {
-        println!(
-            "est_affectation_tableau: {:?}, {:?}, {:?}, {:?}; {:?}",
-            self.get_pos(0),
-            self.len(),
-            self.index,
-            self.get_pos(1),
-            self.liste_tokens
-        );
+    fn est_affectation_tableau(&self) -> bool {        
         if let Some(Token::TokenSeparateur(PARENTO, _)) = self.get_pos(1) {
             let mut i = 1;
             while !self.est_separateur_pos(PARENTF, i) && (i as usize) < self.len() {
