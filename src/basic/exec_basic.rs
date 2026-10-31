@@ -13,7 +13,7 @@ use crate::basic::struct_basic::{
     AstDeclarationVariable, AstExpression, AstInstruction, AstLabelEnum, AstOperateurBinaireType,
     AstOperateurUnaireType, AstProgramme, TypeVariable,
 };
-use crate::basic::system_basic::system_clear;
+use crate::basic::system_basic::{system_clear, system_print, system_println};
 use crate::basic::utils_basic::Sortie;
 use std::collections::HashMap;
 use std::io::Write;
@@ -513,12 +513,12 @@ fn input(
 ) {
     if let Some(message) = message {
         if *question {
-            print!("{} ? ", message);
+            system_print(format!("{} ? ", message)).expect("Erreur pour le print");
         } else {
-            print!("{}", message);
+            system_print(format!("{}", message)).expect("Erreur pour le print");
         }
     } else if *question {
-        print!("? ");
+        system_print("? ".to_string()).expect("Erreur pour le print");
     }
     io::stdout().flush().unwrap();
     if !liste_variables.is_empty() {
@@ -541,7 +541,8 @@ fn input(
                         contexte.set_variable(nom_var.clone(), valeur.clone());
                         break;
                     } else {
-                        println!("Redo from start");
+                        system_println("Redo from start".to_string())
+                            .expect("Erreur pour le print");
                     }
                 } else if type_variable == TypeVariable::String {
                     if valeur.is_empty() {
@@ -564,7 +565,7 @@ fn input(
                         contexte.set_variable(nom_var.clone(), valeur.clone());
                         break;
                     } else {
-                        println!("Redo from start");
+                        system_print("Redo from start".to_string()).expect("Erreur pour le print");
                     }
                 } else if type_variable == TypeVariable::Single {
                     if valeur.is_empty() {
@@ -578,7 +579,7 @@ fn input(
                         contexte.set_variable(nom_var.clone(), valeur.clone());
                         break;
                     } else {
-                        println!("Redo from start");
+                        system_print("Redo from start".to_string()).expect("Erreur pour le print");
                     }
                 } else if type_variable == TypeVariable::Double {
                     if valeur.is_empty() {
@@ -592,7 +593,7 @@ fn input(
                         contexte.set_variable(nom_var.clone(), valeur.clone());
                         break;
                     } else {
-                        println!("Redo from start");
+                        system_print("Redo from start".to_string()).expect("Erreur pour le print");
                     }
                 } else {
                     panic!("Type variable non reconnu {:?}", type_variable);
@@ -601,7 +602,7 @@ fn input(
         }
     }
     if *retour_ligne {
-        println!();
+        system_println("".to_string()).expect("Erreur pour le println");
     }
 }
 

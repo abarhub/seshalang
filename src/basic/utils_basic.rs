@@ -1,3 +1,4 @@
+use crate::basic::system_basic::{system_print, system_println};
 use std::io;
 use std::io::Write;
 
@@ -20,10 +21,9 @@ impl Sortie {
     pub(crate) fn ajoute(&mut self, s: String, retour_ligne_fin: bool) {
         if self.directe {
             if retour_ligne_fin {
-                println!("{}", s);
+                system_println(s).expect("Erreur pour le println");
             } else {
-                print!("{}", s);
-                io::stdout().flush().unwrap();
+                system_print(s).expect("Erreur pour le print");
             }
         } else {
             if !self.dernier_retour_ligne && self.liste_sortie.len() > 0 {
