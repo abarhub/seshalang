@@ -15,9 +15,9 @@ use crate::basic::struct_basic::{
 };
 use crate::basic::utils_basic::Sortie;
 use std::collections::HashMap;
-use std::{fmt, io};
 use std::io::Write;
 use std::rc::Rc;
+use std::{fmt, io};
 
 const TRUE: i16 = -1;
 const FALSE: i16 = 0;
@@ -599,20 +599,17 @@ fn input(
 }
 
 fn trouve_label(label: &AstLabelEnum, liste_instructions: &Vec<AstInstruction>) -> usize {
-    if let AstLabel(nom_label) = label {
-        let mut pos = 0;
-        for instr in liste_instructions {
-            if let AstInstrLabel(AstLabel(label2)) = instr {
-                if *nom_label == *label2 {
-                    return pos;
-                }
+    let AstLabel(nom_label) = label;
+    let mut pos = 0;
+    for instr in liste_instructions {
+        if let AstInstrLabel(AstLabel(label2)) = instr {
+            if *nom_label == *label2 {
+                return pos;
             }
-            pos += 1;
         }
-        pos
-    } else {
-        panic!("label {:?} non trouvé", label);
+        pos += 1;
     }
+    pos
 }
 
 pub fn execute_expression(expression: &AstExpression, table_symbole: &mut TableSymbole) -> Valeur {
@@ -721,7 +718,6 @@ fn operateur_binaire(
                 AstOperateurBinaireType::Xor => NombreInteger(n1 ^ n2),
                 AstOperateurBinaireType::Imp => NombreInteger(!n1 | n2),
                 AstOperateurBinaireType::Eqv => NombreInteger(!(n1 ^ n2)),
-                _ => panic!("Opérateur inconnu: {:?}", operateur),
             },
             (NombreLong(n1), NombreLong(n2)) => match operateur {
                 AstOperateurBinaireType::Plus => NombreLong(n1 + n2),
