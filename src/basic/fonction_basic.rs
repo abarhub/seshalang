@@ -241,6 +241,42 @@ pub fn execute_fonction(
                     _ => panic!("La fonction oct() attend exactement un argument"),
                 }
             }
+            TypeMotCle::Val => {
+                match verification_un_parametre(
+                    "val()".to_string(),
+                    liste_expressions,
+                    table_symbole,
+                ) {
+                    Chaine(s) => NombreLong(s.parse().unwrap()),
+                    _ => panic!("La fonction val() attend exactement un argument"),
+                }
+            }
+            TypeMotCle::Str => {
+                match verification_un_parametre(
+                    "str$()".to_string(),
+                    liste_expressions,
+                    table_symbole,
+                ) {
+                    NombreInteger(n) => Chaine(format!("{}", n)),
+                    NombreLong(n) => Chaine(format!("{}", n)),
+                    NombreSingle(n) => Chaine(format!("{}", n)),
+                    NombreDouble(n) => Chaine(format!("{}", n)),
+                    _ => panic!("La fonction str$() attend exactement un argument"),
+                }
+            }
+            TypeMotCle::Space => {
+                match verification_un_parametre(
+                    "space$()".to_string(),
+                    liste_expressions,
+                    table_symbole,
+                ) {
+                    NombreInteger(n) => Chaine(format!("{:1$}", " ", n as usize)),
+                    NombreLong(n) => Chaine(format!("{:1$}", " ", n as usize)),
+                    NombreSingle(n) => Chaine(format!("{:1$}", " ", n as usize)),
+                    NombreDouble(n) => Chaine(format!("{:1$}", " ", n as usize)),
+                    _ => panic!("La fonction str$() attend exactement un argument"),
+                }
+            }
             _ => panic!("La fonction {:?} n'existe pas", mot_reserve),
         },
         AstNomMethode::AstNomFonction(nom) => {

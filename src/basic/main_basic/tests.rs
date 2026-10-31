@@ -722,6 +722,20 @@ fn test_parse_execute49() {
     assert_eq!(sortie[0], " 1  2  3 ");
 }
 
+#[test]
+fn test_parse_execute50() {
+    let fichier = "print val(\"10\")
+                              print str$(5)
+                              print space$(5)"
+        .to_string();
+    let sortie = exec(fichier);
+    assert_eq!(sortie.len(), 3);
+    assert_eq!(sortie[0], " 10 ");
+    assert_eq!(sortie[1], "5");
+    assert_eq!(sortie[2], "     ");
+}
+
+
 fn exec(fichier: String) -> Vec<String> {
     let mut sortie = Sortie::new(false);
     let programme = parse_basic(fichier).unwrap();

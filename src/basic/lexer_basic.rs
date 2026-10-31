@@ -70,6 +70,10 @@ pub enum TypeMotCle {
     Defdbl,
     Defstr,
     Shared,
+    Str,
+    Val,
+    Space,
+    Mid,
 }
 
 impl TypeMotCle {
@@ -100,7 +104,11 @@ impl TypeMotCle {
             | TypeMotCle::Time
             | TypeMotCle::Instr
             | TypeMotCle::Hex
-            | TypeMotCle::Oct => true,
+            | TypeMotCle::Oct
+            | TypeMotCle::Str
+            | TypeMotCle::Val
+            | TypeMotCle::Space
+            | TypeMotCle::Mid => true,
             _ => false,
         }
     }
@@ -725,6 +733,10 @@ fn mots_cles(s: String) -> Option<TypeMotCle> {
         "DEFDBL" => Some(TypeMotCle::Defdbl),
         "DEFSTR" => Some(TypeMotCle::Defstr),
         "SHARED" => Some(TypeMotCle::Shared),
+        "STR$" => Some(TypeMotCle::Str),
+        "VAL" => Some(TypeMotCle::Val),
+        "SPACE$" => Some(TypeMotCle::Space),
+        "MID$" => Some(TypeMotCle::Mid),
         _ => None,
     }
 }
