@@ -108,7 +108,6 @@ impl TypeMotCle {
 
 #[derive(Debug, Eq, PartialEq, Clone)]
 enum EtatLexer {
-    Nombre,
     Mot,
     Separateur,
     ChaineDeCaracteres,
@@ -316,7 +315,7 @@ impl Iterator for CharIterator {
     }
 }
 
-pub fn lexer(contenu_fichier: String) -> Vec<Vec<Token>> {
+pub fn lexer(contenu_fichier: String) -> Result<Vec<Vec<Token>>, String> {
     let mut liste_tokens: Vec<Vec<Token>> = Vec::new();
 
     let mut ligne_num = 1;
@@ -352,7 +351,7 @@ pub fn lexer(contenu_fichier: String) -> Vec<Vec<Token>> {
                     }
                 }
 
-                let token = creation_token_nombre(s, pos);
+                let token = creation_token_nombre(s, pos)?;
                 liste_tokens_ligne.push(token);
             } else if iter.is_type_charactere(TypeCharactere::Separateur) {
                 // séparateur
@@ -366,10 +365,13 @@ pub fn lexer(contenu_fichier: String) -> Vec<Vec<Token>> {
                     if let Some(mot2) = iter.next() {
                         s.push(mot2);
                     } else {
-                        panic!("erreur de caractere à la position {} : {}", pos, mot)
+                        return Err(format!(
+                            "erreur de caractere à la position {} : {}",
+                            pos, mot
+                        ));
                     }
                 }
-                let token = creation_token(s, EtatLexer::Separateur, pos);
+                let token = creation_token(s, EtatLexer::Separateur, pos)?;
                 liste_tokens_ligne.push(token);
             } else if iter.is_type_charactere(TypeCharactere::Mot) {
                 // identifiant
@@ -389,7 +391,7 @@ pub fn lexer(contenu_fichier: String) -> Vec<Vec<Token>> {
                     }
                 }
 
-                let token = creation_token(s, EtatLexer::Mot, pos);
+                let token = creation_token(s, EtatLexer::Mot, pos)?;
                 liste_tokens_ligne.push(token);
             } else if iter.is_type_charactere(TypeCharactere::Guillemet) {
                 // chaine de caractère
@@ -404,14 +406,17 @@ pub fn lexer(contenu_fichier: String) -> Vec<Vec<Token>> {
                 if iter.next_is_type_charactere(1, TypeCharactere::Guillemet) {
                     iter.next();
                 }
-                let token = creation_token(s, EtatLexer::ChaineDeCaracteres, pos);
+                let token = creation_token(s, EtatLexer::ChaineDeCaracteres, pos)?;
                 liste_tokens_ligne.push(token);
             } else {
                 // ignoré
                 if mot == ' ' || mot == '\n' {
                     // caractères espaces
                 } else {
-                    panic!("caractere invalide à la position {} : {}", pos, mot)
+                    return Err(format!(
+                        "caractere invalide à la position {} : {}",
+                        pos, mot
+                    ));
                 }
             }
         }
@@ -422,10 +427,10 @@ pub fn lexer(contenu_fichier: String) -> Vec<Vec<Token>> {
 
         ligne_num += 1;
     }
-    liste_tokens
+    Ok(liste_tokens)
 }
 
-fn creation_token_nombre(s: String, pos: PositionToken) -> Token {
+fn creation_token_nombre(s: String, pos: PositionToken) -> Result<Token, String> {
     let mut nombre_entier = 0u32;
     let mut decimal = false;
     let mut decimal_double = false;
@@ -484,38 +489,38 @@ fn creation_token_nombre(s: String, pos: PositionToken) -> Token {
         iter.next().unwrap();
     }
     if iter.no_next() {
-        panic!("Nombre invalide à la position {} : {}", pos, s);
+        return Err(format!("Nombre invalide à la position {} : {}", pos, s));
     }
     // vérification
     if est_integer && est_long {
-        panic!("Nombre invalide à la position {} : {}", pos, s);
+        return Err(format!("Nombre invalide à la position {} : {}", pos, s));
     } else if (est_integer || est_long) && (decimal || exposant) {
-        panic!("Nombre invalide à la position {} : {}", pos, s);
+        return Err(format!("Nombre invalide à la position {} : {}", pos, s));
     } else if est_integer && nombre_entier > 32767 {
-        panic!("Nombre invalide à la position {} : {}", pos, s);
+        return Err(format!("Nombre invalide à la position {} : {}", pos, s));
     } else if est_long && nombre_entier > 2147483647 {
-        panic!("Nombre invalide à la position {} : {}", pos, s);
+        return Err(format!("Nombre invalide à la position {} : {}", pos, s));
     }
     // construction du token
     if !decimal && !exposant {
         if nombre_entier <= 32768 && !est_long {
-            Token::TokenNombre(
+            Ok(Token::TokenNombre(
                 i16::try_from(nombre_entier).unwrap(),
                 0,
                 0.,
                 0.,
                 TypeNombre::Entier,
                 pos,
-            )
+            ))
         } else {
-            Token::TokenNombre(
+            Ok(Token::TokenNombre(
                 0,
                 i32::try_from(nombre_entier).unwrap(),
                 0.,
                 0.0,
                 TypeNombre::Long,
                 pos,
-            )
+            ))
         }
     } else {
         if decimal_double {
@@ -526,23 +531,30 @@ fn creation_token_nombre(s: String, pos: PositionToken) -> Token {
             if exposant {
                 nombre = nombre * 10.0_f64.powi(nombre_exposant);
             }
-            Token::TokenNombre(0, 0, 0., nombre, TypeNombre::Double, pos)
+            Ok(Token::TokenNombre(
+                0,
+                0,
+                0.,
+                nombre,
+                TypeNombre::Double,
+                pos,
+            ))
         } else {
             let mut nombre: f32 = nombre_entier as f32;
             if decimal {
-                nombre = nombre + f64_to_f32(nombre_decimal, pos.clone());
+                nombre = nombre + f64_to_f32(nombre_decimal, pos.clone())?;
             }
             if exposant {
                 nombre = nombre * 10.0_f32.powi(nombre_exposant);
             }
-            Token::TokenNombre(
+            Ok(Token::TokenNombre(
                 0,
                 0,
                 f32::try_from(nombre).unwrap(),
                 0.,
                 TypeNombre::Single,
                 pos,
-            )
+            ))
         }
     }
 }
@@ -589,58 +601,57 @@ fn get_type_charactere(mot: char) -> TypeCharactere {
     }
 }
 
-fn creation_token(s: String, etat: EtatLexer, pos: PositionToken) -> Token {
+fn creation_token(s: String, etat: EtatLexer, pos: PositionToken) -> Result<Token, String> {
     match etat {
         EtatLexer::Mot => {
             if let Some(mot_cle) = mots_cles(s.clone()) {
-                Token::TokenMotReserve(mot_cle, pos)
+                Ok(Token::TokenMotReserve(mot_cle, pos))
             } else {
-                Token::TokenIdentifiant(s, pos)
+                Ok(Token::TokenIdentifiant(s, pos))
             }
         }
-        EtatLexer::Separateur => Token::TokenSeparateur(calcul_operateur(s), pos),
-        EtatLexer::ChaineDeCaracteres => Token::TokenChaine(s, pos),
-        _ => panic!("Etat invalide à la position {}", pos),
+        EtatLexer::Separateur => Ok(Token::TokenSeparateur(calcul_operateur(s)?, pos)),
+        EtatLexer::ChaineDeCaracteres => Ok(Token::TokenChaine(s, pos)),
     }
 }
 
-fn calcul_operateur(s: String) -> TypeSeparateur {
+fn calcul_operateur(s: String) -> Result<TypeSeparateur, String> {
     if s == "+" {
-        TypeSeparateur::PLUS
+        Ok(TypeSeparateur::PLUS)
     } else if s == "-" {
-        TypeSeparateur::MOINS
+        Ok(TypeSeparateur::MOINS)
     } else if s == "(" {
-        TypeSeparateur::PARENTO
+        Ok(TypeSeparateur::PARENTO)
     } else if s == ")" {
-        TypeSeparateur::PARENTF
+        Ok(TypeSeparateur::PARENTF)
     } else if s == "=" {
-        TypeSeparateur::EQU
+        Ok(TypeSeparateur::EQU)
     } else if s == "<>" {
-        TypeSeparateur::DIFF
+        Ok(TypeSeparateur::DIFF)
     } else if s == ">" {
-        TypeSeparateur::SUP
+        Ok(TypeSeparateur::SUP)
     } else if s == ">=" {
-        TypeSeparateur::SUPE
+        Ok(TypeSeparateur::SUPE)
     } else if s == "<" {
-        TypeSeparateur::INF
+        Ok(TypeSeparateur::INF)
     } else if s == "<=" {
-        TypeSeparateur::INFE
+        Ok(TypeSeparateur::INFE)
     } else if s == "*" {
-        TypeSeparateur::FOIS
+        Ok(TypeSeparateur::FOIS)
     } else if s == "/" {
-        TypeSeparateur::DIVR
+        Ok(TypeSeparateur::DIVR)
     } else if s == "\\" {
-        TypeSeparateur::DIVE
+        Ok(TypeSeparateur::DIVE)
     } else if s == "^" {
-        TypeSeparateur::EXP
+        Ok(TypeSeparateur::EXP)
     } else if s == "," {
-        TypeSeparateur::VIRGULE
+        Ok(TypeSeparateur::VIRGULE)
     } else if s == ";" {
-        TypeSeparateur::POINTVIRGULE
+        Ok(TypeSeparateur::POINTVIRGULE)
     } else if s == ":" {
-        TypeSeparateur::DEUXPOINT
+        Ok(TypeSeparateur::DEUXPOINT)
     } else {
-        panic!("separateur invalide : {}", s)
+        return Err(format!("separateur invalide : {}", s));
     }
 }
 
@@ -718,12 +729,15 @@ fn mots_cles(s: String) -> Option<TypeMotCle> {
     }
 }
 
-fn f64_to_f32(x: f64, pos: PositionToken) -> f32 {
+fn f64_to_f32(x: f64, pos: PositionToken) -> Result<f32, String> {
     let y = x as f32;
     if y.is_finite() || !x.is_finite() {
-        y // pas de débordement (ou x était déjà inf/NaN)
+        Ok(y) // pas de débordement (ou x était déjà inf/NaN)
     } else {
-        panic!("Nombre decimal trop grand à la position {} : {}", pos, x);
+        Err(format!(
+            "Nombre decimal trop grand à la position {} : {}",
+            pos, x
+        ))
     }
 }
 

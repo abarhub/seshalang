@@ -8,7 +8,7 @@ use crate::basic::lexer_basic::TypeSeparateur::{
 #[test]
 fn test_lexer_nombre() {
     let fichier = "123".to_string();
-    let liste_tokens = lexer(fichier);
+    let liste_tokens = lexer(fichier).unwrap();
 
     assert_eq!(
         liste_tokens,
@@ -26,7 +26,7 @@ fn test_lexer_nombre() {
 #[test]
 fn test_lexer_nombre2() {
     let fichier = "123.456".to_string();
-    let liste_tokens = lexer(fichier);
+    let liste_tokens = lexer(fichier).unwrap();
 
     assert_eq!(
         liste_tokens,
@@ -44,7 +44,7 @@ fn test_lexer_nombre2() {
 #[test]
 fn test_lexer_nombre3() {
     let fichier = "123.456e2".to_string();
-    let liste_tokens = lexer(fichier);
+    let liste_tokens = lexer(fichier).unwrap();
 
     assert_eq!(
         liste_tokens,
@@ -62,7 +62,7 @@ fn test_lexer_nombre3() {
 #[test]
 fn test_lexer_nombre4() {
     let fichier = "10%".to_string();
-    let liste_tokens = lexer(fichier);
+    let liste_tokens = lexer(fichier).unwrap();
 
     assert_eq!(
         liste_tokens,
@@ -80,7 +80,7 @@ fn test_lexer_nombre4() {
 #[test]
 fn test_lexer_nombre5() {
     let fichier = "10&".to_string();
-    let liste_tokens = lexer(fichier);
+    let liste_tokens = lexer(fichier).unwrap();
 
     assert_eq!(
         liste_tokens,
@@ -98,7 +98,7 @@ fn test_lexer_nombre5() {
 #[test]
 fn test_lexer_nombre6() {
     let fichier = "10!".to_string();
-    let liste_tokens = lexer(fichier);
+    let liste_tokens = lexer(fichier).unwrap();
 
     assert_eq!(
         liste_tokens,
@@ -116,7 +116,7 @@ fn test_lexer_nombre6() {
 #[test]
 fn test_lexer_nombre7() {
     let fichier = "10#".to_string();
-    let liste_tokens = lexer(fichier);
+    let liste_tokens = lexer(fichier).unwrap();
 
     assert_eq!(
         liste_tokens,
@@ -132,23 +132,25 @@ fn test_lexer_nombre7() {
 }
 
 #[test]
-#[should_panic(expected = "Nombre invalide à la position (1, 0) : 10e%")]
 fn test_lexer_nombre8() {
     let fichier = "10e%".to_string();
-    lexer(fichier);
+    let res=lexer(fichier);
+    assert_eq!(res.is_err(), true);
+    assert_eq!(res.err().unwrap(), "Nombre invalide à la position (1, 0) : 10e%");
 }
 
 #[test]
-#[should_panic(expected = "Nombre invalide à la position (1, 0) : 50000%")]
 fn test_lexer_nombre9() {
     let fichier = "50000%".to_string();
-    lexer(fichier);
+    let res=lexer(fichier);
+    assert_eq!(res.is_err(), true);
+    assert_eq!(res.err().unwrap(), "Nombre invalide à la position (1, 0) : 50000%");
 }
 
 #[test]
 fn test_lexer_identifiant() {
     let fichier = "abc".to_string();
-    let liste_tokens = lexer(fichier);
+    let liste_tokens = lexer(fichier).unwrap();
 
     assert_eq!(
         liste_tokens,
@@ -162,7 +164,7 @@ fn test_lexer_identifiant() {
 #[test]
 fn test_lexer_identifiant2() {
     let fichier = "abc$".to_string();
-    let liste_tokens = lexer(fichier);
+    let liste_tokens = lexer(fichier).unwrap();
 
     assert_eq!(
         liste_tokens,
@@ -176,7 +178,7 @@ fn test_lexer_identifiant2() {
 #[test]
 fn test_lexer_identifiant3() {
     let fichier = "toto tata% 96325".to_string();
-    let liste_tokens = lexer(fichier);
+    let liste_tokens = lexer(fichier).unwrap();
 
     assert_eq!(
         liste_tokens,
@@ -191,7 +193,7 @@ fn test_lexer_identifiant3() {
 #[test]
 fn test_lexer_identifiant4() {
     let fichier = "azertyu123_bbb".to_string();
-    let liste_tokens = lexer(fichier);
+    let liste_tokens = lexer(fichier).unwrap();
 
     assert_eq!(
         liste_tokens,
@@ -208,7 +210,7 @@ fn test_lexer_identifiant5() {
 bbbb
 cccc"
         .to_string();
-    let liste_tokens = lexer(fichier);
+    let liste_tokens = lexer(fichier).unwrap();
 
     assert_eq!(
         liste_tokens,
@@ -232,7 +234,7 @@ cccc"
 #[test]
 fn test_lexer_identifiant6() {
     let fichier = "aaa$ bbb! ccc% ddd# eeee&".to_string();
-    let liste_tokens = lexer(fichier);
+    let liste_tokens = lexer(fichier).unwrap();
 
     assert_eq!(
         liste_tokens,
@@ -249,7 +251,7 @@ fn test_lexer_identifiant6() {
 #[test]
 fn test_lexer_identifiant7() {
     let fichier = "aaa MOD bbb".to_string();
-    let liste_tokens = lexer(fichier);
+    let liste_tokens = lexer(fichier).unwrap();
 
     assert_eq!(
         liste_tokens,
@@ -264,7 +266,7 @@ fn test_lexer_identifiant7() {
 #[test]
 fn test_lexer_identifiant8() {
     let fichier = "chr$".to_string();
-    let liste_tokens = lexer(fichier);
+    let liste_tokens = lexer(fichier).unwrap();
 
     assert_eq!(
         liste_tokens,
@@ -275,7 +277,7 @@ fn test_lexer_identifiant8() {
 #[test]
 fn test_lexer_identifiant9() {
     let fichier = "CDBL".to_string();
-    let liste_tokens = lexer(fichier);
+    let liste_tokens = lexer(fichier).unwrap();
 
     assert_eq!(
         liste_tokens,
@@ -286,7 +288,7 @@ fn test_lexer_identifiant9() {
 #[test]
 fn test_lexer_separateur() {
     let fichier = "2+3".to_string();
-    let liste_tokens = lexer(fichier);
+    let liste_tokens = lexer(fichier).unwrap();
 
     assert_eq!(
         liste_tokens,
@@ -301,7 +303,7 @@ fn test_lexer_separateur() {
 #[test]
 fn test_lexer_separateur2() {
     let fichier = "+ - * / \\ ^ ( ) < > = >= <= <>".to_string();
-    let liste_tokens = lexer(fichier);
+    let liste_tokens = lexer(fichier).unwrap();
 
     assert_eq!(
         liste_tokens,
@@ -327,7 +329,7 @@ fn test_lexer_separateur2() {
 #[test]
 fn test_lexer_guillemet() {
     let fichier = "\"bbb\"".to_string();
-    let liste_tokens = lexer(fichier);
+    let liste_tokens = lexer(fichier).unwrap();
 
     assert_eq!(
         liste_tokens,
@@ -341,7 +343,7 @@ fn test_lexer_guillemet() {
 #[test]
 fn test_lexer_guillemet2() {
     let fichier = "\"\"".to_string();
-    let liste_tokens = lexer(fichier);
+    let liste_tokens = lexer(fichier).unwrap();
 
     assert_eq!(
         liste_tokens,
@@ -355,7 +357,7 @@ fn test_lexer_guillemet2() {
 #[test]
 fn test_lexer_commentaire() {
     let fichier = "REM aaa bbb ccc".to_string();
-    let liste_tokens = lexer(fichier);
+    let liste_tokens = lexer(fichier).unwrap();
 
     assert_eq!(liste_tokens.len(), 0);
 }
@@ -363,7 +365,7 @@ fn test_lexer_commentaire() {
 #[test]
 fn test_lexer_commentaire2() {
     let fichier = "' aaa bbb ccc".to_string();
-    let liste_tokens = lexer(fichier);
+    let liste_tokens = lexer(fichier).unwrap();
 
     assert_eq!(liste_tokens.len(), 0);
 }
@@ -371,7 +373,7 @@ fn test_lexer_commentaire2() {
 #[test]
 fn test_lexer_commentaire3() {
     let fichier = "i REM xxxx".to_string();
-    let liste_tokens = lexer(fichier);
+    let liste_tokens = lexer(fichier).unwrap();
 
     assert_eq!(
         liste_tokens,
@@ -385,7 +387,7 @@ fn test_lexer_commentaire3() {
 #[test]
 fn test_lexer_commentaire4() {
     let fichier = "XXX ' zzz".to_string();
-    let liste_tokens = lexer(fichier);
+    let liste_tokens = lexer(fichier).unwrap();
 
     assert_eq!(
         liste_tokens,
@@ -399,7 +401,7 @@ fn test_lexer_commentaire4() {
 #[test]
 fn test_lexer_commentaire5() {
     let fichier = "a=3 rem www".to_string();
-    let liste_tokens = lexer(fichier);
+    let liste_tokens = lexer(fichier).unwrap();
 
     assert_eq!(
         liste_tokens,
@@ -414,7 +416,7 @@ fn test_lexer_commentaire5() {
 #[test]
 fn test_lexer_commentaire6() {
     let fichier = "remember".to_string();
-    let liste_tokens = lexer(fichier);
+    let liste_tokens = lexer(fichier).unwrap();
 
     assert_eq!(
         liste_tokens,
@@ -428,7 +430,7 @@ fn test_lexer_commentaire6() {
 #[test]
 fn test_lexer_commentaire7() {
     let fichier = "REM$".to_string();
-    let liste_tokens = lexer(fichier);
+    let liste_tokens = lexer(fichier).unwrap();
 
     assert_eq!(
         liste_tokens,
@@ -441,8 +443,9 @@ fn test_lexer_commentaire7() {
 
 
 #[test]
-#[should_panic(expected = "caractere invalide à la position (1, 0) : ë")]
 fn test_lexer_autre() {
     let fichier = "ë".to_string();
-    lexer(fichier);
+    let res=lexer(fichier);
+    assert_eq!(res.is_err(), true);
+    assert_eq!(res.err().unwrap(), "caractere invalide à la position (1, 0) : ë");
 }

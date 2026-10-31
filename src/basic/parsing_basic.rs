@@ -173,7 +173,7 @@ impl TokenIterator {
         }
     }
 
-    fn est_affectation_tableau(&self) -> bool {        
+    fn est_affectation_tableau(&self) -> bool {
         if let Some(Token::TokenSeparateur(PARENTO, _)) = self.get_pos(1) {
             let mut i = 1;
             while !self.est_separateur_pos(PARENTF, i) && (i as usize) < self.len() {
@@ -227,15 +227,16 @@ impl Compteur {
 }
 
 pub fn parse_basic(contenu_fichier: String) -> std::io::Result<AstProgramme> {
-    let liste_tokens: Vec<Vec<Token>> = lexer(contenu_fichier);
+    let liste_tokens: Result<Vec<Vec<Token>>, String> = lexer(contenu_fichier);
 
     if DEBUG_PRINT {
         println!("liste token : {:?}", liste_tokens);
     }
 
-    let programme = parsing_programme(liste_tokens);
-
-    Ok(programme)
+    match liste_tokens {
+        Ok(liste_token_ok) => Ok(parsing_programme(liste_token_ok)),
+        Err(err) => Err(std::io::Error::new(std::io::ErrorKind::InvalidData, err)),
+    }
 }
 
 fn parsing_programme(liste_tokens: Vec<Vec<Token>>) -> AstProgramme {
@@ -1558,7 +1559,7 @@ mod tests {
     #[test]
     fn test_parser1() {
         let fichier = "x=1".to_string();
-        let liste_tokens = lexer(fichier);
+        let liste_tokens = lexer(fichier).unwrap();
         let ast = parsing_programme(liste_tokens);
 
         assert_eq!(
@@ -1570,7 +1571,7 @@ mod tests {
     #[test]
     fn test_parser2() {
         let fichier = "x = 1 EQV 2".to_string();
-        let liste_tokens = lexer(fichier);
+        let liste_tokens = lexer(fichier).unwrap();
         let ast = parsing_programme(liste_tokens);
 
         assert_eq!(
@@ -1589,7 +1590,7 @@ mod tests {
     #[test]
     fn test_parser_print1() {
         let fichier = "print 1".to_string();
-        let liste_tokens = lexer(fichier);
+        let liste_tokens = lexer(fichier).unwrap();
         let ast = parsing_programme(liste_tokens);
 
         assert_eq!(
@@ -1605,7 +1606,7 @@ mod tests {
     #[test]
     fn test_parser_print2() {
         let fichier = "print 1 EQV 2".to_string();
-        let liste_tokens = lexer(fichier);
+        let liste_tokens = lexer(fichier).unwrap();
         let ast = parsing_programme(liste_tokens);
 
         assert_eq!(
@@ -1625,7 +1626,7 @@ mod tests {
     #[test]
     fn test_parser_print3() {
         let fichier = "print 3 > 2 EQV 0".to_string();
-        let liste_tokens = lexer(fichier);
+        let liste_tokens = lexer(fichier).unwrap();
         let ast = parsing_programme(liste_tokens);
 
         assert_eq!(
@@ -1649,7 +1650,7 @@ mod tests {
     #[test]
     fn test_parser_print4() {
         let fichier = "print 1;2".to_string();
-        let liste_tokens = lexer(fichier);
+        let liste_tokens = lexer(fichier).unwrap();
         let ast = parsing_programme(liste_tokens);
 
         assert_eq!(
@@ -1665,7 +1666,7 @@ mod tests {
     #[test]
     fn test_parser_print5() {
         let fichier = "print 1,2".to_string();
-        let liste_tokens = lexer(fichier);
+        let liste_tokens = lexer(fichier).unwrap();
         let ast = parsing_programme(liste_tokens);
 
         assert_eq!(
@@ -1681,7 +1682,7 @@ mod tests {
     #[test]
     fn test_parser_print6() {
         let fichier = "print 1;2;".to_string();
-        let liste_tokens = lexer(fichier);
+        let liste_tokens = lexer(fichier).unwrap();
         let ast = parsing_programme(liste_tokens);
 
         assert_eq!(
@@ -1697,7 +1698,7 @@ mod tests {
     #[test]
     fn test_parser_print7() {
         let fichier = "print T(1);".to_string();
-        let liste_tokens = lexer(fichier);
+        let liste_tokens = lexer(fichier).unwrap();
         let ast = parsing_programme(liste_tokens);
 
         assert_eq!(
@@ -1716,7 +1717,7 @@ mod tests {
     #[test]
     fn test_parser_label1() {
         let fichier = "label1: print 1".to_string();
-        let liste_tokens = lexer(fichier);
+        let liste_tokens = lexer(fichier).unwrap();
         let ast = parsing_programme(liste_tokens);
 
         assert_eq!(
@@ -1731,7 +1732,7 @@ mod tests {
     #[test]
     fn test_parser_label2() {
         let fichier = "123 print 1".to_string();
-        let liste_tokens = lexer(fichier);
+        let liste_tokens = lexer(fichier).unwrap();
         let ast = parsing_programme(liste_tokens);
 
         assert_eq!(
@@ -1746,7 +1747,7 @@ mod tests {
     #[test]
     fn test_parser_label3() {
         let fichier = "label5:".to_string();
-        let liste_tokens = lexer(fichier);
+        let liste_tokens = lexer(fichier).unwrap();
         let ast = parsing_programme(liste_tokens);
 
         assert_eq!(
@@ -1758,7 +1759,7 @@ mod tests {
     #[test]
     fn test_parser_label4() {
         let fichier = "4".to_string();
-        let liste_tokens = lexer(fichier);
+        let liste_tokens = lexer(fichier).unwrap();
         let ast = parsing_programme(liste_tokens);
 
         assert_eq!(
@@ -1770,7 +1771,7 @@ mod tests {
     #[test]
     fn test_parser_input() {
         let fichier = "input abc".to_string();
-        let liste_tokens = lexer(fichier);
+        let liste_tokens = lexer(fichier).unwrap();
         let ast = parsing_programme(liste_tokens);
 
         assert_eq!(
@@ -1782,7 +1783,7 @@ mod tests {
     #[test]
     fn test_parser_input2() {
         let fichier = "input \"aaa\"; xxx".to_string();
-        let liste_tokens = lexer(fichier);
+        let liste_tokens = lexer(fichier).unwrap();
         let ast = parsing_programme(liste_tokens);
 
         assert_eq!(
@@ -1799,7 +1800,7 @@ mod tests {
     #[test]
     fn test_parser_input3() {
         let fichier = "input ; \"gg\"; t".to_string();
-        let liste_tokens = lexer(fichier);
+        let liste_tokens = lexer(fichier).unwrap();
         let ast = parsing_programme(liste_tokens);
 
         assert_eq!(
@@ -1816,7 +1817,7 @@ mod tests {
     #[test]
     fn test_parser_input4() {
         let fichier = "input \"f\", a,b,c".to_string();
-        let liste_tokens = lexer(fichier);
+        let liste_tokens = lexer(fichier).unwrap();
         let ast = parsing_programme(liste_tokens);
 
         assert_eq!(
