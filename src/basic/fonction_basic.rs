@@ -257,7 +257,6 @@ pub fn execute_fonction(
                 panic!("La fonction {} attend exactement un argument", nom);
             }
         }
-        _ => panic!("Méthode inconnue: {:?}", nom_methode),
     }
 }
 

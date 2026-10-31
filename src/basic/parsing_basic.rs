@@ -122,7 +122,7 @@ impl TokenIterator {
     }
 
     fn est_nombre(&self) -> bool {
-        if let Some(Token::TokenNombre(_, _, _, _, _, _)) = self.get() {
+        if let Some(TokenNombre(_, _, _, _, _, _)) = self.get() {
             true
         } else {
             false
@@ -130,7 +130,7 @@ impl TokenIterator {
     }
 
     fn est_nombre_pos(&self, position: i32) -> bool {
-        if let Some(Token::TokenNombre(_, _, _, _, _, _)) = self.get_pos(position) {
+        if let Some(TokenNombre(_, _, _, _, _, _)) = self.get_pos(position) {
             true
         } else {
             false
@@ -261,9 +261,9 @@ fn parsing_programme(liste_tokens: Vec<Vec<Token>>) -> AstProgramme {
         if token_iterator.est_nombre() {
             let nombre = token_iterator.next().unwrap();
             match nombre.clone() {
-                TokenNombre(n16, n32, _, _, typeNombre, _) => {
+                TokenNombre(n16, n32, _, _, type_nombre, _) => {
                     label = {
-                        match typeNombre {
+                        match type_nombre {
                             Entier => Some(AstLabel(n16.to_string())),
                             Long => Some(AstLabel(n32.to_string())),
                             _ => {
@@ -1124,7 +1124,7 @@ fn parse_if(
     }
 }
 
-fn parse_input(token_iterator: &mut &mut TokenIterator, debutInstr: &mut Vec<AstInstruction>) {
+fn parse_input(token_iterator: &mut &mut TokenIterator, debut_instr: &mut Vec<AstInstruction>) {
     token_iterator.next();
     let retour_ligne: bool;
     if token_iterator.est_separateur(POINTVIRGULE) {
@@ -1165,7 +1165,7 @@ fn parse_input(token_iterator: &mut &mut TokenIterator, debutInstr: &mut Vec<Ast
         retour_ligne,
         point_interrogation,
     ));
-    debutInstr.append(&mut liste_instruction);
+    debut_instr.append(&mut liste_instruction);
 }
 
 fn separateur_parametre(nom_methode: &String, mot: Token) -> bool {
