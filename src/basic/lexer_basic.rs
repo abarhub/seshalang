@@ -74,6 +74,8 @@ pub enum TypeMotCle {
     Val,
     Space,
     Mid,
+    Left,
+    Right,
 }
 
 impl TypeMotCle {
@@ -108,7 +110,10 @@ impl TypeMotCle {
             | TypeMotCle::Str
             | TypeMotCle::Val
             | TypeMotCle::Space
-            | TypeMotCle::Mid => true,
+            | TypeMotCle::Mid
+            | TypeMotCle::Left
+            | TypeMotCle::Right
+            => true,
             _ => false,
         }
     }
@@ -737,6 +742,8 @@ fn mots_cles(s: String) -> Option<TypeMotCle> {
         "VAL" => Some(TypeMotCle::Val),
         "SPACE$" => Some(TypeMotCle::Space),
         "MID$" => Some(TypeMotCle::Mid),
+        "LEFT$" => Some(TypeMotCle::Left),
+        "RIGHT$" => Some(TypeMotCle::Right),
         _ => None,
     }
 }

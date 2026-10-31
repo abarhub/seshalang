@@ -1,4 +1,4 @@
-use super::*;   // accès à tout le module parent, y compris le privé
+use super::*; // accès à tout le module parent, y compris le privé
 use crate::basic::exec_basic::execute;
 use crate::basic::parsing_basic::parse_basic;
 use crate::basic::utils_basic::Sortie;
@@ -705,8 +705,7 @@ fn test_parse_execute47() {
 
 #[test]
 fn test_parse_execute48() {
-    let fichier = "print 1;2"
-        .to_string();
+    let fichier = "print 1;2".to_string();
     let sortie = exec(fichier);
     assert_eq!(sortie.len(), 1);
     assert_eq!(sortie[0], " 1  2 ");
@@ -755,6 +754,17 @@ fn test_parse_execute52() {
     assert_eq!(sortie[0], "Paris?");
 }
 
+#[test]
+fn test_parse_execute53() {
+    let fichier = "a$ = \"Microsoft QBasic\")
+                              print LEFT$(a$, 5)
+                              print RIGHT$(a$, 5)"
+        .to_string();
+    let sortie = exec(fichier);
+    assert_eq!(sortie.len(), 2);
+    assert_eq!(sortie[0], "Micro");
+    assert_eq!(sortie[1], "Basic");
+}
 
 fn exec(fichier: String) -> Vec<String> {
     let mut sortie = Sortie::new(false);
@@ -762,4 +772,3 @@ fn exec(fichier: String) -> Vec<String> {
     execute(programme, &mut sortie);
     sortie.sortie()
 }
-

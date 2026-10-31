@@ -277,7 +277,9 @@ pub fn execute_fonction(
                     _ => panic!("La fonction str$() attend exactement un argument"),
                 }
             }
-            TypeMotCle::Mid => mod_extract(&liste_expressions, table_symbole),
+            TypeMotCle::Mid => mid_extract(&liste_expressions, table_symbole),
+            TypeMotCle::Left => str_extract(&liste_expressions, table_symbole, true),
+            TypeMotCle::Right => str_extract(&liste_expressions, table_symbole, false),
             _ => panic!("La fonction {:?} n'existe pas", mot_reserve),
         },
         AstNomMethode::AstNomFonction(nom) => {
@@ -297,7 +299,52 @@ pub fn execute_fonction(
     }
 }
 
-fn mod_extract(liste_expressions: &Vec<AstExpression>, table_symbole: &mut TableSymbole) -> Valeur {
+fn str_extract(
+    liste_expressions: &Vec<AstExpression>,
+    table_symbole: &mut TableSymbole,
+    left: bool,
+) -> Valeur {
+    if liste_expressions.len() != 2 {
+        panic!(
+            "La fonction {} attend deux arguments",
+            if left { "left$" } else { "right$" }
+        );
+    }
+    let e1 = liste_expressions.get(0).unwrap();
+    let str0 = exec_basic::execute_expression(&(e1.clone()), table_symbole);
+    let e2 = liste_expressions.get(1).unwrap();
+    let debut = exec_basic::execute_expression(&(e2.clone()), table_symbole);
+    let ch;
+    if let Chaine(s) = str0 {
+        ch = s;
+    } else {
+        panic!("Le premier argument de la fonction mid$ doit être une chaine");
+    }
+    let debut0 = match debut {
+        NombreInteger(n) => n as i32,
+        NombreLong(n) => n,
+        NombreSingle(n) => n as i32,
+        NombreDouble(n) => n as i32,
+        _ => panic!("Le deuxième argument de la fonction mid$ doit être un entier"),
+    };
+    let debut_pos = debut0;
+    let mut iter = ch.char_indices();
+    let limite = if left {
+        debut_pos
+    } else {
+        ch.len() as i32 - debut_pos
+    };
+    let (start, _) = iter
+        .nth((limite) as usize)
+        .expect(format!("La position de début {} n'est pas bonne", debut_pos).as_str());
+    if left {
+        Chaine(ch[..start].to_string())
+    } else {
+        Chaine(ch[start..].to_string())
+    }
+}
+
+fn mid_extract(liste_expressions: &Vec<AstExpression>, table_symbole: &mut TableSymbole) -> Valeur {
     if liste_expressions.len() != 2 && liste_expressions.len() != 3 {
         panic!("La fonction mid$ attend deux ou trois arguments");
     }
