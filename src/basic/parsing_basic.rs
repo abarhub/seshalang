@@ -234,12 +234,18 @@ pub fn parse_basic(contenu_fichier: String) -> std::io::Result<AstProgramme> {
     }
 
     match liste_tokens {
-        Ok(liste_token_ok) => Ok(parsing_programme(liste_token_ok)),
+        Ok(liste_token_ok) => {
+            let res = parsing_programme(liste_token_ok);
+            match res {
+                Ok(programme) => Ok(programme),
+                Err(err) => Err(std::io::Error::new(std::io::ErrorKind::InvalidData, err)),
+            }
+        }
         Err(err) => Err(std::io::Error::new(std::io::ErrorKind::InvalidData, err)),
     }
 }
 
-fn parsing_programme(liste_tokens: Vec<Vec<Token>>) -> AstProgramme {
+fn parsing_programme(liste_tokens: Vec<Vec<Token>>) -> Result<AstProgramme, String> {
     let mut programme = AstProgramme {
         liste_instructions: Vec::new(),
     };
@@ -267,13 +273,16 @@ fn parsing_programme(liste_tokens: Vec<Vec<Token>>) -> AstProgramme {
                             Entier => Some(AstLabel(n16.to_string())),
                             Long => Some(AstLabel(n32.to_string())),
                             _ => {
-                                panic!("token {:?} n'est pas un nombre entier", nombre);
+                                return Err(format!(
+                                    "token {:?} n'est pas un nombre entier",
+                                    nombre
+                                ));
                             }
                         }
                     }
                 }
                 _ => {
-                    panic!("token {:?} n'est pas un nombre", nombre);
+                    return Err(format!("token {:?} n'est pas un nombre", nombre));
                 }
             }
         } else if token_iterator.est_label() {
@@ -283,22 +292,22 @@ fn parsing_programme(liste_tokens: Vec<Vec<Token>>) -> AstProgramme {
                 let deux_point = token_iterator.next().unwrap();
                 if let Token::TokenSeparateur(DEUXPOINT, _) = deux_point {
                 } else {
-                    panic!("token {:?} n'est pas un deux point", deux_point);
+                    return Err(format!("token {:?} n'est pas un deux point", deux_point));
                 }
             } else {
-                panic!("token {:?} n'est pas un label", label_ident);
+                return Err(format!("token {:?} n'est pas un label", label_ident));
             }
         }
 
         // les instructions
         let mut liste_instructions =
-            parse_instruction(&mut token_iterator, label, &mut iter, &mut compteur);
+            parse_instruction(&mut token_iterator, label, &mut iter, &mut compteur)?;
         if !liste_instructions.is_empty() {
             programme.liste_instructions.append(&mut liste_instructions);
         }
     }
 
-    programme
+    Ok(programme)
 }
 
 fn parse_instruction(
@@ -306,7 +315,7 @@ fn parse_instruction(
     label: Option<AstLabelEnum>,
     liste_instructions_iter: &mut Iter<Vec<Token>>,
     compteur: &mut Compteur,
-) -> Vec<AstInstruction> {
+) -> Result<Vec<AstInstruction>, String> {
     let mut debut_instr = vec![];
 
     if label.is_some() {
@@ -314,90 +323,83 @@ fn parse_instruction(
         debut_instr.push(instruction);
     }
     if token_iterator.len() == 0 {
-        return debut_instr;
+        return Ok(debut_instr);
     }
     if token_iterator.est_identifiant()
         && (token_iterator.est_separateur_pos(EQU, 1) || token_iterator.est_affectation_tableau())
     {
         // affectation
         let affectation_tab = token_iterator.est_affectation_tableau();
-        affectation(&mut token_iterator, &mut debut_instr, affectation_tab);
-        debut_instr
+        let instr = affectation(&mut token_iterator, affectation_tab)?;
+        debut_instr.push(instr);
+        Ok(debut_instr)
     } else if token_iterator.est_identifiant() {
         // appel de méthode
-        parse_appel_methode(&mut token_iterator, &mut debut_instr);
-        debut_instr
+        let instr = parse_appel_methode(&mut token_iterator)?;
+        debut_instr.push(instr);
+        Ok(debut_instr)
     } else if token_iterator.est_mot_cle(TypeMotCle::Print) {
-        parse_print(&mut token_iterator, &mut debut_instr);
-        debut_instr
+        let instr = parse_print(&mut token_iterator)?;
+        debut_instr.push(instr);
+        Ok(debut_instr)
     } else if token_iterator.est_mot_cle(Goto) {
-        parse_goto(&mut token_iterator, &mut debut_instr);
-        debut_instr
+        let instr = parse_goto(&mut token_iterator)?;
+        debut_instr.push(instr);
+        Ok(debut_instr)
     } else if token_iterator.est_mot_cle(If) {
-        parse_if(
-            &mut token_iterator,
-            liste_instructions_iter,
-            compteur,
-            &mut debut_instr,
-        );
-        debut_instr
+        let mut instrs = parse_if(&mut token_iterator, liste_instructions_iter, compteur)?;
+        debut_instr.append(&mut instrs);
+        Ok(debut_instr)
     } else if token_iterator.est_mot_cle(Input) {
-        parse_input(&mut token_iterator, &mut debut_instr);
-        debut_instr
+        let instr = parse_input(&mut token_iterator);
+        debut_instr.push(instr);
+        Ok(debut_instr)
     } else if token_iterator.est_mot_cle(End) {
-        parse_end(&mut token_iterator, &mut debut_instr);
-        debut_instr
+        let instr = parse_end(&mut token_iterator);
+        debut_instr.push(instr);
+        Ok(debut_instr)
     } else if token_iterator.est_mot_cle(While) {
-        parse_while(
-            &mut token_iterator,
-            &mut debut_instr,
-            compteur,
-            liste_instructions_iter,
-        );
-        debut_instr
+        let mut liste_instr = parse_while(&mut token_iterator, compteur, liste_instructions_iter)?;
+        debut_instr.append(&mut liste_instr);
+        Ok(debut_instr)
     } else if token_iterator.est_mot_cle(Do) {
-        parse_do_while(
-            &mut token_iterator,
-            &mut debut_instr,
-            compteur,
-            liste_instructions_iter,
-        );
-        debut_instr
+        let mut liste_instr =
+            parse_do_while(&mut token_iterator, compteur, liste_instructions_iter)?;
+        debut_instr.append(&mut liste_instr);
+        Ok(debut_instr)
     } else if token_iterator.est_mot_cle(For) {
-        parse_for(
-            &mut token_iterator,
-            &mut debut_instr,
-            compteur,
-            liste_instructions_iter,
-        );
-        debut_instr
+        let mut liste_instr = parse_for(&mut token_iterator, compteur, liste_instructions_iter)?;
+        debut_instr.append(&mut liste_instr);
+        Ok(debut_instr)
     } else if token_iterator.est_mot_cle(Cls) {
         // ne fait rien
-        debut_instr
+        Ok(debut_instr)
     } else if token_iterator.est_mot_cle(Defint)
         || token_iterator.est_mot_cle(Deflng)
         || token_iterator.est_mot_cle(Defsng)
         || token_iterator.est_mot_cle(Defdbl)
         || token_iterator.est_mot_cle(Defstr)
     {
-        parse_declaration_defaut(&mut token_iterator, &mut debut_instr);
-        debut_instr
+        let instr = parse_declaration_defaut(&mut token_iterator)?;
+        debut_instr.push(instr);
+        Ok(debut_instr)
     } else if token_iterator.est_mot_cle(Dim) {
-        parse_declaration(&mut token_iterator, &mut debut_instr);
-        debut_instr
+        let instr = parse_declaration(&mut token_iterator)?;
+        debut_instr.push(instr);
+        Ok(debut_instr)
     } else {
-        panic!("instruction inconnue {:?}", token_iterator.get());
+        Err(format!("instruction inconnue {:?}", token_iterator.get()))
     }
 }
 
-fn parse_declaration(
-    token_iterator: &mut &mut TokenIterator,
-    debut_instr: &mut Vec<AstInstruction>,
-) {
+fn parse_declaration(token_iterator: &mut &mut TokenIterator) -> Result<AstInstruction, String> {
     if let Some(Token::TokenMotReserve(Dim, _)) = token_iterator.next() {
         // DIM
     } else {
-        panic!("token {:?} n'est pas un mot clé Dim", token_iterator.get());
+        return Err(format!(
+            "token {:?} n'est pas un mot clé Dim",
+            token_iterator.get()
+        ));
     }
 
     let mut liste_instr = vec![];
@@ -408,10 +410,16 @@ fn parse_declaration(
         if let Token::TokenIdentifiant(ident, _) = token_iterator.next().unwrap() {
             variable = ident;
         } else {
-            panic!("token {:?} n'est pas un identifiant", token_iterator.get());
+            return Err(format!(
+                "token {:?} n'est pas un identifiant",
+                token_iterator.get()
+            ));
         }
     } else {
-        panic!("token {:?} n'est pas un identifiant", token_iterator.get());
+        return Err(format!(
+            "token {:?} n'est pas un identifiant",
+            token_iterator.get()
+        ));
     }
 
     let mut liste_expression = vec![];
@@ -433,10 +441,10 @@ fn parse_declaration(
         if token_iterator.est_separateur(PARENTF) {
             token_iterator.next();
         } else {
-            panic!(
+            return Err(format!(
                 "token {:?} n'est pas une parenthèse fermante",
                 token_iterator.get()
-            );
+            ));
         }
     }
 
@@ -458,13 +466,24 @@ fn parse_declaration(
                     TypeMotCle::Single => TypeVariable::Single,
                     Double => TypeVariable::Double,
                     StringMC => TypeVariable::String,
-                    _ => panic!("token {:?} n'est pas un identifiant", token_iterator.get()),
+                    _ => {
+                        return Err(format!(
+                            "token {:?} n'est pas un identifiant",
+                            token_iterator.get()
+                        ));
+                    }
                 })
             } else {
-                panic!("token {:?} n'est pas un identifiant", token_iterator.get());
+                return Err(format!(
+                    "token {:?} n'est pas un identifiant",
+                    token_iterator.get()
+                ));
             }
         } else {
-            panic!("token {:?} n'est pas un identifiant", token_iterator.get());
+            return Err(format!(
+                "token {:?} n'est pas un identifiant",
+                token_iterator.get()
+            ));
         }
     }
 
@@ -478,13 +497,12 @@ fn parse_declaration(
         token_iterator.next();
     }
 
-    debut_instr.push(AstDeclVariable(liste_instr));
+    Ok(AstDeclVariable(liste_instr))
 }
 
 fn parse_declaration_defaut(
     token_iterator: &mut &mut TokenIterator,
-    debut_instr: &mut Vec<AstInstruction>,
-) {
+) -> Result<AstInstruction, String> {
     let type_variables;
 
     if let Some(Token::TokenMotReserve(mot_reserve, _)) = token_iterator.next() {
@@ -499,16 +517,16 @@ fn parse_declaration_defaut(
         } else if mot_reserve == Defstr {
             type_variables = TypeVariable::String;
         } else {
-            panic!(
+            return Err(format!(
                 "token {:?} n'est pas un mot clé de déclaration",
                 token_iterator.get()
-            );
+            ));
         }
     } else {
-        panic!(
+        return Err(format!(
             "token {:?} n'est pas un mot clé de déclaration",
             token_iterator.get()
-        );
+        ));
     }
 
     let mut liste_variables = Vec::new();
@@ -520,10 +538,16 @@ fn parse_declaration_defaut(
             if let Token::TokenIdentifiant(ident, _) = token_iterator.next().unwrap() {
                 variable = ident;
             } else {
-                panic!("token {:?} n'est pas un identifiant", token_iterator.get());
+                return Err(format!(
+                    "token {:?} n'est pas un identifiant",
+                    token_iterator.get()
+                ));
             }
         } else {
-            panic!("token {:?} n'est pas un identifiant", token_iterator.get());
+            return Err(format!(
+                "token {:?} n'est pas un identifiant",
+                token_iterator.get()
+            ));
         }
 
         if token_iterator.est_separateur(MOINS) {
@@ -534,7 +558,10 @@ fn parse_declaration_defaut(
                 let tmp = vec![variable, variable2];
                 liste_variables.push(tmp);
             } else {
-                panic!("token {:?} n'est pas un identifiant", token_iterator.get());
+                return Err(format!(
+                    "token {:?} n'est pas un identifiant",
+                    token_iterator.get()
+                ));
             }
         } else {
             let tmp = vec![variable];
@@ -547,15 +574,15 @@ fn parse_declaration_defaut(
         }
     }
 
-    debut_instr.push(AstDecl(type_variables, liste_variables));
+    Ok(AstDecl(type_variables, liste_variables))
 }
 
 fn parse_for(
     mut token_iterator: &mut TokenIterator,
-    debut_instr: &mut Vec<AstInstruction>,
     compteur: &mut Compteur,
     liste_instructions_iter: &mut Iter<Vec<Token>>,
-) {
+) -> Result<Vec<AstInstruction>, String> {
+    let mut debut_instr: Vec<AstInstruction> = vec![];
     token_iterator.next();
 
     let variable;
@@ -564,16 +591,25 @@ fn parse_for(
         if let Token::TokenIdentifiant(ident, _) = token_iterator.next().unwrap() {
             variable = ident;
         } else {
-            panic!("token {:?} n'est pas un identifiant", token_iterator.get());
+            return Err(format!(
+                "token {:?} n'est pas un identifiant",
+                token_iterator.get()
+            ));
         }
     } else {
-        panic!("token {:?} n'est pas un identifiant", token_iterator.get());
+        return Err(format!(
+            "token {:?} n'est pas un identifiant",
+            token_iterator.get()
+        ));
     }
 
     if token_iterator.est_separateur(EQU) {
         token_iterator.next();
     } else {
-        panic!("token {:?} n'est pas un séparateur", token_iterator.get());
+        return Err(format!(
+            "token {:?} n'est pas un séparateur",
+            token_iterator.get()
+        ));
     }
 
     let exp1 = parsing_expression(&mut token_iterator);
@@ -581,7 +617,7 @@ fn parse_for(
     if token_iterator.est_mot_cle(To) {
         token_iterator.next();
     } else {
-        panic!("token {:?} n'est pas to", token_iterator.get());
+        return Err(format!("token {:?} n'est pas to", token_iterator.get()));
     }
 
     let exp2 = parsing_expression(&mut token_iterator);
@@ -609,7 +645,7 @@ fn parse_for(
             let mut iter = v.iter();
 
             let mut liste_instructions2 =
-                parse_instruction(&mut token_iterator2, None, &mut iter, compteur);
+                parse_instruction(&mut token_iterator2, None, &mut iter, compteur)?;
             liste_instruction_actif.append(&mut liste_instructions2);
         }
     }
@@ -672,14 +708,16 @@ fn parse_for(
     debut_instr.push(AstGoto(label_debut));
 
     debut_instr.push(AstInstrLabel(label_fin));
+
+    Ok(debut_instr)
 }
 
 fn parse_do_while(
     mut token_iterator: &mut TokenIterator,
-    debut_instr: &mut Vec<AstInstruction>,
     compteur: &mut Compteur,
     liste_instructions_iter: &mut Iter<Vec<Token>>,
-) {
+) -> Result<Vec<AstInstruction>, String> {
+    let mut debut_instr: Vec<AstInstruction> = vec![];
     token_iterator.next();
 
     let mut debut_while = false;
@@ -730,13 +768,13 @@ fn parse_do_while(
             let mut iter = v.iter();
 
             let mut liste_instructions2 =
-                parse_instruction(&mut token_iterator2, None, &mut iter, compteur);
+                parse_instruction(&mut token_iterator2, None, &mut iter, compteur)?;
             liste_instruction_actif.append(&mut liste_instructions2);
         }
     }
 
     if (debut_while || debut_until) && (fin_while || fin_until) {
-        panic!("while ou until au début et à la fin");
+        return Err("while ou until au début et à la fin".to_string());
     }
 
     let no = compteur.next_if();
@@ -773,14 +811,15 @@ fn parse_do_while(
     debut_instr.push(AstGoto(label_debut));
 
     debut_instr.push(AstInstrLabel(label_fin));
+    Ok(debut_instr)
 }
 
 fn parse_while(
     mut token_iterator: &mut TokenIterator,
-    debut_instr: &mut Vec<AstInstruction>,
     compteur: &mut Compteur,
     liste_instructions_iter: &mut Iter<Vec<Token>>,
-) {
+) -> Result<Vec<AstInstruction>, String> {
+    let mut debut_instr: Vec<AstInstruction> = vec![];
     token_iterator.next();
     let exp = parsing_expression(&mut token_iterator);
 
@@ -802,7 +841,7 @@ fn parse_while(
             let mut iter = v.iter();
 
             let mut liste_instructions2 =
-                parse_instruction(&mut token_iterator2, None, &mut iter, compteur);
+                parse_instruction(&mut token_iterator2, None, &mut iter, compteur)?;
             liste_instruction_actif.append(&mut liste_instructions2);
         }
     }
@@ -820,25 +859,25 @@ fn parse_while(
     debut_instr.push(instruction);
     let instruction = AstInstrLabel(label_fin);
     debut_instr.push(instruction);
+    Ok(debut_instr)
 }
 
-fn parse_end(token_iterator: &mut &mut TokenIterator, debut_instr: &mut Vec<AstInstruction>) {
+fn parse_end(token_iterator: &mut &mut TokenIterator) -> AstInstruction {
     token_iterator.next();
-    let instruction = AstEnd();
-    debut_instr.push(instruction);
+    AstEnd()
 }
-fn parse_goto(token_iterator: &mut &mut TokenIterator, debut_instr: &mut Vec<AstInstruction>) {
+fn parse_goto(token_iterator: &mut &mut TokenIterator) -> Result<AstInstruction, String> {
     token_iterator.next();
     let identifiant = token_iterator.next().unwrap();
     if let Token::TokenIdentifiant(s, _) = identifiant {
         let instruction = AstGoto(AstLabel(s.to_string()));
-        debut_instr.push(instruction);
+        Ok(instruction)
     } else {
-        panic!("token {:?} n'est pas un identifiant", identifiant);
+        Err(format!("token {:?} n'est pas un identifiant", identifiant))
     }
 }
 
-fn parse_print(mut token_iterator: &mut &mut TokenIterator, debut_instr: &mut Vec<AstInstruction>) {
+fn parse_print(mut token_iterator: &mut &mut TokenIterator) -> Result<AstInstruction, String> {
     if let Token::TokenMotReserve(_, _) = token_iterator.next().unwrap() {
         let mut liste_expressions: Vec<AstExpression> = vec![];
         let mut separateur_virgule_liste: Vec<bool> = vec![];
@@ -875,16 +914,18 @@ fn parse_print(mut token_iterator: &mut &mut TokenIterator, debut_instr: &mut Ve
             separateur_virgule_liste,
         );
 
-        debut_instr.push(instruction);
+        Ok(instruction)
     } else {
-        panic!("token {:?} n'est pas un identifiant", token_iterator.get());
+        Err(format!(
+            "token {:?} n'est pas un identifiant",
+            token_iterator.get()
+        ))
     }
 }
 
 fn parse_appel_methode(
     mut token_iterator: &mut &mut TokenIterator,
-    debut_instr: &mut Vec<AstInstruction>,
-) {
+) -> Result<AstInstruction, String> {
     if let Token::TokenIdentifiant(ident, _) = token_iterator.next().unwrap() {
         if DEBUG_PRINT {
             println!("appel {}", ident);
@@ -905,10 +946,10 @@ fn parse_appel_methode(
                 if let Some(Token::TokenSeparateur(s, _)) = token_iterator.next() {
                     separateur_virgule = s == VIRGULE;
                 } else {
-                    panic!(
+                    return Err(format!(
                         "token {:?} n'est pas un séparateur",
                         token_iterator.get().unwrap()
-                    );
+                    ));
                 };
                 separateur_virgule_liste.push(separateur_virgule);
             } else {
@@ -919,17 +960,19 @@ fn parse_appel_methode(
         let instruction =
             AstInstruction::AstAppelMethode(ident, liste_expressions, separateur_virgule_liste);
 
-        debut_instr.push(instruction);
+        Ok(instruction)
     } else {
-        panic!("token {:?} n'est pas un identifiant", token_iterator.get());
+        Err(format!(
+            "token {:?} n'est pas un identifiant",
+            token_iterator.get()
+        ))
     }
 }
 
 fn affectation(
     mut token_iterator: &mut &mut TokenIterator,
-    debut_instr: &mut Vec<AstInstruction>,
     affectation_tableau: bool,
-) {
+) -> Result<AstInstruction, String> {
     if let Token::TokenIdentifiant(ident, _) = token_iterator.next().unwrap() {
         if DEBUG_PRINT {
             println!("affectation {}", ident);
@@ -953,16 +996,19 @@ fn affectation(
             }
             let exp2 = parsing_expression(&mut token_iterator);
             let instruction = AstAffectationTableau(ident.clone(), vec![exp.0], exp2.0);
-            debut_instr.push(instruction);
+            Ok(instruction)
         } else {
             token_iterator.next();
 
             let exp = parsing_expression(&mut token_iterator);
             let instruction = AstAffectation(ident.clone(), exp.0);
-            debut_instr.push(instruction);
+            Ok(instruction)
         }
     } else {
-        panic!("token {:?} n'est pas un identifiant", token_iterator.get());
+        Err(format!(
+            "token {:?} n'est pas un identifiant",
+            token_iterator.get()
+        ))
     }
 }
 
@@ -970,14 +1016,17 @@ fn parse_if(
     mut token_iterator: &mut &mut TokenIterator,
     liste_instructions_iter: &mut Iter<Vec<Token>>,
     compteur: &mut Compteur,
-    debut_instr: &mut Vec<AstInstruction>,
-) {
+) -> Result<Vec<AstInstruction>, String> {
+    let mut debut_instr: Vec<AstInstruction> = vec![];
     token_iterator.next();
     let exp = parsing_expression(&mut token_iterator);
     if token_iterator.est_mot_cle(Then) {
         token_iterator.next();
     } else {
-        panic!("token {:?} n'est pas un mot clé Then", token_iterator.get());
+        return Err(format!(
+            "token {:?} n'est pas un mot clé Then",
+            token_iterator.get()
+        ));
     }
     if token_iterator.len() == 0 {
         let no = compteur.next_if();
@@ -1003,7 +1052,7 @@ fn parse_if(
             } else if token_iterator2.est_mot_cle(ElseIf) {
                 // else if
                 if !liste_instruction_else.is_empty() {
-                    panic!("elseif apres un else");
+                    return Err("elseif apres un else".to_string());
                 }
                 token_iterator2.next();
                 liste_instruction_else_if.push(vec![]);
@@ -1015,10 +1064,10 @@ fn parse_if(
                 if token_iterator2.est_mot_cle(Then) {
                     token_iterator2.next();
                 } else {
-                    panic!(
+                    return Err(format!(
                         "token {:?} n'est pas un mot clé Then",
                         token_iterator2.get()
-                    );
+                    ));
                 }
 
                 let label_else_if = AstLabel(format!("_if_else_if{}_{}", no, n).to_string());
@@ -1033,7 +1082,7 @@ fn parse_if(
             } else if token_iterator2.est_mot_cle(Else) {
                 // else
                 if !liste_instruction_else.is_empty() {
-                    panic!("else apres un else");
+                    return Err("else apres un else".to_string());
                 }
                 liste_instruction_actif = &mut liste_instruction_else;
             } else {
@@ -1042,7 +1091,7 @@ fn parse_if(
                 let mut iter = v.iter();
 
                 let mut liste_instructions2 =
-                    parse_instruction(&mut token_iterator2, None, &mut iter, compteur);
+                    parse_instruction(&mut token_iterator2, None, &mut iter, compteur)?;
                 liste_instruction_actif.append(&mut liste_instructions2);
             }
         }
@@ -1077,10 +1126,6 @@ fn parse_if(
         liste_instruction.append(&mut liste_instruction_else);
         liste_instruction.push(AstInstrLabel(label_end));
 
-        for tmp in liste_instruction.clone() {
-            println!("{:?}", tmp);
-        }
-
         debut_instr.append(&mut liste_instruction);
     } else {
         let no = compteur.next_if();
@@ -1094,12 +1139,12 @@ fn parse_if(
             Some(label_if.clone()),
             &mut iter,
             compteur,
-        );
+        )?;
         let mut instruction_else: Vec<AstInstruction> = vec![];
         if token_iterator.est_mot_cle(Else) {
             token_iterator.next();
 
-            instruction_else = parse_instruction(&mut token_iterator, None, &mut iter, compteur);
+            instruction_else = parse_instruction(&mut token_iterator, None, &mut iter, compteur)?;
         }
         if !instruction.is_empty() || !instruction_else.is_empty() {
             let mut liste_instruction = vec![];
@@ -1119,12 +1164,13 @@ fn parse_if(
             }
             debut_instr.append(&mut liste_instruction);
         } else {
-            panic!("Erreur: pas d'instruction pour le then du if")
+            return Err("Erreur: pas d'instruction pour le then du if".to_string());
         }
     }
+    Ok(debut_instr)
 }
 
-fn parse_input(token_iterator: &mut &mut TokenIterator, debut_instr: &mut Vec<AstInstruction>) {
+fn parse_input(token_iterator: &mut &mut TokenIterator) -> AstInstruction {
     token_iterator.next();
     let retour_ligne: bool;
     if token_iterator.est_separateur(POINTVIRGULE) {
@@ -1158,14 +1204,7 @@ fn parse_input(token_iterator: &mut &mut TokenIterator, debut_instr: &mut Vec<As
             token_iterator.next();
         }
     }
-    let mut liste_instruction = vec![];
-    liste_instruction.push(AstInput(
-        prompt,
-        liste_variables,
-        retour_ligne,
-        point_interrogation,
-    ));
-    debut_instr.append(&mut liste_instruction);
+    AstInput(prompt, liste_variables, retour_ligne, point_interrogation)
 }
 
 fn separateur_parametre(nom_methode: &String, mot: Token) -> bool {
@@ -1551,4 +1590,4 @@ fn calcul_type_operation_binaire(type_operation: TypeSeparateur) -> AstOperateur
 }
 
 #[cfg(test)]
-mod tests; 
+mod tests;
