@@ -13,6 +13,7 @@ use crate::basic::struct_basic::{
     AstDeclarationVariable, AstExpression, AstInstruction, AstLabelEnum, AstOperateurBinaireType,
     AstOperateurUnaireType, AstProgramme, TypeVariable,
 };
+use crate::basic::system_basic::system_clear;
 use crate::basic::utils_basic::Sortie;
 use std::collections::HashMap;
 use std::io::Write;
@@ -359,6 +360,8 @@ pub fn execute(programme: AstProgramme, mut sortie: &mut Sortie) {
             declaration_variable(&mut contexte, liste_variables);
         } else if let AstAffectationTableau(nom_variable, liste_dimensions, valeur) = instruction {
             affectation_tableau(&mut contexte, nom_variable, liste_dimensions, valeur);
+        } else if let AstInstruction::AstCls() = instruction {
+            cls();
         } else {
             panic!("instruction inconnue: {:?}", instruction);
         }
@@ -366,6 +369,10 @@ pub fn execute(programme: AstProgramme, mut sortie: &mut Sortie) {
             pos_instruction += 1;
         }
     }
+}
+
+fn cls() {
+    system_clear().expect("Erreur pour le clear");
 }
 
 fn affectation_tableau(

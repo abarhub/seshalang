@@ -14,8 +14,8 @@ use crate::basic::struct_basic::AstExpression::{
     AstFonction, AstIdentifiant, AstNombreInteger, AstOperateurBinaire,
 };
 use crate::basic::struct_basic::AstInstruction::{
-    AstAffectation, AstAffectationTableau, AstDecl, AstDeclVariable, AstEnd, AstGoto, AstIf,
-    AstInput, AstInstrLabel,
+    AstAffectation, AstAffectationTableau, AstCls, AstDecl, AstDeclVariable, AstEnd, AstGoto,
+    AstIf, AstInput, AstInstrLabel,
 };
 use crate::basic::struct_basic::AstLabelEnum::AstLabel;
 use crate::basic::struct_basic::AstNomMethode::AstNomFonction;
@@ -373,6 +373,8 @@ fn parse_instruction(
         Ok(debut_instr)
     } else if token_iterator.est_mot_cle(Cls) {
         // ne fait rien
+        let instr = parse_cls(&mut token_iterator);
+        debut_instr.push(instr);
         Ok(debut_instr)
     } else if token_iterator.est_mot_cle(Defint)
         || token_iterator.est_mot_cle(Deflng)
@@ -390,6 +392,11 @@ fn parse_instruction(
     } else {
         Err(format!("instruction inconnue {:?}", token_iterator.get()))
     }
+}
+
+fn parse_cls(token_iterator: &mut &mut TokenIterator) -> AstInstruction {
+    token_iterator.next();
+    AstCls()
 }
 
 fn parse_declaration(token_iterator: &mut &mut TokenIterator) -> Result<AstInstruction, String> {
