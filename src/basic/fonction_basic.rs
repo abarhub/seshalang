@@ -277,6 +277,7 @@ pub fn execute_fonction(
                     _ => panic!("La fonction str$() attend exactement un argument"),
                 }
             }
+            TypeMotCle::Mid => mod_extract(&liste_expressions, table_symbole),
             _ => panic!("La fonction {:?} n'existe pas", mot_reserve),
         },
         AstNomMethode::AstNomFonction(nom) => {
@@ -293,6 +294,65 @@ pub fn execute_fonction(
                 panic!("La fonction {} attend exactement un argument", nom);
             }
         }
+    }
+}
+
+fn mod_extract(liste_expressions: &Vec<AstExpression>, table_symbole: &mut TableSymbole) -> Valeur {
+    if liste_expressions.len() != 2 && liste_expressions.len() != 3 {
+        panic!("La fonction mid$ attend deux ou trois arguments");
+    }
+    let e1 = liste_expressions.get(0).unwrap();
+    let str0 = exec_basic::execute_expression(&(e1.clone()), table_symbole);
+    let e2 = liste_expressions.get(1).unwrap();
+    let debut = exec_basic::execute_expression(&(e2.clone()), table_symbole);
+    let mut len = Option::None;
+    if liste_expressions.len() == 3 {
+        let e3 = liste_expressions.get(2).unwrap();
+        len = Some(exec_basic::execute_expression(&(e3.clone()), table_symbole));
+    }
+    let ch;
+    if let Chaine(s) = str0 {
+        ch = s;
+    } else {
+        panic!("Le premier argument de la fonction mid$ doit être une chaine");
+    }
+    let debut0 = match debut {
+        NombreInteger(n) => n as i32,
+        NombreLong(n) => n,
+        NombreSingle(n) => n as i32,
+        NombreDouble(n) => n as i32,
+        _ => panic!("Le deuxième argument de la fonction mid$ doit être un entier"),
+    };
+    let len0;
+    if let Some(len2) = len {
+        len0 = match len2 {
+            NombreInteger(n) => Some(n as i32),
+            NombreLong(n) => Some(n),
+            NombreSingle(n) => Some(n as i32),
+            NombreDouble(n) => Some(n as i32),
+            _ => panic!("Le troisieme argument de la fonction mid$ doit être un entier"),
+        }
+    } else {
+        len0 = None;
+    }
+    let debut_pos = debut0 - 1;
+    let mut iter = ch.char_indices();
+    let (start, _) = iter
+        .nth(debut_pos as usize)
+        .expect(format!("La position de début {} n'est pas bonne", debut_pos).as_str());
+    if let Some(l) = len0 {
+        let fin_pos = debut_pos + l - 1;
+        let (end, _) = iter.nth((l - 1) as usize).expect(
+            format!(
+                "La position de fin {} n'est pas bonne (len={})",
+                fin_pos,
+                ch.len()
+            )
+            .as_str(),
+        );
+        Chaine(ch[start..end].to_string())
+    } else {
+        Chaine(ch[start..].to_string())
     }
 }
 
