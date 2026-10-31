@@ -766,6 +766,29 @@ fn test_parse_execute53() {
     assert_eq!(sortie[1], "Basic");
 }
 
+
+#[test]
+fn test_parse_execute54() {
+    let fichier = "a$ = \"Paris, France\")
+                              MID$(a$, 8) = \"Texas \"
+                              print a$"
+        .to_string();
+    let sortie = exec(fichier);
+    assert_eq!(sortie.len(), 1);
+    assert_eq!(sortie[0], "Paris, Texas ");
+}
+
+#[test]
+fn test_parse_execute55() {
+    let fichier = "a$ = \"Paris, France\")
+                              MID$(a$, 1,5) = \"Pris\"
+                              print a$"
+        .to_string();
+    let sortie = exec(fichier);
+    assert_eq!(sortie.len(), 1);
+    assert_eq!(sortie[0], "Pris, France");
+}
+
 fn exec(fichier: String) -> Vec<String> {
     let mut sortie = Sortie::new(false);
     let programme = parse_basic(fichier).unwrap();

@@ -1,7 +1,7 @@
 use crate::basic::lexer_basic::Token::TokenNombre;
 use crate::basic::lexer_basic::TypeMotCle::{
     As, Cls, Defdbl, Defint, Deflng, Defsng, Defstr, Dim, Do, Double, Else, ElseIf, End, For, Goto,
-    If, Input, Integer, Loop, Next, Step, StringMC, Then, To, Until, Wend, While,
+    If, Input, Integer, Loop, Mid, Next, Step, StringMC, Then, To, Until, Wend, While,
 };
 use crate::basic::lexer_basic::TypeNombre::{Entier, Long, Single};
 use crate::basic::lexer_basic::TypeSeparateur::{
@@ -15,7 +15,7 @@ use crate::basic::struct_basic::AstExpression::{
 };
 use crate::basic::struct_basic::AstInstruction::{
     AstAffectation, AstAffectationTableau, AstCls, AstDecl, AstDeclVariable, AstEnd, AstGoto,
-    AstIf, AstInput, AstInstrLabel,
+    AstIf, AstInput, AstInstrLabel, AstMid,
 };
 use crate::basic::struct_basic::AstLabelEnum::AstLabel;
 use crate::basic::struct_basic::AstNomMethode::AstNomFonction;
@@ -389,9 +389,108 @@ fn parse_instruction(
         let instr = parse_declaration(&mut token_iterator)?;
         debut_instr.push(instr);
         Ok(debut_instr)
+    } else if token_iterator.est_mot_cle(Mid) {
+        let instr = parse_mid(&mut token_iterator)?;
+        debut_instr.push(instr);
+        Ok(debut_instr)
     } else {
         Err(format!("instruction inconnue {:?}", token_iterator.get()))
     }
+}
+
+fn parse_mid(token_iterator: &mut &mut TokenIterator) -> Result<AstInstruction, String> {
+    token_iterator.next();
+
+    let variable;
+
+    let mut liste_expression = vec![];
+
+    if token_iterator.est_separateur(PARENTO) {
+        token_iterator.next();
+
+        if token_iterator.est_identifiant() {
+            if let Token::TokenIdentifiant(ident, _) = token_iterator.next().unwrap() {
+                variable = ident;
+            } else {
+                return Err(format!(
+                    "token {:?} n'est pas un identifiant",
+                    token_iterator.get()
+                ));
+            }
+        } else {
+            return Err(format!(
+                "token {:?} n'est pas un identifiant",
+                token_iterator.get()
+            ));
+        }
+
+        if token_iterator.est_separateur(VIRGULE) {
+            token_iterator.next();
+        } else {
+            return Err(format!(
+                "token {:?} n'est pas une virgule",
+                token_iterator.get()
+            ));
+        }
+
+        loop {
+            let exp1 = parsing_expression(token_iterator);
+            liste_expression.push(exp1.0);
+
+            if token_iterator.est_separateur(VIRGULE) {
+                token_iterator.next();
+            } else {
+                break;
+            }
+        }
+
+        if token_iterator.est_separateur(PARENTF) {
+            token_iterator.next();
+        } else {
+            return Err(format!(
+                "token {:?} n'est pas une parenthèse ouvrante",
+                token_iterator.get()
+            ));
+        }
+    } else {
+        return Err(format!(
+            "token {:?} n'est pas une parenthèse fermante",
+            token_iterator.get()
+        ));
+    }
+
+    if token_iterator.est_separateur(EQU) {
+        token_iterator.next();
+    } else {
+        return Err(format!(
+            "token {:?} n'est pas un séparateur d'égalité",
+            token_iterator.get()
+        ));
+    }
+
+    let exp_valeur = parsing_expression(token_iterator);
+    let exp_valeur2 = exp_valeur.0;
+
+    if liste_expression.len() != 1 && liste_expression.len() != 2 {
+        return Err(format!(
+            "L'instruction mid$  ne peut avoir que 2 ou 3 paramètres {:?}",
+            token_iterator.get()
+        ));
+    }
+
+    let exp_indice = liste_expression.get(0).unwrap();
+
+    let exp_len_opt;
+
+    if liste_expression.len() == 1 {
+        exp_len_opt = None;
+    } else {
+        exp_len_opt = Some(liste_expression.get(1).unwrap().clone());
+    }
+
+    let instr = AstMid(variable, exp_indice.clone(), exp_len_opt, exp_valeur2);
+
+    Ok(instr)
 }
 
 fn parse_cls(token_iterator: &mut &mut TokenIterator) -> AstInstruction {

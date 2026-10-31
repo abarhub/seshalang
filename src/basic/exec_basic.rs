@@ -362,12 +362,73 @@ pub fn execute(programme: AstProgramme, mut sortie: &mut Sortie) {
             affectation_tableau(&mut contexte, nom_variable, liste_dimensions, valeur);
         } else if let AstInstruction::AstCls() = instruction {
             cls();
+        } else if let AstInstruction::AstMid(nom_variable, exp, exp_opt, valeur) = instruction {
+            affectation_contenu_variable_chaine(&mut contexte, nom_variable, exp, exp_opt, valeur);
         } else {
             panic!("instruction inconnue: {:?}", instruction);
         }
         if !pos_change {
             pos_instruction += 1;
         }
+    }
+}
+
+fn affectation_contenu_variable_chaine(
+    table_symbole: &mut TableSymbole,
+    nom_variable: &String,
+    exp: &AstExpression,
+    exp_opt: &Option<AstExpression>,
+    valeur: &AstExpression,
+) {
+    let resultat = execute_expression(&exp, table_symbole);
+    let resultat_opt = match exp_opt {
+        Some(exp) => Some(execute_expression(&exp, table_symbole)),
+        None => None,
+    };
+    let valeur2 = execute_expression(valeur, table_symbole);
+    let indice;
+    match resultat {
+        NombreInteger(n) => indice = n as usize - 1,
+        _ => panic!("affectation_contenu_variable_chaine: resultat n'est pas un entier"),
+    }
+    let indice2;
+    match resultat_opt {
+        Some(NombreInteger(n)) => indice2 = Some(n),
+        None => indice2 = None,
+        _ => panic!("affectation_contenu_variable_chaine: resultat n'est pas un entier"),
+    }
+    let valeur3;
+    match valeur2 {
+        Chaine(s) => valeur3 = s,
+        _ => panic!(
+            "affectation_contenu_variable_chaine: valeur n'est pas une chaine: {}",
+            valeur2
+        ),
+    }
+
+    match table_symbole.get_variable(nom_variable.clone().as_str()) {
+        Some(variable) => match variable {
+            Chaine(chaine) => match indice2 {
+                Some(n) => {
+                    let s = chaine[..indice].to_string()
+                        + valeur3.as_str()
+                        + &chaine[indice + n as usize..];
+                    table_symbole.set_variable(nom_variable.clone(), Chaine(s));
+                }
+                None => {
+                    let s = chaine[..indice].to_string() + valeur3.as_str();
+                    table_symbole.set_variable(nom_variable.clone(), Chaine(s));
+                }
+            },
+            _ => panic!(
+                "affectation_contenu_variable_chaine: variable {} n'est pas une chaine",
+                nom_variable
+            ),
+        },
+        _ => panic!(
+            "affectation_contenu_variable_chaine: variable {} n'existe pas",
+            nom_variable
+        ),
     }
 }
 

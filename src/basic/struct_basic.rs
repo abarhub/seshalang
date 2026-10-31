@@ -40,6 +40,7 @@ pub enum AstInstruction {
     AstDeclVariable(Vec<AstDeclarationVariable>),
     AstAffectationTableau(String, Vec<AstExpression>, AstExpression),
     AstCls(),
+    AstMid(String,AstExpression, Option<AstExpression>,AstExpression)
 }
 
 #[derive(Debug, Clone, PartialEq)]
