@@ -1,3 +1,5 @@
+use std::fmt;
+
 #[derive(Debug, Eq, PartialEq, Clone)]
 pub enum TypeMotCle {
     If,
@@ -145,6 +147,12 @@ pub enum TypeNombre {
 pub struct PositionToken {
     ligne: u32,
     colonne: u32,
+}
+
+impl fmt::Display for PositionToken {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "({}, {})", self.ligne, self.colonne)
+    }
 }
 
 impl PositionToken {
@@ -358,7 +366,7 @@ pub fn lexer(contenu_fichier: String) -> Vec<Vec<Token>> {
                     if let Some(mot2) = iter.next() {
                         s.push(mot2);
                     } else {
-                        panic!("erreur de caractere: {}", mot)
+                        panic!("erreur de caractere à la position {} : {}", pos, mot)
                     }
                 }
                 let token = creation_token(s, EtatLexer::Separateur, pos);
@@ -403,7 +411,7 @@ pub fn lexer(contenu_fichier: String) -> Vec<Vec<Token>> {
                 if mot == ' ' || mot == '\n' {
                     // caractères espaces
                 } else {
-                    panic!("caractere invalide: {}", mot)
+                    panic!("caractere invalide à la position {} : {}", pos, mot)
                 }
             }
         }
@@ -476,17 +484,17 @@ fn creation_token_nombre(s: String, pos: PositionToken) -> Token {
         iter.next().unwrap();
     }
     if iter.no_next() {
-        panic!("Nombre invalide {}", s);
+        panic!("Nombre invalide à la position {} : {}", pos, s);
     }
     // vérification
     if est_integer && est_long {
-        panic!("Nombre invalide {}", s);
+        panic!("Nombre invalide à la position {} : {}", pos, s);
     } else if (est_integer || est_long) && (decimal || exposant) {
-        panic!("Nombre invalide {}", s);
+        panic!("Nombre invalide à la position {} : {}", pos, s);
     } else if est_integer && nombre_entier > 32767 {
-        panic!("Nombre invalide {}", s);
+        panic!("Nombre invalide à la position {} : {}", pos, s);
     } else if est_long && nombre_entier > 2147483647 {
-        panic!("Nombre invalide {}", s);
+        panic!("Nombre invalide à la position {} : {}", pos, s);
     }
     // construction du token
     if !decimal && !exposant {
@@ -522,7 +530,7 @@ fn creation_token_nombre(s: String, pos: PositionToken) -> Token {
         } else {
             let mut nombre: f32 = nombre_entier as f32;
             if decimal {
-                nombre = nombre + f64_to_f32(nombre_decimal);
+                nombre = nombre + f64_to_f32(nombre_decimal, pos.clone());
             }
             if exposant {
                 nombre = nombre * 10.0_f32.powi(nombre_exposant);
@@ -592,7 +600,7 @@ fn creation_token(s: String, etat: EtatLexer, pos: PositionToken) -> Token {
         }
         EtatLexer::Separateur => Token::TokenSeparateur(calcul_operateur(s), pos),
         EtatLexer::ChaineDeCaracteres => Token::TokenChaine(s, pos),
-        _ => panic!("Etat invalide"),
+        _ => panic!("Etat invalide à la position {}", pos),
     }
 }
 
@@ -710,14 +718,13 @@ fn mots_cles(s: String) -> Option<TypeMotCle> {
     }
 }
 
-fn f64_to_f32(x: f64) -> f32 {
+fn f64_to_f32(x: f64, pos: PositionToken) -> f32 {
     let y = x as f32;
-    assert_eq!(
-        x.is_finite(),
-        y.is_finite(),
-        "f32 overflow during conversion"
-    );
-    y
+    if y.is_finite() || !x.is_finite() {
+        y // pas de débordement (ou x était déjà inf/NaN)
+    } else {
+        panic!("Nombre decimal trop grand à la position {} : {}", pos, x);
+    }
 }
 
 #[cfg(test)]

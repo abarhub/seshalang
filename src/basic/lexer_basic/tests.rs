@@ -132,6 +132,20 @@ fn test_lexer_nombre7() {
 }
 
 #[test]
+#[should_panic(expected = "Nombre invalide à la position (1, 0) : 10e%")]
+fn test_lexer_nombre8() {
+    let fichier = "10e%".to_string();
+    lexer(fichier);
+}
+
+#[test]
+#[should_panic(expected = "Nombre invalide à la position (1, 0) : 50000%")]
+fn test_lexer_nombre9() {
+    let fichier = "50000%".to_string();
+    lexer(fichier);
+}
+
+#[test]
 fn test_lexer_identifiant() {
     let fichier = "abc".to_string();
     let liste_tokens = lexer(fichier);
@@ -423,4 +437,12 @@ fn test_lexer_commentaire7() {
             PositionToken::new(1, 0)
         )]]
     );
+}
+
+
+#[test]
+#[should_panic(expected = "caractere invalide à la position (1, 0) : ë")]
+fn test_lexer_autre() {
+    let fichier = "ë".to_string();
+    lexer(fichier);
 }
