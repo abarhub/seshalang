@@ -79,6 +79,7 @@ pub enum TypeMotCle {
     Locate,
     Csrlin,
     Pos,
+    Color,
 }
 
 impl TypeMotCle {
@@ -751,6 +752,7 @@ fn mots_cles(s: String) -> Option<TypeMotCle> {
         "LOCATE" => Some(TypeMotCle::Locate),
         "CSRLIN" => Some(TypeMotCle::Csrlin),
         "POS" => Some(TypeMotCle::Pos),
+        "COLOR" => Some(TypeMotCle::Color),
         _ => None,
     }
 }

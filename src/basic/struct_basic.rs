@@ -48,6 +48,11 @@ pub enum AstInstruction {
         Option<AstExpression>,
         Option<AstExpression>,
     ),
+    AstColor(
+        Option<AstExpression>,
+        Option<AstExpression>,
+        Option<AstExpression>,
+    ),
 }
 
 #[derive(Debug, Clone, PartialEq)]

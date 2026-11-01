@@ -1,4 +1,5 @@
 use crossterm::cursor::{Hide, MoveTo, Show};
+use crossterm::style::{Color, ResetColor, SetBackgroundColor, SetForegroundColor};
 use crossterm::{
     cursor, execute, queue,
     style::{self, Stylize},
@@ -53,4 +54,47 @@ pub fn system_locate(
 pub fn system_get_cursor() -> Result<(i16, i16), io::Error> {
     let (col, ligne) = cursor::position()?;
     Ok((col as i16, ligne as i16))
+}
+
+pub fn system_color(foreground: Option<i16>, background: Option<i16>) -> Result<(), io::Error> {
+    let mut stdout = io::stdout();
+    match (foreground, background) {
+        (Some(foreground_color), Some(background_color)) => execute!(
+            stdout,
+            SetForegroundColor(calcul_couleur(foreground_color)?),
+            SetBackgroundColor(calcul_couleur(background_color)?)
+        )?,
+        (Some(foreground_color), None) => {
+            execute!(stdout, SetForegroundColor(calcul_couleur(foreground_color)?))?
+        }
+        _ => {
+            return Err(io::Error::new(
+                ErrorKind::InvalidData,
+                "Erreur dans les parametres de system_color",
+            ));
+        }
+    }
+    Ok(())
+}
+
+fn calcul_couleur(couleur: i16) -> Result<Color, io::Error> {
+    match couleur {
+        0 => Ok(Color::Black),
+        1 => Ok(Color::DarkBlue),
+        2 => Ok(Color::DarkGreen),
+        3 => Ok(Color::DarkCyan),
+        4 => Ok(Color::DarkRed),
+        5 => Ok(Color::DarkMagenta),
+        6 => Ok(Color::DarkYellow),
+        7 => Ok(Color::Grey),
+        8 => Ok(Color::DarkGrey),
+        9 => Ok(Color::Blue),
+        10 => Ok(Color::Green),
+        11 => Ok(Color::Cyan),
+        12 => Ok(Color::Red),
+        13 => Ok(Color::Magenta),
+        14 => Ok(Color::Yellow),
+        15 => Ok(Color::White),
+        _ => Err(io::Error::new(ErrorKind::InvalidData, "Couleur invalide")),
+    }
 }

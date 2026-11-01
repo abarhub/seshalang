@@ -13,7 +13,9 @@ use crate::basic::struct_basic::{
     AstDeclarationVariable, AstExpression, AstInstruction, AstLabelEnum, AstOperateurBinaireType,
     AstOperateurUnaireType, AstProgramme, TypeVariable,
 };
-use crate::basic::system_basic::{system_clear, system_locate, system_print, system_println};
+use crate::basic::system_basic::{
+    system_clear, system_color, system_locate, system_print, system_println,
+};
 use crate::basic::utils_basic::Sortie;
 use std::collections::HashMap;
 use std::io::Write;
@@ -373,6 +375,8 @@ pub fn execute(programme: AstProgramme, mut sortie: &mut Sortie) {
                 exp4.clone(),
                 exp5.clone(),
             );
+        } else if let AstInstruction::AstColor(exp, exp2, exp3) = instruction {
+            color(&mut contexte, exp.clone(), exp2.clone(), exp3.clone());
         } else {
             panic!("instruction inconnue: {:?}", instruction);
         }
@@ -380,6 +384,51 @@ pub fn execute(programme: AstProgramme, mut sortie: &mut Sortie) {
             pos_instruction += 1;
         }
     }
+}
+
+fn color(
+    table_symbole: &mut TableSymbole,
+    exp: Option<AstExpression>,
+    exp2: Option<AstExpression>,
+    exp3: Option<AstExpression>,
+) {
+    let exp01;
+    if exp.is_some() {
+        exp01 = Some(execute_expression(&exp.unwrap(), table_symbole));
+    } else {
+        exp01 = None;
+    }
+    let exp02;
+    if exp2.is_some() {
+        exp02 = Some(execute_expression(&exp2.unwrap(), table_symbole));
+    } else {
+        exp02 = None;
+    }
+    if exp3.is_some() {
+        panic!("parametre 3 non géré pour color")
+    }
+
+    let exp001;
+    if exp01.is_some() {
+        match exp01.unwrap() {
+            NombreInteger(n) => exp001 = Some(n),
+            NombreLong(n) => exp001 = Some(n as i16),
+            _ => panic!("Locate attend un nombre entier"),
+        }
+    } else {
+        exp001 = None;
+    }
+    let exp002;
+    if exp02.is_some() {
+        match exp02.unwrap() {
+            NombreInteger(n) => exp002 = Some(n),
+            NombreLong(n) => exp002 = Some(n as i16),
+            _ => panic!("Locate attend un nombre entier"),
+        }
+    } else {
+        exp002 = None;
+    }
+    system_color(exp001, exp002).expect("Erreur pour définir la couleur");
 }
 
 fn locate(

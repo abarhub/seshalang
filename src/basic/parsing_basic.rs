@@ -1,7 +1,8 @@
 use crate::basic::lexer_basic::Token::TokenNombre;
 use crate::basic::lexer_basic::TypeMotCle::{
-    As, Cls, Defdbl, Defint, Deflng, Defsng, Defstr, Dim, Do, Double, Else, ElseIf, End, For, Goto,
-    If, Input, Integer, Locate, Loop, Mid, Next, Step, StringMC, Then, To, Until, Wend, While,
+    As, Cls, Color, Defdbl, Defint, Deflng, Defsng, Defstr, Dim, Do, Double, Else, ElseIf, End,
+    For, Goto, If, Input, Integer, Locate, Loop, Mid, Next, Step, StringMC, Then, To, Until, Wend,
+    While,
 };
 use crate::basic::lexer_basic::TypeNombre::{Entier, Long, Single};
 use crate::basic::lexer_basic::TypeSeparateur::{
@@ -397,9 +398,39 @@ fn parse_instruction(
         let instr = parse_locate(&mut token_iterator)?;
         debut_instr.push(instr);
         Ok(debut_instr)
+    } else if token_iterator.est_mot_cle(Color) {
+        let instr = parse_color(&mut token_iterator)?;
+        debut_instr.push(instr);
+        Ok(debut_instr)
     } else {
         Err(format!("instruction inconnue {:?}", token_iterator.get()))
     }
+}
+
+fn parse_color(token_iterator: &mut &mut TokenIterator) -> Result<AstInstruction, String> {
+    token_iterator.next();
+
+    let mut liste_expression = vec![];
+
+    loop {
+        let exp1 = parsing_expression(token_iterator);
+        liste_expression.push(exp1.0);
+
+        if token_iterator.est_separateur(VIRGULE) {
+            token_iterator.next();
+        } else {
+            break;
+        }
+    }
+    if liste_expression.len() < 1 || liste_expression.len() > 3 {
+        return Err("le nombre de paramètres doit être entre 1 et 3".to_string());
+    }
+
+    Ok(AstInstruction::AstColor(
+        liste_expression.get(0).cloned(),
+        liste_expression.get(1).cloned(),
+        liste_expression.get(2).cloned(),
+    ))
 }
 
 fn parse_locate(token_iterator: &mut &mut TokenIterator) -> Result<AstInstruction, String> {
