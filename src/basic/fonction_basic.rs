@@ -7,6 +7,7 @@ use crate::basic::lexer_basic::TypeMotCle;
 
 use crate::basic::struct_basic::AstNomMethode::AstNomReserve;
 use crate::basic::struct_basic::{AstExpression, AstNomMethode};
+use crate::basic::system_basic::system_get_cursor;
 use chrono::Local;
 
 pub fn execute_fonction(
@@ -280,6 +281,14 @@ pub fn execute_fonction(
             TypeMotCle::Mid => mid_extract(&liste_expressions, table_symbole),
             TypeMotCle::Left => str_extract(&liste_expressions, table_symbole, true),
             TypeMotCle::Right => str_extract(&liste_expressions, table_symbole, false),
+            TypeMotCle::Csrlin => get_position_cursor(true),
+            TypeMotCle::Pos => match verification_un_parametre(
+                "space$()".to_string(),
+                liste_expressions,
+                table_symbole,
+            ) {
+                _ => get_position_cursor(false),
+            },
             _ => panic!("La fonction {:?} n'existe pas", mot_reserve),
         },
         AstNomMethode::AstNomFonction(nom) => {
@@ -296,6 +305,15 @@ pub fn execute_fonction(
                 panic!("La fonction {} attend exactement un argument", nom);
             }
         }
+    }
+}
+
+fn get_position_cursor(ligne: bool) -> Valeur {
+    let cursor = system_get_cursor().unwrap();
+    if ligne {
+        NombreInteger(cursor.0)
+    } else {
+        NombreInteger(cursor.1)
     }
 }
 

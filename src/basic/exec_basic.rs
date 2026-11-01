@@ -13,7 +13,7 @@ use crate::basic::struct_basic::{
     AstDeclarationVariable, AstExpression, AstInstruction, AstLabelEnum, AstOperateurBinaireType,
     AstOperateurUnaireType, AstProgramme, TypeVariable,
 };
-use crate::basic::system_basic::{system_clear, system_print, system_println};
+use crate::basic::system_basic::{system_clear, system_locate, system_print, system_println};
 use crate::basic::utils_basic::Sortie;
 use std::collections::HashMap;
 use std::io::Write;
@@ -364,6 +364,15 @@ pub fn execute(programme: AstProgramme, mut sortie: &mut Sortie) {
             cls();
         } else if let AstInstruction::AstMid(nom_variable, exp, exp_opt, valeur) = instruction {
             affectation_contenu_variable_chaine(&mut contexte, nom_variable, exp, exp_opt, valeur);
+        } else if let AstInstruction::AstLocate(exp, exp2, exp3, exp4, exp5) = instruction {
+            locate(
+                &mut contexte,
+                exp.clone(),
+                exp2.clone(),
+                exp3.clone(),
+                exp4.clone(),
+                exp5.clone(),
+            );
         } else {
             panic!("instruction inconnue: {:?}", instruction);
         }
@@ -371,6 +380,84 @@ pub fn execute(programme: AstProgramme, mut sortie: &mut Sortie) {
             pos_instruction += 1;
         }
     }
+}
+
+fn locate(
+    table_symbole: &mut TableSymbole,
+    exp: Option<AstExpression>,
+    exp2: Option<AstExpression>,
+    exp3: Option<AstExpression>,
+    exp4: Option<AstExpression>,
+    exp5: Option<AstExpression>,
+) {
+    let exp01;
+    if exp.is_some() {
+        exp01 = Some(execute_expression(&exp.unwrap(), table_symbole));
+    } else {
+        exp01 = None;
+    }
+    let exp02;
+    if exp2.is_some() {
+        exp02 = Some(execute_expression(&exp2.unwrap(), table_symbole));
+    } else {
+        exp02 = None;
+    }
+    let exp03;
+    if exp3.is_some() {
+        exp03 = Some(execute_expression(&exp3.unwrap(), table_symbole));
+    } else {
+        exp03 = None;
+    }
+    let exp04;
+    if exp4.is_some() {
+        exp04 = Some(execute_expression(&exp4.unwrap(), table_symbole));
+    } else {
+        exp04 = None;
+    }
+    let exp05;
+    if exp5.is_some() {
+        exp05 = Some(execute_expression(&exp5.unwrap(), table_symbole));
+    } else {
+        exp05 = None;
+    }
+
+    let exp001;
+    if exp01.is_some() {
+        match exp01.unwrap() {
+            NombreInteger(n) => exp001 = Some(n),
+            NombreLong(n) => exp001 = Some(n as i16),
+            _ => panic!("Locate attend un nombre entier"),
+        }
+    } else {
+        exp001 = None;
+    }
+    let exp002;
+    if exp02.is_some() {
+        match exp02.unwrap() {
+            NombreInteger(n) => exp002 = Some(n),
+            NombreLong(n) => exp002 = Some(n as i16),
+            _ => panic!("Locate attend un nombre entier"),
+        }
+    } else {
+        exp002 = None;
+    }
+    let exp003;
+    if exp03.is_some() {
+        match exp03.unwrap() {
+            NombreInteger(n) => exp003 = Some(n != 0),
+            NombreLong(n) => exp003 = Some(n != 0),
+            _ => panic!("Locate attend un nombre entier"),
+        }
+    } else {
+        exp003 = None;
+    }
+    if exp04.is_some() || exp05.is_some() {
+        panic!("Parametre de Local non géré");
+    }
+    if exp001.is_none() || exp002.is_none() {
+        panic!("Parametre de Locate non géré");
+    }
+    system_locate(exp001, exp002, exp003).expect("Erreur pour positionner le curseur");
 }
 
 fn affectation_contenu_variable_chaine(
